@@ -6,13 +6,13 @@ import helpers from "../util/helpers";
 import { getSiteOrigin } from "../routes";
 
 const metadata = {
-  keywords: t`Landlord, Portfolio, Tenant, Displacement, Map, JustFix, NYC, New York, Housing, Who Owns What`,
-  description: t`Use this free tool from JustFix to research your building and investigate landlords! We use property ownership mapping to identify a landlord's portfolio and provide data to indicate potential tenant harassment and displacement.`,
+  keywords: t`Landlord, Portfolio, Tenant, Displacement, Map, JustFix, Chicago, Housing, Who Owns What`,
+  description: t`Use this free tool from JustFix to research your building and investigate landlords in Chicago. We use property ownership mapping to identify a landlord's portfolio and provide indicators like permits, violations, and 311 requests.`,
   siteName: t`Who owns what`,
 };
 
 export const FB_APP_ID = "247990609143668";
-const TWITTER_HANDLE = "@JustFixNYC";
+const TWITTER_HANDLE = "@JustFixOrg";
 const ORIGIN_URL = getSiteOrigin();
 const SHARE_IMAGE_URL = "https://i.imgur.com/6WL74DZ.png";
 const FB_PIXEL_CODE = "o2zqsblxwru6hs8nojpihj5l7lacv4";

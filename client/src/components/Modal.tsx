@@ -16,7 +16,7 @@ type ModalProps = {
 
 const Modal = (props: ModalProps) => {
   // style overrides are here. new stuff is in ReactModal.scss
-  const styles = {
+  const styles: ReactModal.Styles = {
     overlay: {
       position: "fixed",
       top: 0,

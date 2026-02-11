@@ -19,91 +19,31 @@ class CommaSeparatedField(forms.CharField):
         return ", ".join([str(s) for s in value])
 
 
-class PaddedBBLForm(forms.Form):
-    bbl = forms.CharField(
+PIN_REGEX = r"^\d{14}$"
+
+
+class PinForm(forms.Form):
+    pin = forms.CharField(
         validators=[
-            RegexValidator(
-                r"^[1-5]\d\d\d\d\d\d\d\d\d$",
-                message="This should be a 10-digit padded BBL.",
-            )
+            RegexValidator(PIN_REGEX, message="This should be a 14-digit PIN.")
         ]
     )
 
 
-class SeparatedBBLForm(forms.Form):
-    borough = forms.CharField(
-        validators=[
-            RegexValidator(r"^[1-5]$", message="This should be 1, 2, 3, 4, or 5.")
-        ]
-    )
-
-    block = forms.CharField(
-        validators=[
-            RegexValidator(
-                r"^\d\d\d\d\d$", message="This should be a 5-digit zero-padded value."
-            )
-        ]
-    )
-
-    lot = forms.CharField(
-        validators=[
-            RegexValidator(
-                r"^\d\d\d\d$", message="This should be a 4-digit zero-padded value."
-            )
-        ]
-    )
-
-
-class PaddedBBLListForm(forms.Form):
-    bbls = CommaSeparatedField(
-        label="10-digit padded BBL (comma-separated list)", required=True
-    )
+class PinListForm(forms.Form):
+    pins = CommaSeparatedField(label="14-digit PIN (comma-separated list)", required=True)
 
     def clean(self):
         data = self.cleaned_data
-        if "bbls" not in data:
+        if "pins" not in data:
             return data
-        for bbl in data["bbls"]:
-            if not re.match(r"^[1-5]\d\d\d\d\d\d\d\d\d$", bbl):
+        for pin in data["pins"]:
+            if not re.match(PIN_REGEX, pin):
                 raise ValidationError(
-                    f"Invalid BBL: '{bbl}'. All BBLs but be in 10-digit zer-padded format."
+                    f"Invalid PIN: '{pin}'. All PINs must be 14-digit numeric values."
                 )
         return data
 
 
-class SignatureCollectionForm(forms.Form):
-    collection = forms.CharField()
-
-
-class DatasetLastUpdatedForm(forms.Form):
-    dataset = forms.CharField(required=False)
-
-
-def validate_district_types(value):
-    VALID_DISTRICTS = [
-        "coun_dist",
-        "nta",
-        "community_dist",
-        "assem_dist",
-        "stsen_dist",
-        "zipcode",
-        "census_tract",
-    ]
-    if value not in VALID_DISTRICTS:
-        raise ValidationError(
-            f"{value} is not a valid district type. Must be on of {', '.join(VALID_DISTRICTS)}",
-        )
-
-
-class DistrictTypeForm(forms.Form):
-    district_type = forms.CharField(validators=[validate_district_types])
-
-
-class EmailAlertDistrict(forms.Form):
-    coun_dist = forms.CharField(required=False)
-    nta = forms.CharField(required=False)
-    community_dist = forms.CharField(required=False)
-    assem_dist = forms.CharField(required=False)
-    stsen_dist = forms.CharField(required=False)
-    zipcode = forms.CharField(required=False)
-    census_tract = forms.CharField(required=False)
+class AddressSearchForm(forms.Form):
+    q = forms.CharField(required=True)

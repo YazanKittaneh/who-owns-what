@@ -4,7 +4,15 @@ import itertools
 import multiprocessing
 from pathlib import Path
 from typing import Iterable, List, NamedTuple
-from geosupport import Geosupport, GeosupportError
+try:
+    from geosupport import Geosupport, GeosupportError
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    Geosupport = None
+
+    class GeosupportError(Exception):
+        def __init__(self, result=None):
+            super().__init__("Geosupport is not installed")
+            self.result = result or {}
 from psycopg2.extras import DictCursor
 
 # Use of NYC DCP's Geosupport desktop for geocoding addresses (to standardize
@@ -16,7 +24,8 @@ SQL_DIR = Path(__file__).parent.resolve() / "sql"
 # TODO: find a better solution for this.
 # can't run this on CI since files are installed, and can't import within one of
 # the functions because of the multiprocessing
-if not os.environ.get("CI"):
+G = None
+if Geosupport and not os.environ.get("CI"):
     G = Geosupport()
 
 
@@ -97,6 +106,22 @@ def standardize_record(record: RawLandlordRow):
         street_name=record.streetname,
         zip_code=record.zip,
     )
+
+    if G is None:
+        # Fall back to the raw address fields if geosupport isn't available.
+        house_sreett_apt = str_squish(
+            f"{record.housenumber} {record.streetname} {record.apartment}"
+        )
+        bizaddr = f"{house_sreett_apt}, {record.city} {record.state}"
+        return StandardizedLandlordRow(
+            bbl=record.bbl,
+            registrationid=record.registrationid,
+            name=record.name,
+            bizaddr=bizaddr,
+            bizhousestreet=f"{record.housenumber} {record.streetname}",
+            bizapt=record.apartment,
+            bizzip=record.zip,
+        )
 
     try:
         geo = G.address(**addr_args)

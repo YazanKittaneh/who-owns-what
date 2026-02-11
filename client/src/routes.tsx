@@ -1,32 +1,21 @@
-import { SearchAddressWithoutBbl } from "components/APIDataTypes";
 import { reportError } from "error-reporting";
 import { removeLocalePrefix } from "i18n";
 
-export type AddressPageUrlParams = SearchAddressWithoutBbl & {
+export type AddressPageUrlParams = {
+  pin: string;
   locale?: string;
-  indicator?: string;
 };
 
 export type AddressPageRoutes = ReturnType<typeof createAddressPageRoutes>;
 
-/**
- * Determines whether a url corresponds to an Address Page.
- */
 export const isAddressPageRoute = (pathname: string) => {
   let path = removeLocalePrefix(pathname);
   if (path.startsWith("/legacy")) path = path.replace("/legacy", "");
-  return path.startsWith("/address");
+  return path.startsWith("/pin");
 };
 
-export const removeIndicatorSuffix = (pathname: string) => pathname.replace(/\/:indicator.*/, "");
-
-export const createRouteForAddressPage = (
-  params: AddressPageUrlParams,
-  isLegacyRoute?: boolean
-) => {
-  let route = `/address/${encodeURIComponent(params.boro)}/${encodeURIComponent(
-    params.housenumber ? params.housenumber : " "
-  )}/${encodeURIComponent(params.streetname)}`;
+export const createRouteForAddressPage = (params: AddressPageUrlParams, isLegacyRoute?: boolean) => {
+  let route = `/pin/${encodeURIComponent(params.pin)}`;
 
   const allowChangingPortfolioMethod =
     process.env.REACT_APP_ENABLE_NEW_WOWZA_PORTFOLIO_MAPPING === "1";
@@ -34,7 +23,7 @@ export const createRouteForAddressPage = (
   if (isLegacyRoute && allowChangingPortfolioMethod) route = "/legacy" + route;
 
   if (route.includes(" ")) {
-    reportError("An Address Page URL was not encoded properly! There's a space in the URL.");
+    reportError("A PIN URL was not encoded properly! There's a space in the URL.");
     route = route.replace(" ", "%20");
   }
 
@@ -42,15 +31,6 @@ export const createRouteForAddressPage = (
     route = `/${params.locale}${route}`;
   }
 
-  return route;
-};
-
-export const createRouteForFullBbl = (bbl: string, prefix?: string, isLegacyRoute?: boolean) => {
-  let route = `/bbl/${bbl}`;
-  const allowChangingPortfolioMethod =
-    process.env.REACT_APP_ENABLE_NEW_WOWZA_PORTFOLIO_MAPPING === "1";
-  if (isLegacyRoute && allowChangingPortfolioMethod) route = "/legacy" + route;
-  if (prefix) route = `/${prefix}` + route;
   return route;
 };
 
@@ -63,9 +43,7 @@ export const createAddressPageRoutes = (
   }
   return {
     overview: `${prefix}`,
-    timeline: `${prefix}/timeline/:indicator?`,
     portfolio: `${prefix}/portfolio`,
-    summary: `${prefix}/summary`,
   };
 };
 
@@ -93,15 +71,8 @@ export const createCoreRoutePaths = (prefix?: string) => {
   const pathPrefix = prefix || "";
   return {
     home: `${pathPrefix}/`,
-    addressPage: createAddressPageRoutes(`${pathPrefix}/address/:boro/:housenumber/:streetname`),
+    addressPage: createAddressPageRoutes(`${pathPrefix}/pin/:pin(\\d{14})`),
     account: createAccountRoutePaths(`${pathPrefix}/account`),
-    areaAlerts: `${pathPrefix}/area-alerts`,
-    /** Note: this path doesn't correspond to a stable page on the site. It simply provides an entry point that
-     * immediately redirects to an addressPageOverview. This path is helpful for folks who, say, have a list of
-     * bbl values in a spreadsheet and want to easily generate direct links to WhoOwnsWhat.
-     * See `BBLPage.tsx` for more details.
-     */
-    bbl: createAddressPageRoutes(`${pathPrefix}/bbl/:bbl(\\d{10})`),
     about: `${pathPrefix}/about`,
     howToUse: `${pathPrefix}/how-to-use`,
     methodology: `${pathPrefix}/how-it-works`,
@@ -117,20 +88,9 @@ export const createWhoOwnsWhatRoutePaths = (prefix?: string) => {
     legacy: {
       ...createCoreRoutePaths(`${pathPrefix}/legacy`),
     },
-    /** This route path corresponds to a page identical to the `bbl` route above, but with an older url
-     * pattern that we want to support so as not to break any old links that exist out in the web.
-     */
-    bblSeparatedIntoParts: `${pathPrefix}/bbl/:boro(\\d+)/:block(\\d+)/:lot(\\d+)`,
-    /** Some user testers have been accessing WOW via this pathname which we have since deprecated.
-     * Let's make sure all routes with this path structure redirect back to the homepage.
-     * See App.tsx and the `WowzaRedirectPage` component in WowzaToggle.tsx for more info.
-     */
     oldWowzaPath: `${pathPrefix}/wowza`,
     dev: `${pathPrefix}/dev`,
   };
 };
 
-/**
- * In other words, get the current site url without its url paths, i.e. `https://whoownswhat.justfix.org`
- */
 export const getSiteOrigin = () => `${window.location.protocol}//${window.location.host}`;

@@ -1,21 +1,16 @@
 import os
 import sys
-import subprocess
 import argparse
+import csv
 import time
 import yaml
-import copy
-import nycdb.dataset
-from nycdb.utility import list_wrap
-from urllib.parse import urlparse
-from typing import Literal, NamedTuple, Any, Tuple, Dict, List
+import tempfile
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Dict, List, Tuple, Iterable, Literal
+from urllib.parse import urlparse
 
-from portfoliograph.table import (
-    export_portfolios_table_json,
-    populate_portfolios_table,
-)
-from ocaevictions.table import OcaConfig, populate_oca_tables
+from portfoliograph.table import export_portfolios_table_json, populate_portfolios_table
 
 try:
     from dotenv import load_dotenv
@@ -35,12 +30,35 @@ TESTS_DIR = ROOT_DIR / "tests"
 DbConnection = Any
 
 
-class DbContext(NamedTuple):
+class DbContext(tuple):
     host: str
     database: str
     user: str
     password: str
     port: int
+
+    def __new__(cls, host: str, database: str, user: str, password: str, port: int):
+        return super().__new__(cls, (host, database, user, password, port))
+
+    @property
+    def host(self) -> str:
+        return self[0]
+
+    @property
+    def database(self) -> str:
+        return self[1]
+
+    @property
+    def user(self) -> str:
+        return self[2]
+
+    @property
+    def password(self) -> str:
+        return self[3]
+
+    @property
+    def port(self) -> int:
+        return self[4]
 
     @staticmethod
     def from_url(url: str) -> "DbContext":
@@ -50,8 +68,6 @@ class DbContext(NamedTuple):
         if parsed.username is None:
             raise ValueError("Database URL must have a username")
         if parsed.password is None:
-            # We might support password-less logins someday, but
-            # not right now.
             raise ValueError("Database URL must have a password")
         if parsed.hostname is None:
             raise ValueError("Database URL must have a hostname")
@@ -95,62 +111,419 @@ class DbContext(NamedTuple):
         return connect()
 
     def get_pg_env_and_args(self) -> Tuple[Dict[str, str], List[str]]:
-        """
-        Return an environment dictionary and command-line arguments that
-        can be passed to Postgres command-line tools (e.g. psql, pg_dump) to
-        connect to the database.
-        """
-
         env = os.environ.copy()
-        env["PGPASSWORD"] = db.password
-        args = ["-h", db.host, "-p", str(db.port), "-U", db.user, "-d", db.database]
+        env["PGPASSWORD"] = self.password
+        args = ["-h", self.host, "-p", str(self.port), "-U", self.user, "-d", self.database]
         return (env, args)
 
 
-class NycDbBuilder:
+@dataclass(frozen=True)
+class DatasetSpec:
+    name: str
+    table: str
+    csv_filename: str
+    columns: List[Tuple[str, str]]
+    primary_key: str | None = None
+
+
+DATASETS: Dict[str, DatasetSpec] = {
+    "chi_parcels": DatasetSpec(
+        name="chi_parcels",
+        table="chi_parcels",
+        csv_filename="chi_parcels.csv",
+        columns=[
+            ("pin", "text"),
+            ("pin10", "text"),
+            ("year", "text"),
+            ("class", "text"),
+            ("triad_name", "text"),
+            ("triad_code", "text"),
+            ("township_name", "text"),
+            ("township_code", "text"),
+            ("nbhd_code", "text"),
+            ("tax_code", "text"),
+            ("zip_code", "text"),
+            ("lon", "text"),
+            ("lat", "text"),
+            ("x_3435", "text"),
+            ("y_3435", "text"),
+            ("census_block_group_geoid", "text"),
+            ("census_block_geoid", "text"),
+            ("census_congressional_district_geoid", "text"),
+            ("census_congressional_district_num", "text"),
+            ("census_county_subdivision_geoid", "text"),
+            ("census_place_geoid", "text"),
+            ("census_puma_geoid", "text"),
+            ("census_school_district_elementary_geoid", "text"),
+            ("census_school_district_secondary_geoid", "text"),
+            ("census_school_district_unified_geoid", "text"),
+            ("census_state_representative_geoid", "text"),
+            ("census_state_representative_num", "text"),
+            ("census_state_senate_geoid", "text"),
+            ("census_state_senate_num", "text"),
+            ("census_tract_geoid", "text"),
+            ("census_zcta_geoid", "text"),
+            ("census_data_year", "text"),
+            ("census_acs5_congressional_district_geoid", "text"),
+            ("census_acs5_congressional_district_num", "text"),
+            ("census_acs5_county_subdivision_geoid", "text"),
+            ("census_acs5_place_geoid", "text"),
+            ("census_acs5_puma_geoid", "text"),
+            ("census_acs5_school_district_elementary_geoid", "text"),
+            ("census_acs5_school_district_secondary_geoid", "text"),
+            ("census_acs5_school_district_unified_geoid", "text"),
+            ("census_acs5_state_representative_geoid", "text"),
+            ("census_acs5_state_representative_num", "text"),
+            ("census_acs5_state_senate_geoid", "text"),
+            ("census_acs5_state_senate_num", "text"),
+            ("census_acs5_tract_geoid", "text"),
+            ("census_acs5_data_year", "text"),
+            ("cook_board_of_review_district_num", "text"),
+            ("cook_board_of_review_district_data_year", "text"),
+            ("cook_commissioner_district_num", "text"),
+            ("cook_commissioner_district_data_year", "text"),
+            ("cook_judicial_district_num", "text"),
+            ("cook_judicial_district_data_year", "text"),
+            ("cook_municipality_num", "text"),
+            ("cook_municipality_name", "text"),
+            ("cook_municipality_data_year", "text"),
+            ("ward_num", "text"),
+            ("ward_chicago_data_year", "text"),
+            ("ward_evanston_data_year", "text"),
+            ("chicago_community_area_num", "text"),
+            ("chicago_community_area_name", "text"),
+            ("chicago_community_area_data_year", "text"),
+            ("chicago_industrial_corridor_num", "text"),
+            ("chicago_industrial_corridor_name", "text"),
+            ("chicago_industrial_corridor_data_year", "text"),
+            ("chicago_police_district_num", "text"),
+            ("chicago_police_district_data_year", "text"),
+            ("econ_coordinated_care_area_num", "text"),
+            ("econ_coordinated_care_area_data_year", "text"),
+            ("econ_enterprise_zone_num", "text"),
+            ("econ_enterprise_zone_data_year", "text"),
+            ("econ_industrial_growth_zone_num", "text"),
+            ("econ_industrial_growth_zone_data_year", "text"),
+            ("econ_qualified_opportunity_zone_num", "text"),
+            ("econ_qualified_opportunity_zone_data_year", "text"),
+            ("econ_central_business_district_num", "text"),
+            ("econ_central_business_district_data_year", "text"),
+            ("env_flood_fema_sfha", "text"),
+            ("env_flood_fema_data_year", "text"),
+            ("env_flood_fs_factor", "text"),
+            ("env_flood_fs_risk_direction", "text"),
+            ("env_flood_fs_data_year", "text"),
+            ("env_ohare_noise_contour_no_buffer_bool", "text"),
+            ("env_ohare_noise_contour_half_mile_buffer_bool", "text"),
+            ("env_ohare_noise_contour_data_year", "text"),
+            ("env_airport_noise_dnl", "text"),
+            ("env_airport_noise_data_year", "text"),
+            ("school_elementary_district_geoid", "text"),
+            ("school_elementary_district_name", "text"),
+            ("school_secondary_district_geoid", "text"),
+            ("school_secondary_district_name", "text"),
+            ("school_unified_district_geoid", "text"),
+            ("school_unified_district_name", "text"),
+            ("school_school_year", "text"),
+            ("school_data_year", "text"),
+            ("tax_municipality_num", "text"),
+            ("tax_municipality_name", "text"),
+            ("tax_school_elementary_district_num", "text"),
+            ("tax_school_elementary_district_name", "text"),
+            ("tax_school_secondary_district_num", "text"),
+            ("tax_school_secondary_district_name", "text"),
+            ("tax_school_unified_district_num", "text"),
+            ("tax_school_unified_district_name", "text"),
+            ("tax_community_college_district_num", "text"),
+            ("tax_community_college_district_name", "text"),
+            ("tax_fire_protection_district_num", "text"),
+            ("tax_fire_protection_district_name", "text"),
+            ("tax_library_district_num", "text"),
+            ("tax_library_district_name", "text"),
+            ("tax_park_district_num", "text"),
+            ("tax_park_district_name", "text"),
+            ("tax_sanitation_district_num", "text"),
+            ("tax_sanitation_district_name", "text"),
+            ("tax_special_service_area_num", "text"),
+            ("tax_special_service_area_name", "text"),
+            ("tax_tif_district_num", "text"),
+            ("tax_tif_district_name", "text"),
+            ("tax_data_year", "text"),
+            ("access_cmap_walk_id", "text"),
+            ("access_cmap_walk_nta_score", "text"),
+            ("access_cmap_walk_total_score", "text"),
+            ("access_cmap_walk_data_year", "text"),
+            ("misc_subdivision_id", "text"),
+            ("misc_subdivision_data_year", "text"),
+            ("row_id", "text"),
+        ],
+    ),
+    "chi_owners": DatasetSpec(
+        name="chi_owners",
+        table="chi_owners",
+        csv_filename="chi_owners.csv",
+        columns=[
+            ("pin", "text"),
+            ("pin10", "text"),
+            ("year", "text"),
+            ("prop_address_full", "text"),
+            ("prop_address_city_name", "text"),
+            ("prop_address_state", "text"),
+            ("prop_address_zipcode_1", "text"),
+            ("mail_address_name", "text"),
+            ("mail_address_full", "text"),
+            ("mail_address_city_name", "text"),
+            ("mail_address_state", "text"),
+            ("mail_address_zipcode_1", "text"),
+            ("row_id", "text"),
+        ],
+    ),
+    "chi_permits": DatasetSpec(
+        name="chi_permits",
+        table="chi_permits",
+        csv_filename="chi_permits.csv",
+        columns=[
+            ("id", "text"),
+            ("permit_", "text"),
+            ("permit_status", "text"),
+            ("permit_milestone", "text"),
+            ("permit_type", "text"),
+            ("review_type", "text"),
+            ("application_start_date", "text"),
+            ("issue_date", "text"),
+            ("processing_time", "text"),
+            ("street_number", "text"),
+            ("street_direction", "text"),
+            ("street_name", "text"),
+            ("work_type", "text"),
+            ("work_description", "text"),
+            ("permit_condition", "text"),
+            ("building_fee_paid", "text"),
+            ("zoning_fee_paid", "text"),
+            ("other_fee_paid", "text"),
+            ("subtotal_paid", "text"),
+            ("building_fee_unpaid", "text"),
+            ("zoning_fee_unpaid", "text"),
+            ("other_fee_unpaid", "text"),
+            ("subtotal_unpaid", "text"),
+            ("building_fee_waived", "text"),
+            ("building_fee_subtotal", "text"),
+            ("zoning_fee_subtotal", "text"),
+            ("other_fee_subtotal", "text"),
+            ("zoning_fee_waived", "text"),
+            ("other_fee_waived", "text"),
+            ("subtotal_waived", "text"),
+            ("total_fee", "text"),
+            ("contact_1_type", "text"),
+            ("contact_1_name", "text"),
+            ("contact_1_city", "text"),
+            ("contact_1_state", "text"),
+            ("contact_1_zipcode", "text"),
+            ("contact_2_type", "text"),
+            ("contact_2_name", "text"),
+            ("contact_2_city", "text"),
+            ("contact_2_state", "text"),
+            ("contact_2_zipcode", "text"),
+            ("contact_3_type", "text"),
+            ("contact_3_name", "text"),
+            ("contact_3_city", "text"),
+            ("contact_3_state", "text"),
+            ("contact_3_zipcode", "text"),
+            ("contact_4_type", "text"),
+            ("contact_4_name", "text"),
+            ("contact_4_city", "text"),
+            ("contact_4_state", "text"),
+            ("contact_4_zipcode", "text"),
+            ("contact_5_type", "text"),
+            ("contact_5_name", "text"),
+            ("contact_5_city", "text"),
+            ("contact_5_state", "text"),
+            ("contact_5_zipcode", "text"),
+            ("contact_6_type", "text"),
+            ("contact_6_name", "text"),
+            ("contact_6_city", "text"),
+            ("contact_6_state", "text"),
+            ("contact_6_zipcode", "text"),
+            ("contact_7_type", "text"),
+            ("contact_7_name", "text"),
+            ("contact_7_city", "text"),
+            ("contact_7_state", "text"),
+            ("contact_7_zipcode", "text"),
+            ("contact_8_type", "text"),
+            ("contact_8_name", "text"),
+            ("contact_8_city", "text"),
+            ("contact_8_state", "text"),
+            ("contact_8_zipcode", "text"),
+            ("contact_9_type", "text"),
+            ("contact_9_name", "text"),
+            ("contact_9_city", "text"),
+            ("contact_9_state", "text"),
+            ("contact_9_zipcode", "text"),
+            ("contact_10_type", "text"),
+            ("contact_10_name", "text"),
+            ("contact_10_city", "text"),
+            ("contact_10_state", "text"),
+            ("contact_10_zipcode", "text"),
+            ("contact_11_type", "text"),
+            ("contact_11_name", "text"),
+            ("contact_11_city", "text"),
+            ("contact_11_state", "text"),
+            ("contact_11_zipcode", "text"),
+            ("contact_12_type", "text"),
+            ("contact_12_name", "text"),
+            ("contact_12_city", "text"),
+            ("contact_12_state", "text"),
+            ("contact_12_zipcode", "text"),
+            ("contact_13_type", "text"),
+            ("contact_13_name", "text"),
+            ("contact_13_city", "text"),
+            ("contact_13_state", "text"),
+            ("contact_13_zipcode", "text"),
+            ("contact_14_type", "text"),
+            ("contact_14_name", "text"),
+            ("contact_14_city", "text"),
+            ("contact_14_state", "text"),
+            ("contact_14_zipcode", "text"),
+            ("contact_15_type", "text"),
+            ("contact_15_name", "text"),
+            ("contact_15_city", "text"),
+            ("contact_15_state", "text"),
+            ("contact_15_zipcode", "text"),
+            ("reported_cost", "text"),
+            ("pin_list", "text"),
+            ("community_area", "text"),
+            ("census_tract", "text"),
+            ("ward", "text"),
+            ("xcoordinate", "text"),
+            ("ycoordinate", "text"),
+            ("latitude", "text"),
+            ("longitude", "text"),
+            ("location", "text"),
+        ],
+    ),
+    "chi_violations": DatasetSpec(
+        name="chi_violations",
+        table="chi_violations",
+        csv_filename="chi_violations.csv",
+        columns=[
+            ("id", "text"),
+            ("violation_last_modified_date", "text"),
+            ("violation_date", "text"),
+            ("violation_code", "text"),
+            ("violation_status", "text"),
+            ("violation_status_date", "text"),
+            ("violation_description", "text"),
+            ("violation_location", "text"),
+            ("violation_inspector_comments", "text"),
+            ("violation_ordinance", "text"),
+            ("inspector_id", "text"),
+            ("inspection_number", "text"),
+            ("inspection_status", "text"),
+            ("inspection_waived", "text"),
+            ("inspection_category", "text"),
+            ("department_bureau", "text"),
+            ("address", "text"),
+            ("street_number", "text"),
+            ("street_direction", "text"),
+            ("street_name", "text"),
+            ("street_type", "text"),
+            ("property_group", "text"),
+            ("ssa", "text"),
+            ("latitude", "text"),
+            ("longitude", "text"),
+            ("location", "text"),
+        ],
+    ),
+    "chi_311": DatasetSpec(
+        name="chi_311",
+        table="chi_311",
+        csv_filename="chi_311.csv",
+        columns=[
+            ("sr_number", "text"),
+            ("sr_type", "text"),
+            ("sr_short_code", "text"),
+            ("created_department", "text"),
+            ("owner_department", "text"),
+            ("status", "text"),
+            ("origin", "text"),
+            ("created_date", "text"),
+            ("last_modified_date", "text"),
+            ("closed_date", "text"),
+            ("street_address", "text"),
+            ("city", "text"),
+            ("state", "text"),
+            ("zip_code", "text"),
+            ("street_number", "text"),
+            ("street_direction", "text"),
+            ("street_name", "text"),
+            ("street_type", "text"),
+            ("duplicate", "text"),
+            ("legacy_record", "text"),
+            ("legacy_sr_number", "text"),
+            ("parent_sr_number", "text"),
+            ("community_area", "text"),
+            ("ward", "text"),
+            ("electrical_district", "text"),
+            ("electricity_grid", "text"),
+            ("police_sector", "text"),
+            ("police_district", "text"),
+            ("police_beat", "text"),
+            ("precinct", "text"),
+            ("sanitation_division_days", "text"),
+            ("created_hour", "text"),
+            ("created_day_of_week", "text"),
+            ("created_month", "text"),
+            ("x_coordinate", "text"),
+            ("y_coordinate", "text"),
+            ("latitude", "text"),
+            ("longitude", "text"),
+            ("location", "text"),
+        ],
+    ),
+    "chi_geographies": DatasetSpec(
+        name="chi_geographies",
+        table="chi_geographies",
+        csv_filename="chi_geographies.csv",
+        columns=[
+            ("geo_type", "text"),
+            ("area_num_1", "text"),
+            ("area_numbe", "text"),
+            ("community", "text"),
+            ("edit_date", "text"),
+            ("globalid", "text"),
+            ("objectid", "text"),
+            ("shape_area", "text"),
+            ("shape_len", "text"),
+            ("st_area_sh", "text"),
+            ("st_length_", "text"),
+            ("the_geom", "text"),
+            ("ward", "text"),
+            ("ward_id", "text"),
+            ("zip", "text"),
+        ],
+    ),
+}
+
+
+class ChiDbBuilder:
     db: DbContext
     conn: DbConnection
     data_dir: Path
-    oca_config: OcaConfig
     is_testing: bool
 
-    def __init__(self, db: DbContext, oca_config: OcaConfig, is_testing: bool) -> None:
+    def __init__(self, db: DbContext, is_testing: bool, data_dir: Path | None = None) -> None:
         self.db = db
-        self.oca_config = oca_config
         self.is_testing = is_testing
 
-        if is_testing:
-            data_dir = ROOT_DIR / "tests" / "data"
-        else:
-            data_dir = ROOT_DIR / "nycdb" / "data"
+        if data_dir is None:
+            if is_testing:
+                data_dir = ROOT_DIR / "tests" / "data"
+            else:
+                data_dir = ROOT_DIR / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir = data_dir
 
         self.conn = db.connection()
-
-        with self.conn.cursor() as cur:
-            cur.execute("CREATE EXTENSION IF NOT EXISTS POSTGIS;")
-
-    def call_nycdb(self, *args: str) -> None:
-        db = self.db
-        subprocess.check_call(
-            [
-                "nycdb",
-                *args,
-                "-H",
-                db.host,
-                "-U",
-                db.user,
-                "-P",
-                db.password,
-                "-D",
-                db.database,
-                "--port",
-                str(db.port),
-                "--root-dir",
-                str(self.data_dir),
-            ]
-        )
 
     def do_tables_exist(self, *names: str) -> bool:
         with self.conn:
@@ -167,40 +540,81 @@ class NycDbBuilder:
                 with self.conn.cursor() as cursor:
                     cursor.execute(f"DROP TABLE IF EXISTS {name}")
 
-    def delete_downloaded_data(self, *tables: str) -> None:
-        if self.is_testing:
-            # We don't want to delete data from the testing fixture dir,
-            # so do nothing.
+    def create_table(self, spec: DatasetSpec) -> None:
+        column_defs = [f"{name} {sql_type}" for name, sql_type in spec.columns]
+        if spec.primary_key:
+            column_defs.append(f"PRIMARY KEY ({spec.primary_key})")
+        columns_sql = ",\n    ".join(column_defs)
+        sql = f"""
+        CREATE TABLE IF NOT EXISTS {spec.table} (
+            {columns_sql}
+        );
+        """
+        with self.conn:
+            with self.conn.cursor() as cursor:
+                cursor.execute(sql)
+
+    def load_csv(self, spec: DatasetSpec) -> None:
+        csv_path = self.data_dir / spec.csv_filename
+        if not csv_path.exists():
+            print(f"Skipping {spec.name}: {csv_path.name} not found in {self.data_dir}.")
             return
-        for tablename in tables:
-            csv_file = self.data_dir / f"{tablename}.csv"
-            if csv_file.exists():
-                print(f"Removing {csv_file.name} so it can be re-downloaded.")
-                csv_file.unlink()
+
+        expected_column_set = {name for name, _ in spec.columns}
+        with self.conn:
+            with self.conn.cursor() as cursor:
+                cursor.execute(f"TRUNCATE {spec.table}")
+                with csv_path.open("r", newline="") as f:
+                    header = next(csv.reader(f), None)
+                    if not header:
+                        raise ValueError(f"{csv_path} is missing a CSV header row.")
+
+                    columns_to_load = [name for name in header if name in expected_column_set]
+                    if not columns_to_load:
+                        raise ValueError(
+                            f"{csv_path} has no columns matching table {spec.table}."
+                        )
+
+                    columns = ",".join(columns_to_load)
+                    has_unknown_columns = len(columns_to_load) != len(header)
+                    f.seek(0)
+
+                    if has_unknown_columns:
+                        # Legacy fixtures can include columns that are no longer
+                        # present in the table schema; write a filtered CSV stream.
+                        reader = csv.DictReader(f)
+                        with tempfile.NamedTemporaryFile(mode="w+", newline="") as filtered:
+                            writer = csv.DictWriter(filtered, fieldnames=columns_to_load)
+                            writer.writeheader()
+                            for row in reader:
+                                writer.writerow({name: row.get(name, "") for name in columns_to_load})
+                            filtered.seek(0)
+                            cursor.copy_expert(
+                                f"COPY {spec.table} ({columns}) FROM STDIN WITH CSV HEADER",
+                                filtered,
+                            )
+                    else:
+                        cursor.copy_expert(
+                            f"COPY {spec.table} ({columns}) FROM STDIN WITH CSV HEADER",
+                            f,
+                        )
+        print(f"Loaded {spec.name} from {csv_path.name}.")
 
     def ensure_dataset(self, name: str, force_refresh: bool = False) -> None:
-        dataset = nycdb.dataset.datasets()[name]
-        tables: List[str] = (
-            [schema["table_name"] for schema in list_wrap(dataset["schema"])]
-            if "schema" in dataset
-            else []
-        )
-        tables_str = "table" if len(tables) == 1 else "tables"
-        print(
-            f"Ensuring NYCDB dataset '{name}' is loaded with {len(tables)} {tables_str}..."
-        )
+        spec = DATASETS[name]
+        print(f"Ensuring Chicago dataset '{name}' is loaded...")
 
         if force_refresh:
-            self.drop_tables(*tables)
-            self.delete_downloaded_data(*tables)
-        if not tables or not self.do_tables_exist(*tables):
-            print(f"Table {name} not found in the database. Downloading...")
-            self.call_nycdb("--download", name)
-            print(f"Loading {name} into the database...")
-            self.call_nycdb("--load", name)
-        elif not self.is_testing:
-            print(f"Table {name} already exists. Verifying row count...")
-            self.call_nycdb("--verify", name)
+            self.drop_tables(spec.table)
+
+        if not self.do_tables_exist(spec.table):
+            self.create_table(spec)
+
+        if not self.is_testing or force_refresh:
+            self.load_csv(spec)
+        else:
+            # For tests, always load from fixtures if present.
+            self.load_csv(spec)
 
     def run_sql_file(self, sqlpath: Path) -> None:
         sql = sqlpath.read_text()
@@ -210,15 +624,12 @@ class NycDbBuilder:
 
     def build(self, force_refresh: bool) -> None:
         if self.is_testing:
-            print("Loading the database with test data.")
+            print("Loading the database with Chicago test data.")
         else:
-            print("Loading the database with real data (this could take a while).")
+            print("Loading the database with Chicago data (this could take a while).")
 
         for dataset in get_dataset_dependencies(for_api=True):
             self.ensure_dataset(dataset, force_refresh=force_refresh)
-
-        with self.conn.cursor() as cur:
-            populate_oca_tables(cur, self.oca_config)
 
         for sqlpath in get_sqlfile_paths("pre"):
             print(f"Running {sqlpath.name}...")
@@ -244,147 +655,21 @@ def get_sqlfile_paths(type: Literal["pre", "post", "all"]) -> List[Path]:
     post_sql = [SQL_DIR / sqlfile for sqlfile in WOW_YML["wow_post_sql"]]
     if type == "pre":
         return pre_sql
-    elif type == "post":
+    if type == "post":
         return post_sql
-    else:
-        return pre_sql + post_sql
+    return pre_sql + post_sql
 
 
 def dbshell(db: DbContext):
     env, args = db.get_pg_env_and_args()
+    import subprocess
+
     retval = subprocess.call(["psql", *args], env=env)
     sys.exit(retval)
 
 
-def loadtestdata(db: DbContext, oca_config: OcaConfig):
-    """
-    Loads test data previously created from the 'exporttestdata' command into
-    the database.
-    """
-
-    oca_config_testing = copy.deepcopy(oca_config)
-    oca_config_testing.is_testing = True
-
-    sqlfile = ROOT_DIR / "tests" / "exported_test_data.sql"
-    sql = sqlfile.read_text()
-
-    NycDbBuilder(db, oca_config_testing, is_testing=True).build(force_refresh=False)
-
-    print(f"Loading test data from {sqlfile}...")
-    with db.connection() as conn:
-        cur = conn.cursor()
-        cur.execute(sql)
-    print("Loaded test data into database.")
-
-
-def export_table_subset(db: DbContext, table_name: str, query: str) -> str:
-    """
-    Returns SQL INSERT statements that will populate the given table
-    with *only* the rows specified by the given query.
-    """
-
-    temp_table_name = f"temp_table_for_export_as_{table_name}"
-
-    with db.connection() as conn:
-        cur = conn.cursor()
-        cur.execute(f"DROP TABLE IF EXISTS {temp_table_name}")
-        cur.execute(f"CREATE TABLE {temp_table_name} AS {query}")
-
-    try:
-        env, args = db.get_pg_env_and_args()
-        sql = (
-            subprocess.check_output(
-                [
-                    "pg_dump",
-                    *args,
-                    "--table",
-                    temp_table_name,
-                    "--data-only",
-                    "--column-inserts",
-                ],
-                env=env,
-            )
-            .decode("ascii")
-            .replace(temp_table_name, table_name)
-            .replace("wow.", "public.")
-        )
-        return f"DELETE FROM public.{table_name};\n\n{sql}"
-    finally:
-        with db.connection() as conn:
-            cur = conn.cursor()
-            cur.execute(f"DROP TABLE {temp_table_name}")
-
-
-def exporttestdata(db: DbContext):
-    """
-    This command must be run on a fully populated database, but the SQL
-    it generates can be useful for test suites and developers who want to
-    work on WoW without first processing lots of data.
-    """
-
-    # This is the BBL of 654 PARK PLACE, BROOKLYN, which is an
-    # All Year Management property.
-    bbl = "3012380016"
-
-    with db.connection() as conn:
-        cur = conn.cursor()
-        # Get the registration ID for the BBL we care about.
-        cur.execute(
-            f"SELECT DISTINCT registrationid FROM wow_bldgs WHERE bbl = '{bbl}'"
-        )
-        reg_id = cur.fetchone()[0]
-
-    # Some additional data for wow_portfolios is added manually
-    with open(TESTS_DIR / "manual_test_data.sql") as f:
-        extra_sql = f.read()
-
-    sql = "\n".join(
-        [
-            export_table_subset(
-                db,
-                "hpd_business_addresses",
-                # This grabs only the subset of HPD business addresses
-                # used by get_regids_from_regid_by_bisaddr() for the
-                # registration ID we care about.
-                f"SELECT * FROM hpd_business_addresses WHERE {reg_id} = any(uniqregids)",
-            ),
-            export_table_subset(
-                db,
-                "hpd_contacts",
-                # This grabs only the subset of HPD contacts
-                # used by get_regids_from_regid_by_owners() for the
-                # registration ID we care about.
-                f"SELECT * FROM hpd_contacts WHERE registrationid = {reg_id}",
-            ),
-            export_table_subset(
-                db,
-                "wow_bldgs",
-                # TODO: This is basically a copy-paste of the body of the
-                # get_assoc_addrs_from_bbl() function defined in
-                # search_function.sql. It would be nice if we could just
-                # reuse that code instead of duplicating it here.
-                f"""
-            SELECT bldgs.* FROM wow_bldgs AS bldgs
-            INNER JOIN (
-                (SELECT DISTINCT registrationid FROM wow_bldgs r WHERE r.bbl = '{bbl}') userreg
-                LEFT JOIN LATERAL
-                (
-                SELECT
-                    unnest(anyarray_uniq(array_cat_agg(merged.uniqregids))) AS regid
-                FROM (
-                    SELECT uniqregids FROM get_regids_from_regid_by_bisaddr(userreg.registrationid)
-                    UNION SELECT uniqregids FROM get_regids_from_regid_by_owners(
-                        userreg.registrationid)
-                ) AS merged
-                ) merged2 ON true
-            ) assocregids ON (bldgs.registrationid = assocregids.regid)
-            """,
-            ),
-            extra_sql,
-        ]
-    )
-
-    print(sql)
+def loadtestdata(db: DbContext):
+    ChiDbBuilder(db, is_testing=True).build(force_refresh=True)
 
 
 if __name__ == "__main__":
@@ -397,30 +682,12 @@ if __name__ == "__main__":
         help="Set database URL. Defaults to the DATABASE_URL env variable.",
         default=os.environ.get("DATABASE_URL", ""),
     )
-    parser.add_argument(
-        "--oca_s3_bucket",
-        help="S3 bucket for OCA files. Defaults to OCA_S3_BUCKET environment variable.",
-        default=os.environ.get("OCA_S3_BUCKET", ""),
-    )
-    parser.add_argument(
-        "--aws_access_key",
-        help="AWS Key for OCA S3 files. Defaults to AWS_ACCESS_KEY environment variable.",
-        default=os.environ.get("AWS_ACCESS_KEY", ""),
-    )
-    parser.add_argument(
-        "--aws_secret_key",
-        help="AWS Secret for OCA S3 files. Defaults to AWS_SECRET_KEY environment variable.",
-        default=os.environ.get("AWS_SECRET_KEY", ""),
-    )
 
     parser_exportgraph = subparsers.add_parser("exportgraph")
     parser_exportgraph.set_defaults(cmd="exportgraph")
     parser_exportgraph.add_argument(
         "-o", "--outfile", help="JSON filename to export to.", default="portfolios.json"
     )
-
-    parser_exporttestdata = subparsers.add_parser("exporttestdata")
-    parser_exporttestdata.set_defaults(cmd="exporttestdata")
 
     parser_loadtestdata = subparsers.add_parser("loadtestdata")
     parser_loadtestdata.set_defaults(cmd="loadtestdata")
@@ -430,8 +697,7 @@ if __name__ == "__main__":
         "--update",
         action="store_true",
         help=(
-            "Delete downloaded data & tables for the "
-            "data sets so they can be re-downloaded and re-installed."
+            "Delete tables for the datasets so they can be re-installed."
         ),
     )
     parser_builddb.set_defaults(cmd="builddb")
@@ -457,50 +723,16 @@ if __name__ == "__main__":
             )
         sys.exit(1)
 
-    if not all([args.oca_s3_bucket, args.aws_access_key, args.aws_secret_key]):
-        print(
-            "AWS Access Keys and S3 Bucket name for private OCAfiles are missing.\n"
-            "The WOW database will still be built but eviction filings data will be missing.\n"
-            "If you have access to the OCA S3, please define the \n"
-            "variables in the environment or pass them in via the options:\n"
-            "--oca_s3_bucket, --aws_access_key, --aws_secret_key"
-        )
-        if dotenv_loaded:
-            print("You can also define them in a .env file.")
-        else:
-            print(
-                'If you run "pip install dotenv", you can also define them '
-                "in a .env file."
-            )
-        sys.exit(1)
-
     db = DbContext.from_url(args.database_url)
 
     cmd = getattr(args, "cmd", "")
 
-    if cmd in ["loadtestdata", "builddb"]:
-
-        oca_config = OcaConfig(
-            sql_pre_files=WOW_YML["oca_pre_sql"],
-            sql_post_files=WOW_YML["oca_post_sql"],
-            data_dir=ROOT_DIR / "nycdb" / "data",
-            test_dir=ROOT_DIR / "tests" / "data",
-            sql_dir=SQL_DIR,
-            aws_key=args.aws_access_key,
-            aws_secret=args.aws_secret_key,
-            s3_bucket=args.oca_s3_bucket,
-            s3_objects=WOW_YML["oca_s3_objects"],
-            is_testing=True if cmd == "loadtestdata" else False,
-        )
-
-    if cmd == "exporttestdata":
-        exporttestdata(db)
-    elif cmd == "loadtestdata":
-        loadtestdata(db, oca_config)
+    if cmd == "loadtestdata":
+        loadtestdata(db)
     elif cmd == "dbshell":
         dbshell(db)
     elif cmd == "builddb":
-        NycDbBuilder(db, oca_config, is_testing=False).build(force_refresh=args.update)
+        ChiDbBuilder(db, is_testing=False).build(force_refresh=args.update)
     elif cmd == "exportgraph":
         with open(args.outfile, "w") as f:
             with db.connection() as conn:

@@ -1,8 +1,8 @@
 [![CircleCI](https://circleci.com/gh/JustFixNYC/who-owns-what.svg?style=svg)](https://circleci.com/gh/JustFixNYC/who-owns-what)
 
-# Who owns what in nyc?
+# Who owns what in Chicago?
 
-The Who owns What project is a new resource for community organizers and tenant leaders to demystify property ownership and shell company networks across New York City.
+The Who owns What project is a resource for community organizers and tenant leaders to demystify property ownership and shell company networks across Chicago.
 
 With this website, you can find crucial information about who is responsible for your building. The site utilizes a database of 160k other properties to connect the dots and discover other properties that your landlord might own or be associated with. Use this tool to discover what buildings in your neighborhood to organize in, what communities your landlord might be targeting, and if your building might be financially overleveraged.
 
@@ -12,11 +12,10 @@ With this website, you can find crucial information about who is responsible for
 
 ## Architecture
 
-This site is built on top of the critical work done by [@aepyornis](https://github.com/aepyornis) on the [nycdb](https://github.com/nycdb/nycdb) project, which is used to cleanly extract, sanitize, and load [HPD Registration data](http://www1.nyc.gov/site/hpd/about/open-data.page) into a PostgreSQL instance.
+This site is built on a Chicago-focused data pipeline that loads open data into a PostgreSQL instance.
 
 Backend logic and data manipulation is largely handled by making calls to PostgreSQL functions and prebuilding results into tables whenever possible to avoid complex queries made per-request. for the SQL code that provides this functionality, see:
 
-- the [hpd-registration](https://github.com/nycdb/nycdb/tree/master/src/nycdb/sql/hpd_registrations) scripts of `nycdb`, and
 - the [sql](./sql) directory of this repository.
 
 #### Backend

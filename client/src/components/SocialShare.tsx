@@ -23,10 +23,10 @@ export type SocialShareContent = {
 };
 
 const defaultSocialContent: SocialShareContent = {
-  tweet: t`Who’s responsible for issues in your apartment & building? #WhoOwnsWhat helps you research NYC property owners using public, open data. A free tool built by @JustFixNYC, it works on any device with an internet connection! Search your address here: `,
+  tweet: t`Who’s responsible for issues in your apartment & building? #WhoOwnsWhat helps you research Chicago property owners using public, open data. A free tool built by @JustFixOrg, it works on any device with an internet connection! Search your address here: `,
   emailSubject: t`All the public info on your landlord`,
   getEmailBody: (url: string) =>
-    t`Who Owns What is a free tool built by JustFix to research property owners in NYC. It has helped over 200,000 New Yorkers find out who really owns their building, what other buildings that their landlord or management company owns, and other critical information about code violations, evictions, rent stabilized units, and so much more in any given building. You can look up any residential building located in NYC, even public housing (NYCHA) buildings! Search your address here: ${url}`,
+    t`Who Owns What is a free tool built by JustFix to research property owners in Chicago. It helps tenants and organizers find out who really owns their building, what other properties their landlord owns, and other critical information like permits, violations, and 311 requests. Search your address here: ${url}`,
 };
 
 export type SocialShareLocation =
