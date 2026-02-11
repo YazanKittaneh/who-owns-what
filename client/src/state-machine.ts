@@ -107,6 +107,7 @@ async function getSearchResult(addr: SearchAddress, useNewPortfolioMethod: boole
       context: { searchAddrParams: addr, searchAddrPin: undefined },
     };
   } else if (apiResults.addrs.length === 0) {
+
     const buildingInfoResults = await APIClient.getBuildingInfo(apiResults.geosearch.pin);
     const buildingInfo = buildingInfoResults.result[0];
 
@@ -153,24 +154,18 @@ const createSearchInvoke = (): any => ({
   onDone: [
     {
       target: "pinNotFound",
-      actions: assign((_ctx, event: DoneInvokeEvent<WowState>) => {
-        if (event.data.value !== "pinNotFound") return {};
-        return event.data.context;
-      }),
+      cond: (_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.value === "pinNotFound",
+      actions: assign((_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.context),
     },
     {
       target: "unregisteredFound",
-      actions: assign((_ctx, event: DoneInvokeEvent<WowState>) => {
-        if (event.data.value !== "unregisteredFound") return {};
-        return event.data.context;
-      }),
+      cond: (_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.value === "unregisteredFound",
+      actions: assign((_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.context),
     },
     {
       target: "portfolioFound",
-      actions: assign((_ctx, event: DoneInvokeEvent<WowState>) => {
-        if (event.data.value !== "portfolioFound") return {};
-        return event.data.context;
-      }),
+      cond: (_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.value === "portfolioFound",
+      actions: assign((_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.context),
     },
   ],
   onError: {
