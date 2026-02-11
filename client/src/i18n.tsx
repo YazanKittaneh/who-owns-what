@@ -15,10 +15,17 @@ import { Link as JFCLLink } from "@justfixnyc/component-library";
 
 import catalogEn from "./locales/en/messages";
 import catalogEs from "./locales/es/messages";
-import { LocationDescriptorObject, History } from "history";
 import { SupportedLocale, defaultLocale, isSupportedLocale } from "./i18n-base";
 import { logAmplitudeEvent } from "./components/Amplitude";
 import JFCLLinkInternal from "components/JFCLLinkInternal";
+
+type LocationDescriptorObject = {
+  pathname?: string;
+  search?: string;
+  hash?: string;
+  state?: unknown;
+};
+type LocationDescriptor = string | LocationDescriptorObject;
 
 /** The structure for message catalogs that lingui expects. */
 type LocaleCatalog = {
@@ -111,8 +118,8 @@ export const I18n = withRouter(function I18nWithoutRouter(
  */
 export function localePrefixPath(
   routerProps: RouteComponentProps,
-  path: History.LocationDescriptor
-): History.LocationDescriptor {
+  path: LocationDescriptor
+): LocationDescriptor {
   const locale = localeFromRouter(routerProps);
 
   if (typeof path === "string") {
@@ -259,7 +266,7 @@ export function JFCLLocaleLink(props: LinkProps & { to: string; icon?: "internal
  * the current locale.
  */
 export function LocaleRedirect(
-  props: Omit<RedirectProps, "to"> & { to: LocationDescriptorObject }
+  props: Omit<RedirectProps, "to"> & { to: LocationDescriptor }
 ): JSX.Element {
   return (
     <Route render={(rProps) => <Redirect {...props} to={localePrefixPath(rProps, props.to)} />} />

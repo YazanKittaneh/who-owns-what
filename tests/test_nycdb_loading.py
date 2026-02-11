@@ -1,51 +1,70 @@
-from .factories.hpd_violations import HpdViolations
-from .factories.pluto_20v8 import Pluto20v8
-from .factories.pluto_latest import PlutoLatest
-from .factories.changes_summary import ChangesSummary
+from .factories.chi_parcels import ChiParcels
+from .factories.chi_owners import ChiOwners
+from .factories.chi_violations import ChiViolations
 
 
 def test_loading_violations_works(db, nycdb_ctx):
     nycdb_ctx.write_csv(
-        "hpd_violations.csv", [HpdViolations(ViolationID="123", NOVDescription="boop")]
+        "chi_violations.csv",
+        [
+            ChiViolations(
+                id="V123",
+                violation_status="Open",
+                street_number="123",
+                street_name="FUNKY",
+                street_type="ST",
+            )
+        ],
     )
-    nycdb_ctx.load_dataset("hpd_violations")
+    nycdb_ctx.load_dataset("chi_violations")
     with db.cursor() as cur:
-        cur.execute("select * from hpd_violations where ViolationID='123'")
-        assert cur.fetchone()["novdescription"] == "boop"
+        cur.execute("select * from chi_violations where id='V123'")
+        row = cur.fetchone()
+        assert row["violation_status"] == "Open"
 
 
-def test_loading_pluto_latest_works(db, nycdb_ctx):
-    # note: some fields, like census tract, are renamed in the nycdb sql
+def test_loading_parcels_with_owners_works(db, nycdb_ctx):
     nycdb_ctx.write_csv(
-        "pluto_latest.csv", [PlutoLatest(bbl="4116700053", censustract2010="176")]
+        "chi_parcels.csv",
+        [
+            ChiParcels(
+                pin="12345678901234",
+                pin10="1234567890",
+                year="2024",
+                PY_class="2",
+                zip_code="60601",
+                lat="41.88",
+                lon="-87.63",
+                ward_num="42",
+                chicago_community_area_name="Loop",
+                census_tract_geoid="17031010100",
+            )
+        ],
     )
-    nycdb_ctx.load_dataset("pluto_latest")
-    with db.cursor() as cur:
-        cur.execute("select * from pluto_latest where bbl='4116700053'")
-        assert cur.fetchone()["ct2010"] == "176"
-
-
-def test_loading_pluto_zip_works(db, nycdb_ctx):
-    nycdb_ctx.write_zip(
-        "pluto_20v8.zip",
-        {
-            "PLUTO_for_WEB/BK_20v8.csv": [
-                Pluto20v8(histdist="Funky Historic District", address="FUNKY STREET"),
-                Pluto20v8(histdist="Monkey Historic District", address="MONKEY STREET"),
-            ]
-        },
-    )
-    nycdb_ctx.load_dataset("pluto_20v8")
-    with db.cursor() as cur:
-        cur.execute("select * from pluto_20v8 where histdist='Funky Historic District'")
-        assert cur.fetchone()["address"] == "FUNKY STREET"
-
-
-def test_loading_changes_summary_works(db, nycdb_ctx):
     nycdb_ctx.write_csv(
-        "changes-summary.csv", [ChangesSummary(PY_421a="blarg", ownername="BOOP JONES")]
+        "chi_owners.csv",
+        [
+            ChiOwners(
+                pin="12345678901234",
+                pin10="1234567890",
+                year="2024",
+                prop_address_full="100 FUNKY ST",
+                prop_address_city_name="CHICAGO",
+                prop_address_state="IL",
+                prop_address_zipcode_1="60601",
+                mail_address_name="FUNKY HOLDINGS LLC",
+                mail_address_full="1 MAIN ST",
+                mail_address_city_name="CHICAGO",
+                mail_address_state="IL",
+                mail_address_zipcode_1="60601",
+                row_id="OWN1",
+            )
+        ],
     )
-    nycdb_ctx.load_dataset("rentstab_summary")
+    nycdb_ctx.load_dataset("chi_parcels")
+    nycdb_ctx.load_dataset("chi_owners")
     with db.cursor() as cur:
-        cur.execute("select * from rentstab_summary where a421='blarg'")
-        assert cur.fetchone()["ownername"] == "BOOP JONES"
+        cur.execute("select * from chi_parcels where pin='12345678901234'")
+        assert cur.fetchone()["zip_code"] == "60601"
+        cur.execute("select * from chi_owners where row_id='OWN1'")
+        assert cur.fetchone()["mail_address_name"] == "FUNKY HOLDINGS LLC"

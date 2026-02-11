@@ -1,24 +1,16 @@
 import { searchAddressToString } from "./AddressSearch";
 
-describe("searchAddressToString()", () => {
-  it("works when housenumber is a string", () => {
+describe("searchAddressToString", () => {
+  it("formats address text", () => {
     expect(
       searchAddressToString({
-        bbl: "1234567890",
-        housenumber: "150",
-        streetname: "COURT STREET",
-        boro: "BROOKLYN",
+        pin: "12345678901234",
+        housenumber: "123",
+        streetname: "MAIN ST",
+        city: "Chicago",
+        state: "IL",
+        zip: "60601",
       })
-    ).toBe("150 COURT STREET, BROOKLYN");
-  });
-
-  it("works when housenumber is undefined", () => {
-    expect(
-      searchAddressToString({
-        bbl: "1234567890",
-        streetname: "GOWANUS HOUSES",
-        boro: "BROOKLYN",
-      })
-    ).toBe("GOWANUS HOUSES, BROOKLYN");
+    ).toBe("123 MAIN ST, Chicago, IL");
   });
 });

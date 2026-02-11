@@ -26,7 +26,6 @@ import { useMachine } from "@xstate/react";
 
 import HomePage from "./HomePage";
 import AddressPage from "./AddressPage";
-import BBLPage from "./BBLPage";
 import AboutPage from "./AboutPage";
 import HowToUsePage from "./HowToUsePage";
 import MethodologyPage from "./Methodology";
@@ -53,8 +52,6 @@ import { JFLogo } from "components/JFLogo";
 import { STANDALONE_PAGES } from "components/StandalonePage";
 import { JFLogoDivider } from "components/JFLogoDivider";
 import { LoadingPage } from "components/Loader";
-import BBLSeparatedPage from "./BBLSeparatedPage";
-import DistrictAlertsPage from "./DistrictAlertsPage";
 
 const BRANCH_NAME = process.env.REACT_APP_BRANCH;
 
@@ -122,14 +119,6 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
         render={(props) => <AddressPage currentTab={1} {...machineProps} {...props} />}
       />
       <Route
-        path={paths.legacy.addressPage.timeline}
-        render={(props) => <AddressPage currentTab={2} {...machineProps} {...props} />}
-      />
-      <Route
-        path={paths.legacy.addressPage.summary}
-        render={(props) => <AddressPage currentTab={3} {...machineProps} {...props} />}
-      />
-      <Route
         path={paths.addressPage.overview}
         render={(props) => (
           <AddressPage
@@ -150,41 +139,6 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
             {...props}
             useNewPortfolioMethod={allowChangingPortfolioMethod}
           />
-        )}
-      />
-      <Route
-        path={paths.addressPage.timeline}
-        render={(props) => (
-          <AddressPage
-            currentTab={2}
-            {...machineProps}
-            {...props}
-            useNewPortfolioMethod={allowChangingPortfolioMethod}
-          />
-        )}
-      />
-      <Route
-        path={paths.addressPage.summary}
-        render={(props) => (
-          <AddressPage
-            currentTab={3}
-            {...machineProps}
-            {...props}
-            useNewPortfolioMethod={allowChangingPortfolioMethod}
-          />
-        )}
-      />
-      <Route path={Object.values(paths.legacy.bbl)} component={BBLPage} />
-      <Route
-        path={Object.values(paths.bbl)}
-        render={(props) => (
-          <BBLPage {...props} useNewPortfolioMethod={allowChangingPortfolioMethod} />
-        )}
-      />
-      <Route
-        path={paths.bblSeparatedIntoParts}
-        render={(props) => (
-          <BBLSeparatedPage {...props} useNewPortfolioMethod={allowChangingPortfolioMethod} />
         )}
       />
       <Route path={paths.account.login} component={LoginPage} />
@@ -216,7 +170,6 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
       <Route path={paths.legacy.privacyPolicy} component={PrivacyPolicyPage} />
       <Route path={paths.dev} component={DevPage} />
       <Route path={paths.oldWowzaPath} component={WowzaRedirectPage} />
-      <Route path={paths.areaAlerts} component={DistrictAlertsPage} />
       <Route component={NotFoundPage} />
     </Switch>
   );

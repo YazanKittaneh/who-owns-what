@@ -1,226 +1,161 @@
 from io import StringIO
 import json
-import multiprocessing
-import os
-from typing import List
-import networkx as nx
-from psycopg2.extras import DictCursor
-from unittest.mock import patch
-import freezegun
 import pytest
-import dbtool
 
-from portfoliograph.landlord_index import (
-    get_corpname_data_for_algolia,
-    get_landlord_data_for_algolia,
-    dict_hash,
-)
-from portfoliograph.standardize import (
-    RawLandlordRow,
-    StandardizedLandlordRow,
-    get_raw_landlord_rows,
-    populate_landlords_table,
-)
+from portfoliograph.table import export_portfolios_table_json
 
-from .factories.hpd_contacts import HpdContacts
-from .factories.hpd_registrations import HpdRegistrations
-from .factories.hpd_complaints import HpdComplaints
-from .factories.hpd_complaint_problems import HpdComplaintProblems
-from .factories.hpd_complaints_and_problems import HpdComplaintsAndProblems
-from .factories.dof_exemptions import DofExemptions
-from .factories.dof_exemption_classification_codes import (
-    DofExemptionClassificationCodes,
-)
-from .factories.marshal_evictions_17 import MarshalEvictions17
-from .factories.marshal_evictions_18 import MarshalEvictions18
-from .factories.marshal_evictions_19 import MarshalEvictions19
-from .factories.marshal_evictions_all import MarshalEvictionsAll
-from .factories.nycha_bbls_18 import NychaBbls18
-from .factories.nycha_bbls_24 import NychaBbls24
-from .factories.changes_summary import ChangesSummary
-from .factories.hpd_violations import HpdViolations
-from .factories.dob_violations import DobViolations
-from .factories.ecb_violations import EcbViolations
-from .factories.pluto_latest import PlutoLatest
-from .factories.real_property_master import RealPropertyMaster
-from .factories.real_property_legals import RealPropertyLegals
-
-from portfoliograph.graph import build_graph
-from portfoliograph.table import (
-    iter_portfolio_rows,
-    populate_portfolios_table,
-    export_portfolios_table_json,
-)
-from ocaevictions.table import OcaConfig, populate_oca_tables
-
-# This test suite defines two landlords:
-#
-# * CLOUD CITY MEGAPROPERTIES is a landlord with
-#   three buildings in its portfolio, FUNKY, MONKEY,
-#   and SPUNKY. FUNKY is hidden behind an LLC but
-#   the association can be inferred from its business
-#   address, while SPUNKY has a head officer whose
-#   name is spelled slightly differently from MONKEY's.
-#
-# * THE UNRELATED COMPANIES, L.P. is a landlord with
-#   one building, UNRELATED.
-
-FUNKY_BBL = "3000010002"
-
-MONKEY_BBL = "3000040005"
-
-SPUNKY_BBL = "3000040006"
-
-UNRELATED_BBL = "1000010002"
-
-FUNKY_REGISTRATION = HpdRegistrations(
-    RegistrationID="1",
-    HouseNumber="1",
-    StreetName="FUNKY STREET",
-    BoroID="3",
-    Block="1",
-    Lot="2",
-)
-
-MONKEY_REGISTRATION = HpdRegistrations(
-    RegistrationID="2",
-    HouseNumber="2",
-    StreetName="MONKEY STREET",
-    BoroID="3",
-    Block="4",
-    Lot="5",
-)
-
-SPUNKY_REGISTRATION = HpdRegistrations(
-    RegistrationID="4",
-    HouseNumber="4",
-    StreetName="SPUNKY STREET",
-    BoroID="3",
-    Block="4",
-    Lot="6",
-)
-
-UNRELATED_REGISTRATION = HpdRegistrations(
-    RegistrationID="3",
-    HouseNumber="3",
-    StreetName="UNRELATED STREET",
-    BoroID="1",
-    Block="1",
-    Lot="2",
-)
-
-FUNKY_CONTACT = HpdContacts(
-    RegistrationID="1",
-    Type="HeadOfficer",
-    FirstName="Lobot",
-    LastName="Jones",
-    CorporationName="1 FUNKY STREET LLC",
-    BusinessHouseNumber="5",
-    BusinessStreetName="BESPIN AVE",
-    BusinessZip="11231",
-)
-
-MONKEY_CONTACT = HpdContacts(
-    RegistrationID="2",
-    Type="HeadOfficer",
-    FirstName="Landlordo",
-    LastName="Calrissian",
-    CorporationName="CLOUD CITY MEGAPROPERTIES",
-    BusinessHouseNumber="5",
-    BusinessStreetName="BESPIN AVE",
-    BusinessZip="11231",
-)
-
-SPUNKY_CONTACT = HpdContacts(
-    RegistrationID="4",
-    Type="HeadOfficer",
-    FirstName="Landlordo",
-    LastName="Calrisian",
-    CorporationName="4 SPUNKY STREET LLC",
-    BusinessHouseNumber="700",
-    BusinessStreetName="SUPERSPUNKY AVE",
-    BusinessZip="11201",
-)
-
-UNRELATED_CONTACT = HpdContacts(
-    RegistrationID="3",
-    Type="HeadOfficer",
-    FirstName="Boop",
-    LastName="Jones",
-    CorporationName="THE UNRELATED COMPANIES, L.P.",
-    BusinessHouseNumber="6",
-    BusinessStreetName="UNRELATED AVE",
-    BusinessApartment="2FLOOR",
-    BusinessZip="11231",
-)
+from .factories.chi_parcels import ChiParcels
+from .factories.chi_owners import ChiOwners
+from .factories.chi_permits import ChiPermits
+from .factories.chi_violations import ChiViolations
+from .factories.chi_311 import Chi311
+from .factories.chi_geographies import ChiGeographies
 
 
-class TestOcaTableBuild:
-    def test_oca_tables_empty_if_no_creds(self, db, capsys):
-
-        config = OcaConfig(
-            sql_pre_files=dbtool.WOW_YML["oca_pre_sql"],
-            sql_post_files=dbtool.WOW_YML["oca_post_sql"],
-            sql_dir=dbtool.SQL_DIR,
-            # Confusingly, we need to say we aren't testing and use the test
-            # data directory to properly test that a user can still do a real
-            # build even without OCA creds
-            data_dir=dbtool.ROOT_DIR / "tests" / "data",
-            test_dir=dbtool.ROOT_DIR / "tests" / "data",
-            aws_key=None,
-            aws_secret=None,
-            s3_bucket=None,
-            s3_objects=dbtool.WOW_YML["oca_s3_objects"],
-            is_testing=False,
-        )
-        with db.cursor() as cur:
-            populate_oca_tables(cur, config)
-            captured = capsys.readouterr()
-            assert "Leaving tables empty" in captured.out
-            cur.execute("select count(*) as rows from oca_addresses_with_bbl")
-            r = cur.fetchone()
-            cur.execute("drop table oca_evictions_bldgs")
-        assert r["rows"] == 0
+FUNKY_PIN = "12345678901234"
+MONKEY_PIN = "12345678901235"
+UNRELATED_PIN = "22345678901234"
 
 
 class TestSQL:
     @pytest.fixture(autouse=True, scope="class")
     def setup_class_fixture(self, db, nycdb_ctx):
-        nycdb_ctx.write_csv("pluto_latest.csv", [PlutoLatest()])
-        nycdb_ctx.write_csv("hpd_violations.csv", [HpdViolations()])
-        nycdb_ctx.write_csv("hpd_complaints.csv", [HpdComplaints()])
         nycdb_ctx.write_csv(
-            "hpd_complaints_and_problems.csv", [HpdComplaintsAndProblems()]
-        )
-        nycdb_ctx.write_csv("dob_violations.csv", [DobViolations()])
-        nycdb_ctx.write_csv("ecb_violations.csv", [EcbViolations()])
-        nycdb_ctx.write_csv("dof_exemptions.csv", [DofExemptions()])
-        nycdb_ctx.write_csv(
-            "dof_exemption_classification_codes.csv",
-            [DofExemptionClassificationCodes()],
-        )
-        nycdb_ctx.write_csv("hpd_complaint_problems.csv", [HpdComplaintProblems()])
-        nycdb_ctx.write_csv("changes-summary.csv", [ChangesSummary()])
-        nycdb_ctx.write_csv("marshal_evictions_17.csv", [MarshalEvictions17()])
-        nycdb_ctx.write_csv("marshal_evictions_18.csv", [MarshalEvictions18()])
-        nycdb_ctx.write_csv("marshal_evictions_19.csv", [MarshalEvictions19()])
-        nycdb_ctx.write_csv("marshal_evictions_all.csv", [MarshalEvictionsAll()])
-        nycdb_ctx.write_csv("nycha_bbls_18.csv", [NychaBbls18()])
-        nycdb_ctx.write_csv("nycha_bbls_24.csv", [NychaBbls24()])
-        nycdb_ctx.write_csv("real_property_master.csv", [RealPropertyMaster()])
-        nycdb_ctx.write_csv("real_property_legals.csv", [RealPropertyLegals()])
-        nycdb_ctx.write_csv(
-            "hpd_registrations.csv",
+            "chi_parcels.csv",
             [
-                FUNKY_REGISTRATION,
-                MONKEY_REGISTRATION,
-                SPUNKY_REGISTRATION,
-                UNRELATED_REGISTRATION,
+                ChiParcels(
+                    pin=FUNKY_PIN,
+                    pin10="1234567890",
+                    year="2024",
+                    PY_class="2",
+                    zip_code="60601",
+                    lon="-87.63",
+                    lat="41.88",
+                    ward_num="42",
+                    chicago_community_area_name="Loop",
+                    census_tract_geoid="17031010100",
+                ),
+                ChiParcels(
+                    pin=MONKEY_PIN,
+                    pin10="1234567891",
+                    year="2024",
+                    PY_class="2",
+                    zip_code="60601",
+                    lon="-87.63",
+                    lat="41.88",
+                    ward_num="42",
+                    chicago_community_area_name="Loop",
+                    census_tract_geoid="17031010100",
+                ),
+                ChiParcels(
+                    pin=UNRELATED_PIN,
+                    pin10="2234567890",
+                    year="2024",
+                    PY_class="2",
+                    zip_code="60602",
+                    lon="-87.64",
+                    lat="41.89",
+                    ward_num="1",
+                    chicago_community_area_name="Near North",
+                    census_tract_geoid="17031010200",
+                ),
             ],
         )
         nycdb_ctx.write_csv(
-            "hpd_contacts.csv",
-            [FUNKY_CONTACT, MONKEY_CONTACT, SPUNKY_CONTACT, UNRELATED_CONTACT],
+            "chi_owners.csv",
+            [
+                ChiOwners(
+                    pin=FUNKY_PIN,
+                    pin10="1234567890",
+                    year="2024",
+                    prop_address_full="100 FUNKY ST",
+                    prop_address_city_name="CHICAGO",
+                    prop_address_state="IL",
+                    prop_address_zipcode_1="60601",
+                    mail_address_name="FUNKY HOLDINGS LLC",
+                    mail_address_full="1 MAIN ST",
+                    mail_address_city_name="CHICAGO",
+                    mail_address_state="IL",
+                    mail_address_zipcode_1="60601",
+                    row_id="OWN1",
+                ),
+                ChiOwners(
+                    pin=MONKEY_PIN,
+                    pin10="1234567891",
+                    year="2024",
+                    prop_address_full="200 FUNKY ST",
+                    prop_address_city_name="CHICAGO",
+                    prop_address_state="IL",
+                    prop_address_zipcode_1="60601",
+                    mail_address_name="FUNKY HOLDINGS LLC",
+                    mail_address_full="1 MAIN ST",
+                    mail_address_city_name="CHICAGO",
+                    mail_address_state="IL",
+                    mail_address_zipcode_1="60601",
+                    row_id="OWN1",
+                ),
+                ChiOwners(
+                    pin=UNRELATED_PIN,
+                    pin10="2234567890",
+                    year="2024",
+                    prop_address_full="300 UNRELATED AVE",
+                    prop_address_city_name="CHICAGO",
+                    prop_address_state="IL",
+                    prop_address_zipcode_1="60602",
+                    mail_address_name="UNRELATED OWNER",
+                    mail_address_full="9 OTHER ST",
+                    mail_address_city_name="CHICAGO",
+                    mail_address_state="IL",
+                    mail_address_zipcode_1="60602",
+                    row_id="OWN2",
+                ),
+            ],
+        )
+        nycdb_ctx.write_csv(
+            "chi_geographies.csv",
+            [
+                ChiGeographies(geo_type="ward", ward="42", ward_id="42"),
+                ChiGeographies(geo_type="ward", ward="1", ward_id="1"),
+            ],
+        )
+        nycdb_ctx.write_csv(
+            "chi_permits.csv",
+            [
+                ChiPermits(pin_list="1234567890", street_number="100", street_name="FUNKY"),
+                ChiPermits(pin_list="1234567890", street_number="100", street_name="FUNKY"),
+                ChiPermits(pin_list="1234567891", street_number="200", street_name="FUNKY"),
+            ],
+        )
+        nycdb_ctx.write_csv(
+            "chi_violations.csv",
+            [
+                ChiViolations(
+                    violation_status="OPEN",
+                    street_number="100",
+                    street_name="FUNKY",
+                    street_type="ST",
+                ),
+                ChiViolations(
+                    violation_status="CLOSED",
+                    street_number="100",
+                    street_name="FUNKY",
+                    street_type="ST",
+                ),
+                ChiViolations(
+                    violation_status="CLOSED",
+                    street_number="200",
+                    street_name="FUNKY",
+                    street_type="ST",
+                ),
+            ],
+        )
+        nycdb_ctx.write_csv(
+            "chi_311.csv",
+            [
+                Chi311(street_number="100", street_name="FUNKY", street_type="ST"),
+                Chi311(street_number="200", street_name="FUNKY", street_type="ST"),
+                Chi311(street_number="200", street_name="FUNKY", street_type="ST"),
+            ],
         )
         nycdb_ctx.build_everything()
 
@@ -238,318 +173,54 @@ class TestSQL:
             cur.execute(query)
             return cur.fetchall()
 
-    def get_assoc_addrs_from_bbl(self, bbl, expected_bbls=None):
-        results = self.query_all(f"SELECT * FROM get_assoc_addrs_from_bbl('{bbl}')")
-        results_by_bbl = {}
-        for result in results:
-            results_by_bbl[result["bbl"]] = result
-        if expected_bbls is not None:
-            assert set(results_by_bbl.keys()) == set(expected_bbls)
-        return results_by_bbl
+    def get_assoc_addrs_from_pin(self, pin, expected_pins=None):
+        results = self.query_all(f"SELECT * FROM get_assoc_addrs_from_pin('{pin}')")
+        results_by_pin = {result["pin"]: result for result in results}
+        if expected_pins is not None:
+            assert set(results_by_pin.keys()) == set(expected_pins)
+        return results_by_pin
 
-    def test_oca_addresses_tables_populated(self):
+    def test_wow_parcels_is_populated(self):
+        r = self.query_one(f"SELECT * FROM wow_parcels WHERE pin='{FUNKY_PIN}'")
+        assert r["housenumber"] == "100"
+        assert r["streetname"] == "FUNKY ST"
+        assert r["owner_name"] == "FUNKY HOLDINGS LLC"
+        assert r["ward"] == "42"
+
+    def test_wow_indicators_counts(self):
+        r = self.query_one(f"SELECT * FROM wow_indicators WHERE pin='{FUNKY_PIN}'")
+        assert r["permits_total"] == 2
+        assert r["violations_open"] == 1
+        assert r["violations_total"] == 2
+        assert r["requests_311_total"] == 1
+
+        r = self.query_one(f"SELECT * FROM wow_indicators WHERE pin='{MONKEY_PIN}'")
+        assert r["permits_total"] == 1
+        assert r["violations_open"] == 0
+        assert r["violations_total"] == 1
+        assert r["requests_311_total"] == 2
+
+    def test_get_assoc_addrs_from_pin_returns_portfolio(self):
+        results = self.get_assoc_addrs_from_pin(
+            FUNKY_PIN, expected_pins=[FUNKY_PIN, MONKEY_PIN]
+        )
+        assert results[FUNKY_PIN]["address"] == "100 FUNKY ST"
+        assert results[MONKEY_PIN]["address"] == "200 FUNKY ST"
+
+    def test_get_assoc_addrs_from_pin_invalid_returns_empty(self):
+        assert self.get_assoc_addrs_from_pin("00000000000000") == {}
+
+    def test_portfolios_table_is_populated(self):
         r = self.query_one(
-            f"SELECT * FROM oca_addresses_with_bbl WHERE bbl='1234567890'"
+            "SELECT * FROM wow_portfolios WHERE owner_names @> ARRAY['FUNKY HOLDINGS LLC']"
         )
-        assert (
-            r["indexnumberid"]
-            == "000058EF368DF4A687DC20231F9E2AB72D59C718960F15A2C68408D052CD99BF"
-        )
-        r = self.query_one(
-            f"SELECT * FROM oca_evictions_monthly WHERE bbl='1234567890'"
-        )
-        assert r["evictionfilings"] == 1
+        assert set(r["pins"]) == {FUNKY_PIN, MONKEY_PIN}
 
-    def test_wow_bldgs_is_populated(self):
-        r = self.query_one(f"SELECT * FROM wow_bldgs WHERE bbl='{FUNKY_BBL}'")
-        assert r["housenumber"] == "1"
-        assert r["streetname"] == "FUNKY STREET"
-        assert r["businessaddrs"] == ["5 BESPIN AVENUE 11231"]
-
-    def test_get_assoc_addrs_from_bbl_returns_one_building_porfolios(self):
-        assert len(self.get_assoc_addrs_from_bbl(UNRELATED_BBL)) == 1
-
-    def test_get_assoc_addrs_from_bbl_returns_empty_set_on_invalid_bbl(self):
-        assert len(self.get_assoc_addrs_from_bbl("zzz")) == 0
-
-    def test_get_assoc_addrs_from_bbl_links_buildings_through_businessaddrs_and_names(
-        self,
-    ):
-        self.get_assoc_addrs_from_bbl(
-            MONKEY_BBL,
-            expected_bbls=[
-                # This includes all the buildings in the portfolio because MONKEY shares
-                # the same (fuzzy) head officer name as SPUNKY and the exact same address
-                # as FUNKY.
-                FUNKY_BBL,
-                MONKEY_BBL,
-                SPUNKY_BBL,
-            ],
-        )
-
-        self.get_assoc_addrs_from_bbl(
-            FUNKY_BBL,
-            expected_bbls=[
-                # Ideally this should include SPUNKY, but because the head officer of FUNKY is
-                # completely unrelated to the head officer of SPUNKY and they also don't
-                # share the exact same address, that connection can't be inferred.
-                #
-                # In other words, get_assoc_addrs_from_bbl() doesn't currently support
-                # transitivity: just because MONKEY is associated with FUNKY and
-                # MONKEY is associated with SPUNKY does *not* mean that
-                # FUNKY is associated with SPUNKY (even though it should be).
-                FUNKY_BBL,
-                MONKEY_BBL,
-            ],
-        )
-
-        self.get_assoc_addrs_from_bbl(
-            SPUNKY_BBL,
-            expected_bbls=[
-                # For similar reasons, this should ideally include FUNKY but doesn't.
-                SPUNKY_BBL,
-                MONKEY_BBL,
-            ],
-        )
-
-    def test_get_assoc_addrs_from_bbl_has_expected_strucure(self):
-        funky = self.get_assoc_addrs_from_bbl(FUNKY_BBL)[FUNKY_BBL]
-        assert funky["housenumber"] == "1"
-        assert funky["streetname"] == "FUNKY STREET"
-        assert funky["businessaddrs"] == ["5 BESPIN AVENUE 11231"]
-
-    def test_hpd_registrations_with_contacts_is_populated(self):
-        r = self.query_one(
-            f"SELECT * FROM hpd_registrations_with_contacts WHERE bbl='{FUNKY_BBL}'"
-        )
-        assert r["registrationid"] == 1
-        assert r["housenumber"] == "1"
-        assert r["streetname"] == "FUNKY STREET"
-        assert r["corpnames"] == ["1 FUNKY STREET LLC"]
-        assert r["businessaddrs"] == ["5 BESPIN AVENUE 11231"]
-        assert r["ownernames"] == [
-            {
-                "title": "HeadOfficer",
-                "value": "Lobot Jones",
-            }
-        ]
-        assert r["allcontacts"] == [
-            {
-                "title": "HeadOfficer",
-                "value": "Lobot Jones",
-                "address": {
-                    "zip": "11231",
-                    "city": "BROKLYN",
-                    "state": "NY",
-                    "apartment": None,
-                    "streetname": "BESPIN AVENUE",
-                    "housenumber": "5",
-                },
-            },
-            {
-                "title": "Corporation",
-                "value": "1 FUNKY STREET LLC",
-                "address": {
-                    "zip": "11231",
-                    "city": "BROKLYN",
-                    "state": "NY",
-                    "apartment": None,
-                    "streetname": "BESPIN AVENUE",
-                    "housenumber": "5",
-                },
-            },
-        ]
-
-    @pytest.mark.skipif(
-        not os.environ.get("CI"), reason="geosupport is installed locally"
-    )
-    def test_standardize_with_no_geosuport_works(self):
-        def fake_standardize_records(rows: List[RawLandlordRow]):
-            def fake_standardize_apt(x):
-                return "2 FL" if x == "2FLOOR" else x
-
-            return [
-                StandardizedLandlordRow(
-                    bbl=row.bbl,
-                    registrationid=row.registrationid,
-                    name=row.name,
-                    bizaddr=f"{row.housenumber} {row.streetname} "
-                    + f"{fake_standardize_apt(row.apartment)}, "
-                    + f"{row.city} {row.state}",
-                    bizhousestreet=f"{row.housenumber} {row.streetname}",
-                    bizapt=f"{fake_standardize_apt(row.apartment)}",
-                    bizzip=row.zip,
-                )
-                for row in rows
-            ]
-
-        with patch(
-            "portfoliograph.standardize.standardize_records_multiprocessing",
-            wraps=fake_standardize_records,
-        ):
-            # This test has side effect from populate_landlords_table
-            with self.db.connect() as conn:
-                populate_landlords_table(conn)
-            r = self.query_one(f"SELECT * FROM wow_landlords where bbl = '1000010002'")
-            assert r["bizaddr"] == "6 UNRELATED AVENUE 2 FL, BROKLYN NY"
-
-    @pytest.mark.skipif(
-        bool(os.environ.get("CI")), reason="geosupport not installed on CI"
-    )
-    def test_standardize_with_geosupport_works(self):
-        from portfoliograph.standardize import standardize_record
-
-        with self.db.connect() as conn:
-            cur = conn.cursor(cursor_factory=DictCursor)
-            raw_rows = get_raw_landlord_rows(cur)
-        raw_row = list(filter(lambda x: x.bbl == "1000010002", raw_rows))[0]
-        assert raw_row.name == "BOOP JONES"
-
-        std_row = standardize_record(raw_row)
-        assert std_row.bizaddr == "6 UNRELATED AVENUE 2 FL, BROOKLYN NY"
-
-        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-            std_rows = pool.map(standardize_record, raw_rows, 10000)
-        std_row = list(filter(lambda x: x.bbl == "1000010002", std_rows))[0]
-
-        assert std_row.bizaddr == "6 UNRELATED AVENUE 2 FL, BROOKLYN NY"
-
-        # This test has side effect from populate_landlords_table
-        with self.db.connect() as conn:
-            populate_landlords_table(conn)
-        r = self.query_one(f"SELECT * FROM wow_landlords where bbl = '1000010002'")
-        assert r["bizaddr"] == "6 UNRELATED AVENUE 2 FL, BROOKLYN NY"
-
-    def test_built_graph_works(self):
-        with self.db.connect() as conn:
-            cur = conn.cursor(cursor_factory=DictCursor)
-            with freezegun.freeze_time("2018-01-01"):
-                g = build_graph(cur)
-            nodes_data = [node[1] for node in g.nodes(data=True)]
-            node_data = list(filter(lambda x: "1000010002" in x["bbls"], nodes_data))[0]
-            assert node_data == {
-                "bbls": ["1000010002"],
-                "bizAddr": (
-                    "6 UNRELATED AVENUE 2 FL, BROKLYN NY"
-                    if os.environ.get("CI")
-                    else "6 UNRELATED AVENUE 2 FL, BROOKLYN NY"
-                ),
-                "name": "BOOP JONES",
-            }
-
-            assert len(list(nx.connected_components(g))) == 3
-
-    def test_iter_portfolio_rows_works(self):
-        with self.db.connect() as conn:
-            rows = [row for row in iter_portfolio_rows(conn)]
-        row = list(filter(lambda x: "1000010002" in x.bbls, rows))
-        assert row[0].landlord_names == ["BOOP JONES"]
-
-    def test_portfolio_graph_works(self):
-        # This test has side effect from populate_portfolios_table
-        with self.db.connect() as conn:
-            with freezegun.freeze_time("2018-01-01"):
-                populate_portfolios_table(conn)
-        r = self.query_one(
-            f"""SELECT landlord_names
-                FROM wow_portfolios
-                WHERE '{FUNKY_BBL}' = any(bbls)"""
-        )
-        assert set(r[0]) == {"LANDLORDO CALRISSIAN", "LOBOT JONES"}
-
-    def test_getting_landlord_names_for_algolia_index(self):
-        with self.db.connect() as conn:
-            with freezegun.freeze_time("2018-01-01"):
-                r = get_landlord_data_for_algolia(conn, 20)
-                assert len(r) == 4
-
-                # The result is a list of dicts, and each dict includes the ObjectID, which
-                # is the hash of the rest of the dict. To simplify the expected data testing
-                # we remove all those objectIDs and test those separately first before checking
-                # the rest of the contents
-                r_hashes = []
-                for row in r:
-                    r_hashes.append(row.pop("objectID"))
-                assert r_hashes[0] == dict_hash(r[0])
-
-                assert {
-                    "portfolio_bbl": "1000010002",
-                    "landlord_names": "BOOP JONES",
-                } in r
-                assert {
-                    "portfolio_bbl": "3000040006",
-                    "landlord_names": "LANDLORDO CALRISIAN",
-                } in r
-                assert {
-                    "portfolio_bbl": "3000010002",
-                    "landlord_names": "LOBOT JONES",
-                } in r
-                assert {
-                    "portfolio_bbl": "3000010002",
-                    "landlord_names": "LANDLORDO CALRISSIAN",
-                } in r
-
-                r2 = get_landlord_data_for_algolia(conn)
-                assert len(r2) == 3
-
-                r2_hashes = []
-                for row in r2:
-                    r2_hashes.append(row.pop("objectID"))
-                assert r2_hashes[0] == dict_hash(r2[0])
-
-                assert {
-                    "portfolio_bbl": "1000010002",
-                    "landlord_names": "BOOP JONES",
-                } in r2
-                assert {
-                    "portfolio_bbl": "3000040006",
-                    "landlord_names": "LANDLORDO CALRISIAN",
-                } in r2
-                assert {
-                    "portfolio_bbl": "3000010002",
-                    "landlord_names": "LANDLORDO CALRISSIAN, LOBOT JONES",
-                } in r2
-
-    def test_getting_corporation_names_for_algolia_index(self):
-        with self.db.connect() as conn:
-            with freezegun.freeze_time("2018-01-01"):
-                r = get_corpname_data_for_algolia(conn)
-                assert len(r) == 4
-
-                # The result is a list of dicts, and each dict includes the ObjectID, which
-                # is the hash of the rest of the dict. To simplify the expected data testing
-                # we remove all those objectIDs and test those separately first before checking
-                # the rest of the contents
-                r_hashes = []
-                for row in r:
-                    r_hashes.append(row.pop("objectID"))
-                assert r_hashes[0] == dict_hash(r[0])
-
-                assert {
-                    "portfolio_bbl": "1000010002",
-                    "landlord_names": "THE UNRELATED COMPANIES, L.P.",
-                } in r
-                assert {
-                    "portfolio_bbl": "3000010002",
-                    "landlord_names": "1 FUNKY STREET LLC",
-                } in r
-                assert {
-                    "portfolio_bbl": "3000040005",
-                    "landlord_names": "CLOUD CITY MEGAPROPERTIES",
-                } in r
-                assert {
-                    "portfolio_bbl": "3000040006",
-                    "landlord_names": "4 SPUNKY STREET LLC",
-                } in r
-
-    def test_portfolio_graph_json_works(self):
+    def test_export_portfolios_table_json_works(self):
         with self.db.connect() as conn:
             f = StringIO()
-            with freezegun.freeze_time("2018-01-01"):
-                export_portfolios_table_json(conn, f)
-
-            # Ideally we'd actually do a snapshot test here,
-            # but I'm not confident that the ordering of
-            # lists will be deterministic, so for now we'll
-            # just leave it as a smoke test... -AV
-            json.loads(f.getvalue())
+            export_portfolios_table_json(conn, f)
+            data = json.loads(f.getvalue())
+            assert any(
+                row["pins"] == [FUNKY_PIN, MONKEY_PIN] for row in data
+            )

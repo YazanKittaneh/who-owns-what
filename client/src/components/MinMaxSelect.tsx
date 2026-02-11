@@ -4,12 +4,14 @@ import { I18n } from "@lingui/react";
 import classnames from "classnames";
 import helpers from "util/helpers";
 import { Alert } from "./Alert";
-import {
-  FilterNumberRange,
-  FilterNumberRangeSelections,
-  NUMBER_RANGE_DEFAULT,
-} from "./PropertiesList";
 import { Button, Icon } from "@justfixnyc/component-library";
+
+type FilterNumberRange = { min: number; max: number };
+type FilterNumberRangeSelections = {
+  type: "default" | "presets" | "custom";
+  values: FilterNumberRange[];
+};
+const NUMBER_RANGE_DEFAULT: FilterNumberRange = { min: -Infinity, max: Infinity };
 
 type CustomRangeErrors = { min: boolean; max: boolean; msg: JSX.Element | undefined };
 const CUSTOM_RANGE_ERRORS_DEFAULT = { min: false, max: false, msg: undefined };
@@ -59,7 +61,7 @@ function MinMaxSelect({
           break;
         case "presets":
           setCustomRange(NUMBER_RANGE_DEFAULT);
-          const selectionMinValues = defaultSelections.values.map((rng) => rng.min);
+          const selectionMinValues = defaultSelections.values.map((rng: FilterNumberRange) => rng.min);
           const presetSelections = PRESETS_DEFAULT.map((preset) => {
             return { ...preset, checked: selectionMinValues.includes(preset.min) };
           });

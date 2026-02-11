@@ -24,7 +24,12 @@ const AddressToolbar: React.FC<AddressToolbarProps> = ({ searchAddr, assocAddrs 
   const [showExportModal, setExportModalVisibility] = useState(false);
   const { pathname } = useLocation();
   const { home, legacy } = createWhoOwnsWhatRoutePaths();
-  const userAddrStr = `${searchAddr.housenumber} ${searchAddr.streetname}, ${searchAddr.boro}`;
+  const fallbackAddr = assocAddrs[0]?.address;
+  const userAddrStr =
+    fallbackAddr ||
+    [searchAddr.housenumber, searchAddr.streetname, searchAddr.city, searchAddr.state]
+      .filter(Boolean)
+      .join(" ");
 
   return (
     <div className="AddressToolbar">

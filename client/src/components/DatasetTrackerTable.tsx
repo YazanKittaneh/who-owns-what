@@ -6,10 +6,16 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { DatasetTrackerInfo } from "./APIDataTypes";
-import { inNumberRanges, isNonZero } from "./PortfolioTable";
 import classNames from "classnames";
 import "../styles/DatasetTrackerTable.scss";
+
+type DatasetTrackerInfo = {
+  dataset: string;
+  last_updated: string;
+  update_cadence: string;
+  alert_threshold: string;
+  is_late: boolean;
+};
 
 const columnHelper = createColumnHelper<DatasetTrackerInfo>();
 
@@ -61,8 +67,6 @@ export const DatasetTrackerTable: React.FC<{ data: DatasetTrackerInfo[] }> = ({ 
     },
     filterFns: {
       arrIncludesSome: filterFns.arrIncludesSome,
-      inNumberRanges: inNumberRanges,
-      isNonZero: isNonZero,
     },
   });
 

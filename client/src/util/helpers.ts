@@ -1,11 +1,11 @@
 import { defaultLocale, SupportedLocale } from "../i18n-base";
-import { AddressRecord, HpdContactAddress, SearchAddressWithoutBbl } from "components/APIDataTypes";
+import { AddressRecord, HpdContactAddress } from "components/APIDataTypes";
 import { reportError } from "error-reporting";
 import { t } from "@lingui/macro";
 import { I18n, MessageDescriptor } from "@lingui/core";
 import React, { useEffect, useState, ChangeEvent } from "react";
 import _ from "lodash";
-import { AreaProperties } from "containers/DistrictAlertsPage";
+type AreaProperties = any;
 
 const hpdComplaintTypeTranslations = new Map([
   ["DOOR/WINDOW", t`DOOR/WINDOW`],
@@ -140,15 +140,8 @@ const translateAreaTypeLabel = createTranslationFunctionFromMap(
   "en"
 );
 
-export function searchAddrsAreEqual(
-  addr1: SearchAddressWithoutBbl,
-  addr2: SearchAddressWithoutBbl
-) {
-  return (
-    addr1.boro === addr2.boro &&
-    addr1.streetname === addr2.streetname &&
-    addr1.housenumber === addr2.housenumber
-  );
+export function searchAddrsAreEqual(addr1: { pin?: string }, addr2: { pin?: string }) {
+  return !!addr1.pin && addr1.pin === addr2.pin;
 }
 
 // https://www.codevertiser.com/reusable-input-component-react/
@@ -216,32 +209,17 @@ const helpers = {
     return sortedElementsByFrequency.slice(0, numberOfResults).map((a) => a[0]);
   },
 
-  /**
-   * Note: while almost all address records will just have one landlord listed, there is a rare
-   * edge case where more than one distinct landlord name might be listed, so we return an array
-   * of names here to accommodate that edge case.
-   */
   getLandlordNameFromAddress(addr: AddressRecord): string[] {
-    const { ownernames } = addr;
-    if (!ownernames) return [];
-    const landlords = ownernames.filter((owner) =>
-      ["HeadOfficer", "IndividualOwner", "CorporateOwner", "JointOwner"].includes(owner.title)
-    );
-    const landlordNames = landlords.map((landlord) => landlord.value);
-    // Remove duplicate names:
-    return Array.from(new Set(landlordNames));
+    const name = addr.owner_name || null;
+    return name ? [name] : [];
   },
 
-  splitBBL(bbl: string) {
-    const bblArr = bbl.split("");
-    const boro = bblArr.slice(0, 1).join("");
-    const block = bblArr.slice(1, 6).join("");
-    const lot = bblArr.slice(6, 10).join("");
-    return { boro, block, lot };
+  isValidPin(pin: string): boolean {
+    return /^\\d{14}$/.test(pin);
   },
 
-  addrsAreEqual<T extends { bbl: string }>(a: T, b: T) {
-    return a.bbl === b.bbl;
+  addrsAreEqual<T extends { pin: string }>(a: T, b: T) {
+    return a.pin === b.pin;
   },
 
   formatPrice(amount: number, locale?: SupportedLocale): string {

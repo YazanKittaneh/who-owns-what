@@ -2,11 +2,11 @@ import { createAddressPageRoutes, isAddressPageRoute } from "routes";
 
 describe("isAddressPageRoute()", () => {
   it("correctly identifies a regular address page", () => {
-    expect(isAddressPageRoute("/es/address/QUEENS/4125/CASE%20STREET")).toBe(true);
+    expect(isAddressPageRoute("/es/pin/12345678901234")).toBe(true);
   });
 
   it("correctly identifies a legacy address page", () => {
-    expect(isAddressPageRoute("/es/legacy/address/QUEENS/4125/CASE%20STREET")).toBe(true);
+    expect(isAddressPageRoute("/es/legacy/pin/12345678901234")).toBe(true);
   });
 
   it("correctly identifies a regular page as not an address page", () => {
@@ -32,28 +32,25 @@ describe("createAddressPageRoutes()", () => {
   });
 
   it("prefixes with string when given one", () => {
-    expect(createAddressPageRoutes("/boop").summary).toBe("/boop/summary");
+    expect(createAddressPageRoutes("/boop").overview).toBe("/boop");
+    expect(createAddressPageRoutes("/boop").portfolio).toBe("/boop/portfolio");
   });
 
   it("prefixes with address page params when given one", () => {
     expect(
       createAddressPageRoutes({
-        boro: "BROOKLYN",
-        housenumber: "654",
-        streetname: "PARK PLACE",
-      }).summary
-    ).toBe("/address/BROOKLYN/654/PARK%20PLACE/summary");
+        pin: "12345678901234",
+      }).overview
+    ).toBe("/pin/12345678901234");
   });
 
   it("prefixes with address page params and locale when given one", () => {
     expect(
       createAddressPageRoutes({
-        boro: "BROOKLYN",
-        housenumber: "654",
-        streetname: "PARK PLACE",
+        pin: "12345678901234",
         locale: "es",
-      }).summary
-    ).toBe("/es/address/BROOKLYN/654/PARK%20PLACE/summary");
+      }).portfolio
+    ).toBe("/es/pin/12345678901234/portfolio");
   });
 
   it("correctly sets the right path when route is specified as a legacy route", () => {
@@ -61,14 +58,12 @@ describe("createAddressPageRoutes()", () => {
     expect(
       createAddressPageRoutes(
         {
-          boro: "BROOKLYN",
-          housenumber: "654",
-          streetname: "PARK PLACE",
+          pin: "12345678901234",
           locale: "es",
         },
         true
-      ).summary
-    ).toBe("/es/legacy/address/BROOKLYN/654/PARK%20PLACE/summary");
+      ).overview
+    ).toBe("/es/legacy/pin/12345678901234");
   });
 
   it("defaults to the standard path when env variable is not defined", () => {
@@ -76,13 +71,11 @@ describe("createAddressPageRoutes()", () => {
     expect(
       createAddressPageRoutes(
         {
-          boro: "BROOKLYN",
-          housenumber: "654",
-          streetname: "PARK PLACE",
+          pin: "12345678901234",
           locale: "es",
         },
         true
-      ).summary
-    ).toBe("/es/address/BROOKLYN/654/PARK%20PLACE/summary");
+      ).overview
+    ).toBe("/es/pin/12345678901234");
   });
 });
