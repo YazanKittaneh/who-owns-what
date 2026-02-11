@@ -1,12 +1,11 @@
 import { init, track } from "@amplitude/analytics-browser";
 
 const API_KEY = process.env.REACT_APP_AMPLITUDE_API_KEY;
+const SHOULD_INIT_AMPLITUDE = Boolean(API_KEY) && process.env.NODE_ENV === "production";
 
-if (!API_KEY) {
-  throw new Error("No Amplitude API key defined!");
+if (SHOULD_INIT_AMPLITUDE) {
+  init(API_KEY as string);
 }
-
-init(API_KEY);
 
 export type AmplitudeEvent =
   | "closeFeatureCalloutWidget"
@@ -79,6 +78,6 @@ export type EventProperties = {
 };
 
 export const logAmplitudeEvent = (name: AmplitudeEvent, eventProperties?: EventProperties) => {
-  if (!API_KEY) return;
+  if (!SHOULD_INIT_AMPLITUDE) return;
   track(name, eventProperties);
 };

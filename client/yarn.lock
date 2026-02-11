@@ -2814,11 +2814,6 @@
     "@fortawesome/react-fontawesome" "0.2.2"
     react-select "^5.7.2"
 
-"@justfixnyc/geosearch-requester@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@justfixnyc/geosearch-requester/-/geosearch-requester-1.0.0.tgz#7677fdde3e80eb1b4fcffacfa1621fbff783705d"
-  integrity sha512-apPtPi1U78ac59bw2PrC84JaTXQJxNyWBfq3g8BcjdQ0RQ1L0Hd4WEL79ctjjYsRYHE1wY5qSa6JNvEgWRvKYg==
-
 "@justfixnyc/util@^0.4.1":
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/@justfixnyc/util/-/util-0.4.1.tgz#98e9036f9c751520c79f7d59eaaa95d7c0619d8f"
@@ -3253,6 +3248,13 @@
   version "2.9.23"
   resolved "https://registry.yarnpkg.com/@types/chart.js/-/chart.js-2.9.23.tgz#5de713e801f5aff4d042c7d49ab9691489c11848"
   integrity sha512-4QQNE/b+digosu3mnj4E7aNQGKnlpzXa9JvQYPtexpO7v9gnDeqwc1DxF8vLJWLDCNoO6hH0EgO8K/7PtJl8wg==
+  dependencies:
+    moment "^2.10.2"
+
+"@types/chart.js@^2.9.37":
+  version "2.9.41"
+  resolved "https://registry.yarnpkg.com/@types/chart.js/-/chart.js-2.9.41.tgz#4148cdc87d4f98fad44b2883271cd0fa57f05e0d"
+  integrity sha512-3dvkDvueckY83UyUXtJMalYoH6faOLkWQoaTlJgB4Djde3oORmNP0Jw85HtzTuXyliUHcdp704s0mZFQKio/KQ==
   dependencies:
     moment "^2.10.2"
 

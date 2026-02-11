@@ -5,73 +5,9 @@ from . import views
 app_name = "wow"
 
 urlpatterns = [
+    path("address/search", views.address_search, name="address_search"),
     path("address", views.address_query, name="address_query"),
-    path(
-        "address/wowza",
-        views.address_query_wowza,
-        name="address_query_wowza",
-    ),
     path("address/aggregate", views.address_aggregate, name="address_aggregate"),
-    path(
-        "address/dap-aggregate",
-        views.address_dap_aggregate,
-        name="address_dap_aggregate",
-    ),
-    path(
-        "address/dap-portfoliosize",
-        views.address_dap_portfoliosize,
-        name="address_dap_portfoliosize",
-    ),
-    path(
-        "address/buildinginfo", views.address_buildinginfo, name="address_buildinginfo"
-    ),
-    path(
-        "address/indicatorhistory",
-        views.address_indicatorhistory,
-        name="address_indicatorhistory",
-    ),
+    path("address/buildinginfo", views.address_buildinginfo, name="address_buildinginfo"),
     path("address/export", views.address_export, name="address_export"),
-    path("address/latestdeed", views.address_latestdeed, name="address_latestdeed"),
-    path("alerts/building", views.email_alerts_building, name="email_alerts_building"),
-    path("alerts/district", views.email_alerts_district, name="email_alerts_district"),
-    path("alerts/district/geojson", views.districts_geojson, name="districts_geojson"),
-    path(
-        "alerts/district/vacate_order",
-        views.district_vacate_order,
-        name="district_vacate_order",
-    ),
-    path(
-        "alerts/district/building_sale",
-        views.district_building_sale,
-        name="district_building_sale",
-    ),
-    path(
-        "alerts/district/litigation",
-        views.district_litigation,
-        name="district_litigation",
-    ),
-    path("signature/building", views.signature_building, name="signature_building"),
-    path(
-        "signature/building/charts",
-        views.signature_building_charts,
-        name="signature_building_charts",
-    ),
-    path(
-        "signature/collection", views.signature_collection, name="signature_collection"
-    ),
-    path(
-        "signature/collection/charts",
-        views.signature_collection_charts,
-        name="signature_collection_charts",
-    ),
-    path("signature/landlords", views.signature_landlords, name="signature_landlords"),
-    path(
-        "signature/portfolios", views.signature_portfolios, name="signature_portfolios"
-    ),
-    path("signature/map", views.signature_map, name="signature_map"),
-    path(
-        "dataset/last_updated", views.dataset_last_updated, name="dataset_last_updated"
-    ),
-    path("dataset/tracker", views.dataset_tracker, name="dataset_tracker"),
-    path("gce/screener", views.gce_screener, name="gce_screener"),
 ]

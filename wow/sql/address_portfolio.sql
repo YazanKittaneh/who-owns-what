@@ -1,45 +1,34 @@
--- Select a subset of WOW_BLDGS that only contains
--- BBLs within the same portfolio
-SELECT 
-	WOW_BLDGS.HOUSENUMBER,
-	WOW_BLDGS.STREETNAME,
-	WOW_BLDGS.ZIP,
-	WOW_BLDGS.BORO,
-	WOW_BLDGS.REGISTRATIONID,
-	WOW_BLDGS.LASTREGISTRATIONDATE,
-	WOW_BLDGS.REGISTRATIONENDDATE,
-	WOW_BLDGS.BBL,
-	WOW_BLDGS.BIN,
-	WOW_BLDGS.HPDBUILDINGID,
-	WOW_BLDGS.HPDBUILDINGS,
-	WOW_BLDGS.CORPNAMES,
-	WOW_BLDGS.BUSINESSADDRS,
-	WOW_BLDGS.OWNERNAMES,
-	WOW_BLDGS.ALLCONTACTS,
-	WOW_BLDGS.TOTALVIOLATIONS,
-	WOW_BLDGS.OPENVIOLATIONS,
-	WOW_BLDGS.TOTALCOMPLAINTS,
-	WOW_BLDGS.RECENTCOMPLAINTS,
-	WOW_BLDGS.RECENTCOMPLAINTSBYTYPE,
-	WOW_BLDGS.UNITSRES,
-	WOW_BLDGS.YEARBUILT,
-	WOW_BLDGS.COUNCIL,
-	WOW_BLDGS.LAT,
-	WOW_BLDGS.LNG,
-	WOW_BLDGS.EVICTIONS,
-	WOW_BLDGS.RSUNITS2007,
-	WOW_BLDGS.RSUNITSLATEST,
-	WOW_BLDGS.RSUNITSLATESTYEAR,
-	WOW_BLDGS.RSDIFF,
-	WOW_BLDGS.YEARSTARTEDJ51,
-	WOW_BLDGS.YEARSTARTED421A,
-	WOW_BLDGS.LASTSALEACRISID,
-	WOW_BLDGS.LASTSALEDATE,
-	WOW_BLDGS.LASTSALEAMOUNT,
-	WOW_BLDGS.EVICTIONFILINGS
-FROM WOW_BLDGS
-WHERE BBL = ANY(
-	SELECT UNNEST(BBLS)
-	FROM WOW_PORTFOLIOS
-	WHERE %(bbl)s = ANY(BBLS)
-);
+SELECT
+    p.pin,
+    p.housenumber,
+    p.streetname,
+    p.address,
+    p.city,
+    p.state,
+    p.zip,
+    p.owner_id,
+    p.owner_name,
+    p.mailing_address,
+    p.mailing_city,
+    p.mailing_state,
+    p.mailing_zip,
+    p.units_res,
+    p.land_class,
+    p.building_class,
+    p.lat,
+    p.lng,
+    p.ward,
+    p.community_area,
+    p.census_tract,
+    i.permits_total,
+    i.violations_open,
+    i.violations_total,
+    i.requests_311_total
+FROM wow_parcels AS p
+LEFT JOIN wow_indicators AS i USING(pin)
+WHERE p.pin = ANY(
+    SELECT unnest(pins)
+    FROM wow_portfolios
+    WHERE %(pin)s = ANY(pins)
+)
+ORDER BY p.pin;

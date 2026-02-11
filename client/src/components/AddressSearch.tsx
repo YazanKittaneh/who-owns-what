@@ -4,39 +4,23 @@ import Downshift, {
   GetInputPropsOptions,
   ControllerStateAndHelpers,
 } from "downshift";
-import { GeoSearchRequester, GeoSearchResults } from "@justfixnyc/geosearch-requester";
 
 import "../styles/AddressSearch.css";
-import { Borough } from "./APIDataTypes";
 
 const GeoDownshift = Downshift as DownshiftInterface<SearchAddress>;
 
 const KEY_ENTER = 13;
-
 const KEY_TAB = 9;
-
 const KEY_ESC = 27;
-
 const SEARCH_RESULTS_LIMIT = 5;
 
 export interface SearchAddress {
-  /**
-   * The house number, e.g. '654'. It can be undefined,
-   * e.g. for NYCHA properties.
-   */
-  housenumber?: string;
-
-  /** The street name, e.g. 'PARK PLACE'. */
-  streetname: string;
-
-  /** The all-uppercase borough name, e.g. 'BROOKLYN'.
-   * We allow for an empty string case in this type as our GeoSearch form submission includes the possibility
-   * of an 'empty' address search. See the AddressSearch class below for more details.
-   */
-  boro: Borough | "";
-
-  /** The padded BBL, e.g. '1234567890'. */
-  bbl: string;
+  housenumber?: string | null;
+  streetname: string | null;
+  city: string | null;
+  state: string | null;
+  zip?: string | null;
+  pin: string;
 }
 
 export interface AddressSearchProps {
@@ -50,42 +34,49 @@ type State = {
   results: SearchAddress[];
 };
 
-/**
- * Return an empty search address.
- *
- * This could just be a constant but I'm not confident that the
- * code which calls it won't mutate it, so we'll just create a
- * new one every time. -AV
- */
 export function makeEmptySearchAddress(): SearchAddress {
   return {
     housenumber: "",
     streetname: "",
-    boro: "",
-    bbl: "",
+    city: "",
+    state: "",
+    zip: "",
+    pin: "",
   };
-}
-
-function toSearchAddresses(results: GeoSearchResults): SearchAddress[] {
-  return results.features.map((feature) => {
-    let formattedBoroName = feature.properties.borough.toUpperCase() as Borough;
-    const sa: SearchAddress = {
-      housenumber: feature.properties.housenumber,
-      streetname: feature.properties.street,
-      boro: formattedBoroName,
-      bbl: feature.properties.addendum.pad.bbl,
-    };
-    return sa;
-  });
 }
 
 export function searchAddressToString(sa: SearchAddress): string {
   const prefix = sa.housenumber ? `${sa.housenumber} ` : "";
-  return `${prefix}${sa.streetname}, ${sa.boro}`;
+  const street = sa.streetname || "";
+  const city = sa.city ? `, ${sa.city}` : "";
+  const state = sa.state ? `, ${sa.state}` : "";
+  return `${prefix}${street}${city}${state}`.trim();
+}
+
+async function fetchSearchResults(query: string, signal?: AbortSignal): Promise<SearchAddress[]> {
+  const baseUrl = process.env.REACT_APP_API_BASE_URL || "";
+  const res = await fetch(`${baseUrl}/api/address/search?q=${encodeURIComponent(query)}`, {
+    headers: { accept: "application/json" },
+    signal,
+  });
+  if (!res.ok) {
+    throw new Error(`Search failed with status ${res.status}`);
+  }
+  const data = await res.json();
+  return (data.result || []).map((row: any) => ({
+    pin: row.pin,
+    housenumber: row.housenumber,
+    streetname: row.streetname,
+    city: row.city,
+    state: row.state,
+    zip: row.zip,
+  }));
 }
 
 export default class AddressSearch extends React.Component<AddressSearchProps, State> {
-  requester: GeoSearchRequester;
+  private pendingSearch?: number;
+  private activeSearch?: AbortController;
+  private isUnmounted = false;
 
   constructor(props: AddressSearchProps) {
     super(props);
@@ -93,44 +84,69 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
       isLoading: false,
       results: [],
     };
-    this.requester = new GeoSearchRequester({
-      onError: (e) => {
-        this.props.onFormSubmit(makeEmptySearchAddress(), e);
-      },
-      onResults: (results) => {
-        this.setState({
-          isLoading: false,
-          results: toSearchAddresses(results).slice(0, SEARCH_RESULTS_LIMIT),
-        });
-      },
-    });
   }
 
   componentWillUnmount() {
-    this.requester.shutdown();
+    this.isUnmounted = true;
+    if (this.pendingSearch) {
+      window.clearTimeout(this.pendingSearch);
+    }
+    if (this.activeSearch) {
+      this.activeSearch.abort();
+    }
   }
 
   handleInputValueChange(value: string) {
-    if (this.requester.changeSearchRequest(value)) {
-      this.setState({ isLoading: true });
-    } else {
+    if (!value) {
+      if (this.activeSearch) {
+        this.activeSearch.abort();
+        this.activeSearch = undefined;
+      }
       this.setState({ isLoading: false, results: [] });
+      return;
     }
+
+    if (this.pendingSearch) {
+      window.clearTimeout(this.pendingSearch);
+    }
+    if (this.activeSearch) {
+      this.activeSearch.abort();
+    }
+
+    this.setState({ isLoading: true });
+    this.pendingSearch = window.setTimeout(async () => {
+      this.activeSearch = new AbortController();
+      try {
+        const results = await fetchSearchResults(value, this.activeSearch.signal);
+        if (this.isUnmounted) {
+          return;
+        }
+        this.setState({
+          isLoading: false,
+          results: results.slice(0, SEARCH_RESULTS_LIMIT),
+        });
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") {
+          return;
+        }
+        if (this.isUnmounted) {
+          return;
+        }
+        this.setState({ isLoading: false, results: [] });
+        this.props.onFormSubmit(makeEmptySearchAddress(), e);
+      } finally {
+        this.activeSearch = undefined;
+      }
+    }, 200);
   }
 
-  /**
-   * If the result list is non-empty and visible, and the user hasn't selected
-   * anything, select the first item in the list and return true.
-   *
-   * Otherwise, return false.
-   */
   selectFirstResult(ds: ControllerStateAndHelpers<SearchAddress>): boolean {
     const { results } = this.state;
-    if (ds.highlightedIndex === null && ds.isOpen && results.length > 0) {
-      ds.selectItem(results[0]);
-      return true;
-    }
-    return false;
+    if (results.length === 0) return false;
+    const index = ds.highlightedIndex === null ? 0 : ds.highlightedIndex;
+    const boundedIndex = Math.max(0, Math.min(index, results.length - 1));
+    ds.selectItem(results[boundedIndex]);
+    return true;
   }
 
   handleAutocompleteKeyDown(
@@ -144,7 +160,6 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
       }
     }
     if (results.length > 0) {
-      // Allow tab key to navigate to next item in autocomplete list
       if (event.keyCode === KEY_TAB && !event.shiftKey) {
         ds.setHighlightedIndex(
           ds.highlightedIndex === results.length - 1 || ds.highlightedIndex === null
@@ -153,7 +168,6 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
         );
         event.preventDefault();
       }
-      // Allow tab key + shift key to navigate to previous item in autocomplete list
       if (event.keyCode === KEY_TAB && event.shiftKey) {
         ds.setHighlightedIndex(
           ds.highlightedIndex === 0 || ds.highlightedIndex === null
@@ -163,9 +177,6 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
         event.preventDefault();
       }
     }
-    // Allow esc key to clear the results
-    // Note: we do not call `event.preventDefault()` here as we also want to allow the event of
-    // pressing the esc key to trigger its default responses as well (like clearing the search form)
     if (event.keyCode === KEY_ESC) {
       this.setState({
         results: [],
@@ -181,9 +192,6 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
             case Downshift.stateChangeTypes.mouseUp:
             case Downshift.stateChangeTypes.touchEnd:
             case Downshift.stateChangeTypes.blurInput:
-              // By default, Downshift clears the input value,
-              // but we don't want to lose user data, so we'll
-              // override that behavior here.
               return {
                 ...changes,
                 inputValue: state.inputValue,
@@ -197,10 +205,6 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
           if (sa) {
             this.props.onFormSubmit(sa, null);
           }
-          // TODO: I am very unclear on what it means for `sa` to be null,
-          // and the docs don't seem to provide any guidance on the matter.
-          // There's no meaningful value for us to pass to `onFormSubmit` in
-          // this case, so we will just do nothing.
         }}
         itemToString={(sa) => {
           return sa ? searchAddressToString(sa) : "";
@@ -226,7 +230,7 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
                     </label>
                     <input
                       autoFocus
-                      placeholder="Search places"
+                      placeholder="Search Chicago addresses"
                       className="geosuggest__input form-input"
                       {...downshift.getInputProps(inputOptions)}
                     />
@@ -240,7 +244,7 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
                         }
                         const label = searchAddressToString(item);
                         const props = downshift.getItemProps({
-                          key: label,
+                          key: `${item.pin}-${label}`,
                           index,
                           item,
                         });

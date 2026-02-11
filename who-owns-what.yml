@@ -1,94 +1,26 @@
 ---
 dependencies:
-  # These are NYCDB datasets needed by the SQL scripts.
-  - pluto_latest
-  - rentstab_summary
-  - rentstab
-  - rentstab_v2
-  - marshal_evictions
-  - hpd_registrations
-  - hpd_violations
-  - hpd_complaints
-  - hpd_vacateorders
-  - hpd_litigations
-  - dob_violations
-  - dob_complaints
-  - ecb_violations
-  - dof_exemptions
-  - acris
-  - nycha_bbls
-  - oca
-  - boundaries_25a
-  - zipcodes
-  - pad
-  - pluto_latest_districts_25a
-api_dependencies:
-  # These are NYCDB datasets that aren't needed by the
-  # SQL scripts, but which the Django server uses
-  # for the WoW API.
-  - hpd_complaints
-  - dob_violations
-  - ecb_violations
-  - dobjobs
-  - rentstab
-  - rentstab_v2
-oca_s3_objects:
-  - "public/oca_addresses_with_bbl.csv"
-oca_pre_sql:
-  # Create tables in the WOW/NYCDB DB to populate from CSVs via S3 as part of
-  # the private OCA level-2 process
-  - create_oca_tables.sql
-oca_post_sql:
-  # Scripts for OCA data to run after the above tables have been created and populated
-  - oca_evictions_bldgs.sql
-  - oca_evictions_monthly.sql
-signature_s3_objects:
-  - "signature_unhp_buildings.csv"
-  - "signature_unhp_loan_status.csv"
-signature_pre_sql:
-  # Create tables in the WOW/NYCDB DB to populate from CSVs via S3 as part of
-  # the private signature data process
-  - create_signature_unhp_tables.sql
-signature_post_sql:
-  # Scripts for signature data to run after the above tables have been created and populated
-  - create_signature_buildings.sql
-  - create_signature_collections.sql
-  - create_signature_building_charts.sql
-  - create_signature_collection_charts.sql
-good_cause_sql:
-  - create_gce_common.sql
-  - create_gce_screener.sql
-  - create_gce_eligibility.sql
-  - create_gce_eligibility_maps.sql
+  # These are Chicago datasets needed by the SQL scripts.
+  - chi_parcels
+  - chi_owners
+  - chi_permits
+  - chi_violations
+  - chi_311
+  - chi_geographies
+api_dependencies: []
 wow_pre_sql:
   # These SQL scripts must be executed in order, as
   # some of them depend on others.
-  - registrations_with_contacts.sql
-  - create_bldgs_table.sql
-  - helper_functions.sql
-  - search_function.sql
-  - agg_function.sql
-  - landlord_contact.sql
-  - create_landlords_table.sql
+  - create_parcels_table.sql
   - create_portfolios_table.sql
+  - helper_functions.sql
+  - search_function_pin.sql
+  - agg_function.sql
 wow_post_sql:
   # These SQL scripts are run after the above "pre" scripts and the wow_portfolios
   # table is populated via /portfoliograph python functions.
-  - create_districts_geom.sql
-  - create_districts_geojson.sql
   - create_indicators_table.sql
 extra_nycdb_test_data:
   # This is extra data our tests need that we don't
   # create ourselves via factories.
-  - "tests/data/acris_*.csv"
-  - "tests/data/oca_*.csv"
-  - "tests/data/rentstab_counts_from_doffer_2023.csv"
-  - "tests/data/taxbills_joined.csv"
-  - "tests/data/hpd_complaints_and_problems.csv"
-  - "tests/data/hpd_litigations.csv"
-  - "tests/data/hpd_vacateorders.csv"
-  - "tests/data/dob_complaints.csv"
-  # boundaries v25a
-  - "tests/data/ny*_25a.zip"
-  - "tests/data/nyc-zip-codes.zip"
-  - "tests/data/pad.zip"
+  - "tests/data/chi_*.csv"
