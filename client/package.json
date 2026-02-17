@@ -121,6 +121,7 @@
   "engines": {
     "node": ">=16.0.0"
   },
+  "packageManager": "yarn@1.22.22",
   "@comment browserslist": "Note that when changing browserslist, you need to delete `node_modules/.cache` for the changes to propagate! For more details, see https://github.com/JustFixNYC/who-owns-what/pull/335.",
   "browserslist": [
     ">0.2%",
