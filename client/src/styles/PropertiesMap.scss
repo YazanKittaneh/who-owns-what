@@ -61,6 +61,12 @@
     }
   }
 
+  .leaflet-container {
+    height: 100%;
+    width: 100%;
+    background: #f8f8f8;
+  }
+
   .PropertiesMap__error {
     width: 100%;
     height: 100%;

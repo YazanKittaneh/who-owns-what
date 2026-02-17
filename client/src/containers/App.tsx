@@ -119,6 +119,14 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
         render={(props) => <AddressPage currentTab={1} {...machineProps} {...props} />}
       />
       <Route
+        path={paths.legacy.addressPage.timeline}
+        render={(props) => <AddressPage currentTab={2} {...machineProps} {...props} />}
+      />
+      <Route
+        path={paths.legacy.addressPage.summary}
+        render={(props) => <AddressPage currentTab={3} {...machineProps} {...props} />}
+      />
+      <Route
         path={paths.addressPage.overview}
         render={(props) => (
           <AddressPage
@@ -135,6 +143,28 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
         render={(props) => (
           <AddressPage
             currentTab={1}
+            {...machineProps}
+            {...props}
+            useNewPortfolioMethod={allowChangingPortfolioMethod}
+          />
+        )}
+      />
+      <Route
+        path={paths.addressPage.timeline}
+        render={(props) => (
+          <AddressPage
+            currentTab={2}
+            {...machineProps}
+            {...props}
+            useNewPortfolioMethod={allowChangingPortfolioMethod}
+          />
+        )}
+      />
+      <Route
+        path={paths.addressPage.summary}
+        render={(props) => (
+          <AddressPage
+            currentTab={3}
             {...machineProps}
             {...props}
             useNewPortfolioMethod={allowChangingPortfolioMethod}

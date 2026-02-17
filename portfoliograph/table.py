@@ -42,7 +42,7 @@ def populate_portfolios_table(conn, table="wow_portfolios"):
                 FROM chi_parcels
                 ORDER BY
                     pin,
-                    NULLIF(year, '')::int DESC NULLS LAST
+                    NULLIF(regexp_replace(year::text, '\\.0+$', ''), '')::int DESC NULLS LAST
             ),
             latest_owners AS (
                 SELECT DISTINCT ON (pin)
@@ -50,7 +50,7 @@ def populate_portfolios_table(conn, table="wow_portfolios"):
                 FROM chi_owners
                 ORDER BY
                     pin,
-                    NULLIF(year, '')::int DESC NULLS LAST
+                    NULLIF(regexp_replace(year::text, '\\.0+$', ''), '')::int DESC NULLS LAST
             )
             SELECT
                 row_number() OVER (

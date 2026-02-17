@@ -67,6 +67,8 @@ export const DatasetTrackerTable: React.FC<{ data: DatasetTrackerInfo[] }> = ({ 
     },
     filterFns: {
       arrIncludesSome: filterFns.arrIncludesSome,
+      inNumberRanges: filterFns.inNumberRange,
+      isNonZero: filterFns.weakEquals,
     },
   });
 

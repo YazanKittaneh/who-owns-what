@@ -62,6 +62,14 @@ export type AddressRecord = {
   // Legacy NYC fields kept optional for compatibility with unused UI pieces.
   bbl?: string;
   boro?: Borough;
+  council?: string | null;
+  unitsres?: number | null;
+  rsunits2007?: number | null;
+  yearstartedj51?: number | null;
+  yearstarted421a?: number | null;
+  lastsaledate?: string | null;
+  lastsaleamount?: number | null;
+  lastsaleacrisid?: string | null;
   ownernames?: HpdOwnerContact[] | null;
   allcontacts?: HpdFullContact[] | null;
   businessaddrs?: string[] | null;
@@ -101,4 +109,31 @@ export type BuildingInfoRecord = AddressRecord;
 
 export type BuildingInfoResults = {
   result: BuildingInfoRecord[];
+};
+
+export type IndicatorsHistoryRecord = {
+  month: string;
+  permits_total?: number;
+  violations_total?: number;
+  violations_open?: number;
+  service_requests_total?: number;
+  hpdviolations_class_a?: number;
+  hpdviolations_class_b?: number;
+  hpdviolations_class_c?: number;
+  hpdviolations_class_i?: number;
+  hpdviolations_total?: number;
+  hpdcomplaints_emergency?: number;
+  hpdcomplaints_nonemergency?: number;
+  hpdcomplaints_total?: number;
+  dobpermits_total?: number;
+  dobviolations_regular?: number;
+  dobviolations_ecb?: number;
+  dobviolations_total?: number;
+  evictionfilings_total?: number | null;
+  rentstabilizedunits_total?: number;
+};
+
+export type IndicatorsHistoryResults = {
+  schema?: "nyc" | "standard";
+  result: IndicatorsHistoryRecord[];
 };

@@ -7,7 +7,7 @@ WITH latest_parcels AS (
     FROM chi_parcels
     ORDER BY
         pin,
-        NULLIF(year, '')::int DESC NULLS LAST
+        NULLIF(regexp_replace(year::text, '\.0+$', ''), '')::int DESC NULLS LAST
 ),
 latest_owners AS (
     SELECT DISTINCT ON (pin)
@@ -15,7 +15,7 @@ latest_owners AS (
     FROM chi_owners
     ORDER BY
         pin,
-        NULLIF(year, '')::int DESC NULLS LAST
+        NULLIF(regexp_replace(year::text, '\.0+$', ''), '')::int DESC NULLS LAST
 ),
 parcels_with_owner AS (
     SELECT
@@ -72,3 +72,13 @@ CREATE INDEX ON wow_parcels (zip);
 CREATE INDEX ON wow_parcels (ward);
 CREATE INDEX ON wow_parcels (community_area);
 CREATE INDEX IF NOT EXISTS wow_parcels_address_trgm_idx ON wow_parcels USING GIN (address gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS wow_parcels_address_lower_prefix_idx
+    ON wow_parcels (lower(address) text_pattern_ops);
+CREATE INDEX IF NOT EXISTS wow_parcels_streetname_lower_prefix_idx
+    ON wow_parcels (lower(streetname) text_pattern_ops);
+CREATE INDEX IF NOT EXISTS wow_parcels_housenumber_lower_prefix_idx
+    ON wow_parcels (lower(housenumber) text_pattern_ops);
+CREATE INDEX IF NOT EXISTS wow_parcels_fulladdr_lower_prefix_idx
+    ON wow_parcels (
+        (coalesce(lower(housenumber), '') || ' ' || coalesce(lower(streetname), '')) text_pattern_ops
+    );

@@ -1,48 +1,242 @@
+import { withI18n, withI18nProps } from "@lingui/react";
 import React from "react";
 import { withMachineInStateProps } from "state-machine";
 import "styles/PropertiesList.css";
+import { defaultLocale, SupportedLocale } from "../i18n-base";
+import _groupBy from "lodash/groupBy";
+import { FixedLoadingLabel } from "./Loader";
+import PortfolioFilters from "./PortfolioFilters";
+import PortfolioTable from "./PortfolioTable";
+import { AmplitudeEvent, EventProperties, logAmplitudeEvent } from "./Amplitude";
+import PropertiesMap from "./PropertiesMap";
 import { AddressPageRoutes } from "routes";
+import { AddressRecord } from "./APIDataTypes";
 
-export const FilterContextProvider: React.FC<{}> = (props) => <>{props.children}</>;
+// Pattern for context provider to update context from child components
+// https://stackoverflow.com/a/67710693/7051239
 
-const PropertiesList: React.FC<
+export type FilterNumberRange = { min: number; max: number };
+export const NUMBER_RANGE_DEFAULT = { min: -Infinity, max: Infinity };
+export type FilterNumberRangeSelections = {
+  type: "default" | "presets" | "custom";
+  values: FilterNumberRange[];
+};
+
+export type FilterSelections = {
+  ownernames: string[];
+  unitsres: FilterNumberRangeSelections;
+  zip: string[];
+  rsunitslatest?: boolean;
+  commercialOnly?: boolean;
+};
+
+export type IFilterContext = {
+  viewType: "table" | "map";
+  totalBuildings?: number | undefined;
+  filteredBuildings?: number | undefined;
+  filterSelections: FilterSelections;
+  filterOptions: {
+    ownernames: string[];
+    unitsres: FilterNumberRange;
+    zip: string[];
+  };
+};
+
+export const defaultFilterContext: IFilterContext = {
+  viewType: "table",
+  totalBuildings: undefined,
+  filteredBuildings: undefined,
+  filterSelections: {
+    rsunitslatest: false,
+    commercialOnly: false,
+    ownernames: [],
+    unitsres: { type: "default", values: [NUMBER_RANGE_DEFAULT] },
+    zip: [],
+  },
+  filterOptions: {
+    ownernames: [],
+    unitsres: NUMBER_RANGE_DEFAULT,
+    zip: [],
+  },
+};
+
+const useValue = () => {
+  const [filterContext, setFilterContext] = React.useState(defaultFilterContext);
+
+  return {
+    filterContext,
+    setFilterContext,
+  };
+};
+
+export const FilterContext = React.createContext({} as ReturnType<typeof useValue>);
+
+export const filterAddresses = (addrs: AddressRecord[], filterSelections: FilterSelections) => {
+  const {
+    rsunitslatest: filterRsunitslatest,
+    commercialOnly: filterCommercialOnly,
+    ownernames: filterOwnernames,
+    unitsres: filterUnitsres,
+    zip: filterZip,
+  } = filterSelections;
+
+  return addrs.filter((addr) => {
+    let keepAddr = true;
+
+    if (keepAddr && filterRsunitslatest) {
+      keepAddr = (addr.rsunitslatest || 0) > 0;
+    }
+
+    if (keepAddr && filterCommercialOnly) {
+      keepAddr = (addr.unitsres ?? addr.units_res ?? 0) <= 0;
+    }
+
+    if (keepAddr && !!filterOwnernames.length) {
+      const addrOwnernames =
+        addr.allcontacts &&
+        Object.entries(_groupBy(addr.allcontacts, "value")).map((contact) => contact[0]);
+
+      keepAddr = filterOwnernames.some((filterOwnername) =>
+        addrOwnernames?.includes(filterOwnername)
+      );
+    }
+
+    if (keepAddr && filterUnitsres.type !== "default") {
+      keepAddr = filterUnitsres.values.reduce(
+        (acc, range) =>
+          acc ||
+          ((addr.unitsres ?? addr.units_res) != null &&
+            (addr.unitsres ?? addr.units_res)! >= range.min &&
+            (addr.unitsres ?? addr.units_res)! <= range.max),
+        false
+      );
+    }
+
+    if (keepAddr && !!filterZip.length) {
+      keepAddr = addr.zip != null && filterZip.includes(addr.zip);
+    }
+
+    return keepAddr;
+  });
+};
+
+export const FilterContextProvider: React.FC<{}> = (props) => {
+  return <FilterContext.Provider value={useValue()}>{props.children}</FilterContext.Provider>;
+};
+
+export type PortfolioAnalyticsEvent = (
+  event: AmplitudeEvent,
+  extraProps: {
+    column?: string;
+    extraParams?: EventProperties;
+    /** In case the corresponding event name for google isn't a straight case change from amplitude */
+    gtmEvent?: string;
+  }
+) => void;
+
+const PropertiesListWithoutI18n: React.FC<
   withMachineInStateProps<"portfolioFound"> &
-    {
+    withI18nProps & {
       addressPageRoutes: AddressPageRoutes;
       isVisible?: boolean;
-      onAddrChange: (pin: string) => void;
+      onAddrChange?: (pin: string) => void;
     }
-> = ({ state, onAddrChange }) => {
-  const addrs = state.context.portfolioData.assocAddrs;
+> = (props) => {
+  const { i18n } = props;
+  const isVisible = props.isVisible ?? true;
+  const locale = (i18n.language as SupportedLocale) || defaultLocale;
+  const useNewPortfolioMethod = props.state.context.useNewPortfolioMethod || false;
+  const portfolioFiltersEnabled = process.env.REACT_APP_PORTFOLIO_FILTERS_ENABLED !== "0";
 
-  return (
+  const addrs = props.state.context.portfolioData.assocAddrs;
+  const rsunitslatestyear = props.state.context.portfolioData.searchAddr.rsunitslatestyear ?? 0;
+
+  const { filterContext } = React.useContext(FilterContext);
+  const { viewType, filterSelections } = filterContext;
+  const filteredAddrs = React.useMemo(
+    () => filterAddresses(addrs, filterSelections),
+    [addrs, filterSelections]
+  );
+
+  // avoid loading any components until portfolio tab is viewed
+  const [everVisible, setEverVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    setEverVisible((prev) => prev || isVisible);
+  }, [isVisible]);
+
+  // only load the map or table when viewed, and avoid reloading when switching between
+  const [viewsEverVisible, setViewsEverVisible] = React.useState({
+    table: viewType === "table",
+    map: viewType === "map",
+  });
+
+  // We keep trak of this since mapbox loads on render of the Map component (not
+  // instantiation of the Map object) and we're charged for each load, so we
+  // want to only render it when necessary and then not unmount when switching
+  // views back and forth
+  React.useEffect(() => {
+    // Currently table will alsways be true, and map always start as false, but
+    // we have talked about adding the ability to link to the portfolio tab with
+    // the view type (map/table) specified, so this will help if/when we do that
+    setViewsEverVisible((prev) => ({
+      table: prev.table || viewType === "table",
+      map: prev.map || viewType === "map",
+    }));
+  }, [viewType]);
+
+  const logPortfolioAnalytics: PortfolioAnalyticsEvent = (event, extraProps) => {
+    const { column, extraParams, gtmEvent } = extraProps;
+    const portfolioColumn = !!column && { portfolioColumn: column };
+    const eventParams = {
+      portfolioSize: addrs.length,
+      portfolioMappingMethod: useNewPortfolioMethod ? "wowza" : "legacy",
+      ...portfolioColumn,
+      ...extraParams,
+    };
+    logAmplitudeEvent(event, eventParams);
+    const gtagEvent = gtmEvent || event.replace(/([a-zA-Z])(?=[A-Z])/g, "$1-").toLowerCase();
+    window.gtag("event", gtagEvent, eventParams);
+  };
+
+  return !everVisible ? (
+    <FixedLoadingLabel />
+  ) : (
     <div className="PropertiesList">
-      <table className="table">
-        <thead>
-          <tr>
-            <th>Address</th>
-            <th>Owner</th>
-            <th>Units</th>
-            <th>Permits</th>
-            <th>Open violations</th>
-            <th>311 requests</th>
-          </tr>
-        </thead>
-        <tbody>
-          {addrs.map((addr) => (
-            <tr key={addr.pin} onClick={() => onAddrChange(addr.pin)}>
-              <td>{addr.address || `${addr.housenumber || ""} ${addr.streetname || ""}`}</td>
-              <td>{addr.owner_name || ""}</td>
-              <td>{addr.units_res ?? 0}</td>
-              <td>{addr.permits_total ?? 0}</td>
-              <td>{addr.violations_open ?? 0}</td>
-              <td>{addr.requests_311_total ?? 0}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {portfolioFiltersEnabled && (
+        <PortfolioFilters
+          state={props.state}
+          send={props.send}
+          logPortfolioAnalytics={logPortfolioAnalytics}
+        />
+      )}
+
+      {viewsEverVisible.table && (
+        <PortfolioTable
+          data={filteredAddrs}
+          locale={locale}
+          rsunitslatestyear={rsunitslatestyear}
+          getRowCanExpand={() => true}
+          logPortfolioAnalytics={logPortfolioAnalytics}
+          isVisible={viewType === "table"}
+        />
+      )}
+
+      {portfolioFiltersEnabled && viewsEverVisible.map && (
+        <PropertiesMap
+          location="portfolio"
+          state={props.state}
+          send={props.send}
+          addrs={filteredAddrs}
+          onAddrChange={props.onAddrChange || (() => {})}
+          isVisible={viewType === "map"}
+          addressPageRoutes={props.addressPageRoutes}
+        />
+      )}
     </div>
   );
 };
+
+const PropertiesList = withI18n()(PropertiesListWithoutI18n);
 
 export default PropertiesList;

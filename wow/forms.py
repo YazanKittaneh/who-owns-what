@@ -20,6 +20,7 @@ class CommaSeparatedField(forms.CharField):
 
 
 PIN_REGEX = r"^\d{14}$"
+BBL_REGEX = r"^\d{10}$"
 
 
 class PinForm(forms.Form):
@@ -28,6 +29,23 @@ class PinForm(forms.Form):
             RegexValidator(PIN_REGEX, message="This should be a 14-digit PIN.")
         ]
     )
+
+
+class PinOrBblForm(forms.Form):
+    pin = forms.CharField(
+        validators=[RegexValidator(PIN_REGEX, message="This should be a 14-digit PIN.")],
+        required=False,
+    )
+    bbl = forms.CharField(
+        validators=[RegexValidator(BBL_REGEX, message="This should be a 10-digit BBL.")],
+        required=False,
+    )
+
+    def clean(self):
+        data = super().clean()
+        if not data.get("pin") and not data.get("bbl"):
+            raise ValidationError("Either pin or bbl is required.")
+        return data
 
 
 class PinListForm(forms.Form):
