@@ -57,6 +57,7 @@ export type AmplitudeEvent =
   | "hpdviolationsTimelineTab"
   | "dobpermitsTimelineTab"
   | "dobviolationsTimelineTab"
+  | "show_allTimelineTab"
   | "monthTimelineTab"
   | "quarterTimelineTab"
   | "yearTimelineTab"

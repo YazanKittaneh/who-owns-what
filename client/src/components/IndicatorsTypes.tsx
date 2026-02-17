@@ -7,7 +7,12 @@ export const nycIndicatorsDatasetIds = [
   "rentstabilizedunits",
 ] as const;
 
-export const standardIndicatorsDatasetIds = ["permits", "violations", "service_requests"] as const;
+export const standardIndicatorsDatasetIds = [
+  "show_all",
+  "permits",
+  "violations",
+  "service_requests",
+] as const;
 
 export const indicatorsDatasetIds = [
   ...nycIndicatorsDatasetIds,
@@ -100,6 +105,15 @@ export const indicatorsInitialDataStructure: IndicatorsDataFromAPI = {
   service_requests: {
     labels: null,
     values: {
+      total: null,
+    },
+  },
+  show_all: {
+    labels: null,
+    values: {
+      permits: null,
+      violations: null,
+      service_requests: null,
       total: null,
     },
   },

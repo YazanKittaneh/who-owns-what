@@ -245,4 +245,39 @@ export const INDICATORS_DATASETS: Record<IndicatorsDatasetId, IndicatorsDataset>
       },
     ],
   },
+  show_all: {
+    mode: "standard",
+    name: (i18n) => i18n._(t`Show all`),
+    analyticsName: "show_all",
+    quantity: (_i18n, value) => `${value} total records`,
+    startYear: 2007,
+    yAxisLabel: (i18n) => i18n._(t`Records`),
+    explanation: (i18n) => (
+      <>
+        {i18n._(
+          t`Combined timeline showing permits, code violations, and 311 service requests for this property.`
+        )}
+      </>
+    ),
+    series: [
+      {
+        key: "permits",
+        label: (i18n) => i18n._(t`Permits`),
+        backgroundColor: "#4ea8de",
+        borderColor: "#1d3557",
+      },
+      {
+        key: "violations",
+        label: (i18n) => i18n._(t`Violations`),
+        backgroundColor: "#f4a261",
+        borderColor: "#8d5524",
+      },
+      {
+        key: "service_requests",
+        label: (i18n) => i18n._(t`311 requests`),
+        backgroundColor: "#90be6d",
+        borderColor: "#2a9d8f",
+      },
+    ],
+  },
 };

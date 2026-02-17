@@ -29,6 +29,7 @@ const indicatorColumns: Record<IndicatorsDatasetId, string[]> = {
   dobviolations: ["regular", "ecb", "total"],
   evictionfilings: ["total"],
   rentstabilizedunits: ["total"],
+  show_all: ["permits", "violations", "service_requests", "total"],
   permits: ["total"],
   violations: ["total"],
   service_requests: ["total"],
@@ -56,6 +57,16 @@ function createVizData(rawJson: any[], dataset: IndicatorsDatasetId): Indicators
 
   rawJson.forEach((row) => {
     vizData.labels?.push(row.month);
+    if (dataset === "show_all") {
+      const permits = parseInt(row.permits_total, 10) || 0;
+      const violations = parseInt(row.violations_total, 10) || 0;
+      const serviceRequests = parseInt(row.service_requests_total, 10) || 0;
+      (vizData.values.permits as number[]).push(permits);
+      (vizData.values.violations as number[]).push(violations);
+      (vizData.values.service_requests as number[]).push(serviceRequests);
+      (vizData.values.total as number[]).push(permits + violations + serviceRequests);
+      return;
+    }
     indicatorColumns[dataset].forEach((column) => {
       const values = vizData.values[column];
       if (!values) return;
@@ -85,6 +96,13 @@ function getAvailableDatasets(mode: IndicatorTimelineMode, rawJson: any[]): Indi
   }
 
   return candidateIds.filter((datasetId) => {
+    if (datasetId === "show_all") {
+      return (
+        Object.prototype.hasOwnProperty.call(row, "permits_total") &&
+        Object.prototype.hasOwnProperty.call(row, "violations_total") &&
+        Object.prototype.hasOwnProperty.call(row, "service_requests_total")
+      );
+    }
     const requiredColumns = indicatorColumns[datasetId];
     return requiredColumns.every((column) => {
       const sourceColumn = `${datasetId}_${column}`;

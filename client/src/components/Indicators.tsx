@@ -32,10 +32,26 @@ type RouteParams = {
   indicator?: string;
 };
 
-const DEFAULT_DATASET: IndicatorsDatasetId = "violations";
+const DEFAULT_DATASET: IndicatorsDatasetId = "show_all";
 
 const getXAxisViewableColumns = (timeSpan: IndicatorsTimeSpan) =>
   timeSpan === "month" ? 24 : timeSpan === "quarter" ? 20 : Number.MAX_SAFE_INTEGER;
+
+const getRecommendedTimeSpan = (datasetId: IndicatorsDatasetId, data: IndicatorsDataFromAPI) => {
+  if (datasetId !== "show_all") {
+    return "quarter" as IndicatorsTimeSpan;
+  }
+  const labels = data[datasetId]?.labels || [];
+  const totals = data[datasetId]?.values.total || [];
+  const firstNonZeroIndex = totals.findIndex((value) => value > 0);
+  const firstIndex = firstNonZeroIndex >= 0 ? firstNonZeroIndex : 0;
+  const firstYear = parseInt((labels[firstIndex] || "").slice(0, 4), 10);
+  const lastYear = parseInt((labels[labels.length - 1] || "").slice(0, 4), 10);
+  if (!Number.isNaN(firstYear) && !Number.isNaN(lastYear) && lastYear > firstYear) {
+    return "year" as IndicatorsTimeSpan;
+  }
+  return "quarter" as IndicatorsTimeSpan;
+};
 
 const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
   const pin = state.context.portfolioData.detailAddr.pin;
@@ -81,6 +97,11 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
         if (!isMounted) return;
         setTimelineData(historyData.data);
         setAvailableDatasets(historyData.availableDatasets);
+        const nextActiveVis = historyData.availableDatasets.includes(activeVis)
+          ? activeVis
+          : historyData.availableDatasets[0] || DEFAULT_DATASET;
+        setActiveVis(nextActiveVis);
+        setActiveTimeSpan(getRecommendedTimeSpan(nextActiveVis, historyData.data));
       })
       .catch(() => {
         if (!isMounted) return;
@@ -94,13 +115,6 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
       isMounted = false;
     };
   }, [pin, detailAddr.bbl, isVisible]);
-
-  React.useEffect(() => {
-    if (!availableDatasets.length) return;
-    if (!availableDatasets.includes(activeVis)) {
-      setActiveVis(availableDatasets[0]);
-    }
-  }, [availableDatasets, activeVis]);
 
   const groupedData = React.useMemo(() => {
     if (!timelineData) {
@@ -117,6 +131,9 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
 
   const handleDatasetChange = (dataset: IndicatorsDatasetId) => {
     setActiveVis(dataset);
+    if (timelineData) {
+      setActiveTimeSpan(getRecommendedTimeSpan(dataset, timelineData));
+    }
     if (isVisible) {
       history.replace(`${timelinePathBase}/${dataset}`);
     }

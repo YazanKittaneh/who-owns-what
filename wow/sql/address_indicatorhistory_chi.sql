@@ -1,12 +1,17 @@
 WITH history AS (
     SELECT
         month,
-        permits_total,
-        violations_total,
-        violations_open,
-        service_requests_total
+        sum(permits_total)::int AS permits_total,
+        sum(violations_total)::int AS violations_total,
+        sum(violations_open)::int AS violations_open,
+        sum(service_requests_total)::int AS service_requests_total
     FROM wow_indicatorhistory_monthly
-    WHERE pin = %(pin)s
+    WHERE pin = ANY(
+        SELECT unnest(pins)
+        FROM wow_portfolios
+        WHERE %(pin)s = ANY(pins)
+    )
+    GROUP BY month
 ),
 first_month AS (
     SELECT coalesce(min(month), date_trunc('month', current_date)::date) AS month
