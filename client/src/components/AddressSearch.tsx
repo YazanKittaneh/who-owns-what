@@ -13,6 +13,7 @@ const KEY_ENTER = 13;
 const KEY_TAB = 9;
 const KEY_ESC = 27;
 const SEARCH_RESULTS_LIMIT = 5;
+const SEARCH_DEBOUNCE_MS = 120;
 
 export interface SearchAddress {
   housenumber?: string | null;
@@ -97,7 +98,8 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
   }
 
   handleInputValueChange(value: string) {
-    if (!value) {
+    const normalizedValue = value.trim();
+    if (!normalizedValue) {
       if (this.activeSearch) {
         this.activeSearch.abort();
         this.activeSearch = undefined;
@@ -117,7 +119,7 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
     this.pendingSearch = window.setTimeout(async () => {
       this.activeSearch = new AbortController();
       try {
-        const results = await fetchSearchResults(value, this.activeSearch.signal);
+        const results = await fetchSearchResults(normalizedValue, this.activeSearch.signal);
         if (this.isUnmounted) {
           return;
         }
@@ -137,7 +139,7 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
       } finally {
         this.activeSearch = undefined;
       }
-    }, 200);
+    }, SEARCH_DEBOUNCE_MS);
   }
 
   selectFirstResult(ds: ControllerStateAndHelpers<SearchAddress>): boolean {

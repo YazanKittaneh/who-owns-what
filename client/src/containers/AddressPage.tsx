@@ -3,6 +3,13 @@ import React, { Component } from "react";
 import AddressToolbar from "../components/AddressToolbar";
 import PropertiesList, { FilterContextProvider } from "../components/PropertiesList";
 import DetailView from "../components/DetailView";
+import PropertiesMap from "../components/PropertiesMap";
+import PropertiesSummary from "../components/PropertiesSummary";
+import Indicators from "../components/Indicators";
+import ComplaintsSummary from "../components/ComplaintsSummary";
+import ViolationsSummary from "../components/ViolationsSummary";
+import EvictionsSummary from "../components/EvictionsSummary";
+import RentstabSummary from "../components/RentstabSummary";
 import { LoadingPage } from "../components/Loader";
 
 import "styles/AddressPage.css";
@@ -16,7 +23,7 @@ import { withMachineProps } from "state-machine";
 import { AddrNotFoundPage } from "./NotFoundPage";
 import { searchAddrsAreEqual } from "util/helpers";
 import { NetworkErrorMessage } from "components/NetworkErrorMessage";
-import { createAddressPageRoutes, createRouteForAddressPage } from "routes";
+import { createAddressPageRoutes, createRouteForAddressPage, removeIndicatorSuffix } from "routes";
 import { isLegacyPath } from "../components/WowzaToggle";
 import { logAmplitudeEvent } from "components/Amplitude";
 import { localeFromRouter } from "i18n";
@@ -24,6 +31,7 @@ import { localeFromRouter } from "i18n";
 type RouteParams = {
   locale?: string;
   pin?: string;
+  indicator?: string;
 };
 
 type AddressPageProps = RouteComponentProps<RouteParams> &
@@ -177,22 +185,57 @@ export default class AddressPage extends Component<AddressPageProps, State> {
                       <Trans>Portfolio</Trans>
                     </Link>
                   </li>
+                  <li className={`tab-item ${this.props.currentTab === 2 ? "active" : ""}`}>
+                    <Link
+                      to={removeIndicatorSuffix(routes.timeline)}
+                      tabIndex={this.props.currentTab === 2 ? -1 : 0}
+                      onClick={() => {
+                        logAmplitudeEvent("timelineTab");
+                        window.gtag("event", "timeline-tab");
+                      }}
+                    >
+                      <Trans>Timeline</Trans>
+                    </Link>
+                  </li>
+                  <li className={`tab-item ${this.props.currentTab === 3 ? "active" : ""}`}>
+                    <Link
+                      to={routes.summary}
+                      tabIndex={this.props.currentTab === 3 ? -1 : 0}
+                      onClick={() => {
+                        logAmplitudeEvent("summaryTab");
+                        window.gtag("event", "summary-tab");
+                      }}
+                    >
+                      <Trans>Summary</Trans>
+                    </Link>
+                  </li>
                 </ul>
               </div>
               <AddressToolbar searchAddr={searchAddr} assocAddrs={assocAddrs} />
             </div>
             <div
-              className={`AddressPage__content AddressPage__viz ${
+              className={`AddressPage__content AddressPage__overview ${
                 this.props.currentTab === 0 ? "AddressPage__content-active" : ""
               }`}
             >
-              <DetailView
-                state={state}
-                send={send}
-                mobileShow={this.state.detailMobileSlide}
-                onClose={this.handleCloseDetail}
-                onAddrChange={(pin: string) => this.handleAddrChange(pin)}
-              />
+              <PropertiesSummary state={state} send={send} />
+              <div className="AddressPage__viz">
+                <PropertiesMap
+                  state={state}
+                  send={send}
+                  onAddrChange={(pin: string) => this.handleAddrChange(pin)}
+                  isVisible={this.props.currentTab === 0}
+                  addressPageRoutes={routes}
+                  location="overview"
+                />
+                <DetailView
+                  state={state}
+                  send={send}
+                  mobileShow={this.state.detailMobileSlide}
+                  onClose={this.handleCloseDetail}
+                  onAddrChange={(pin: string) => this.handleAddrChange(pin)}
+                />
+              </div>
             </div>
             <div
               className={`AddressPage__content AddressPage__portfolio ${
@@ -207,6 +250,33 @@ export default class AddressPage extends Component<AddressPageProps, State> {
                   addressPageRoutes={routes}
                 />
               </FilterContextProvider>
+            </div>
+            <div
+              className={`AddressPage__content ${
+                this.props.currentTab === 2 ? "AddressPage__content-active" : ""
+              }`}
+            >
+              <Indicators state={state} send={send} isVisible={this.props.currentTab === 2} />
+            </div>
+            <div
+              className={`AddressPage__content AddressPage__summary ${
+                this.props.currentTab === 3 ? "AddressPage__content-active" : ""
+              }`}
+            >
+              <div className="p-2">
+                <div className="card p-2 mb-2">
+                  <ComplaintsSummary state={state} send={send} />
+                </div>
+                <div className="card p-2 mb-2">
+                  <ViolationsSummary state={state} send={send} />
+                </div>
+                <div className="card p-2 mb-2">
+                  <EvictionsSummary state={state} send={send} />
+                </div>
+                <div className="card p-2 mb-2">
+                  <RentstabSummary state={state} send={send} />
+                </div>
+              </div>
             </div>
           </div>
         </Page>

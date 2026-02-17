@@ -4,6 +4,7 @@ import { removeLocalePrefix } from "i18n";
 export type AddressPageUrlParams = {
   pin: string;
   locale?: string;
+  indicator?: string;
 };
 
 export type AddressPageRoutes = ReturnType<typeof createAddressPageRoutes>;
@@ -44,8 +45,13 @@ export const createAddressPageRoutes = (
   return {
     overview: `${prefix}`,
     portfolio: `${prefix}/portfolio`,
+    timeline: `${prefix}/timeline/:indicator?`,
+    summary: `${prefix}/summary`,
   };
 };
+
+export const removeIndicatorSuffix = (pathname: string) =>
+  pathname.replace(/(\/timeline)(\/[^/]+)?$/, "$1");
 
 export const createAccountRoutePaths = (prefix?: string) => {
   return {

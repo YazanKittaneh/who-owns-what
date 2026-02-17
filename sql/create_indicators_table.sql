@@ -16,17 +16,20 @@ WITH parcels AS (
     FROM wow_parcels
 ),
 permits_by_pin AS (
+    WITH permits_expanded AS (
+        SELECT
+            trim(pin_value) AS pin10
+        FROM chi_permits AS cp
+        CROSS JOIN LATERAL unnest(
+            regexp_split_to_array(coalesce(cp.pin_list, ''), '\\s*\\|\\s*')
+        ) AS pin_value
+        WHERE pin_value <> ''
+    )
     SELECT
         p.pin,
         count(perm.pin10) AS permits_total
     FROM parcels AS p
-    LEFT JOIN chi_permits AS cp ON TRUE
-    LEFT JOIN LATERAL (
-        SELECT
-            trim(pin_value) AS pin10
-        FROM unnest(regexp_split_to_array(coalesce(cp.pin_list, ''), '\\s*\\|\\s*')) AS pin_value
-        WHERE pin_value <> ''
-    ) AS perm ON perm.pin10 = p.pin10
+    LEFT JOIN permits_expanded AS perm ON perm.pin10 = p.pin10
     GROUP BY p.pin
 ),
 violations_norm AS (

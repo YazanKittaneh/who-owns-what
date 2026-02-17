@@ -14,12 +14,13 @@ wow_pre_sql:
   - create_parcels_table.sql
   - create_portfolios_table.sql
   - helper_functions.sql
-  - search_function_pin.sql
-  - agg_function.sql
 wow_post_sql:
   # These SQL scripts are run after the above "pre" scripts and the wow_portfolios
   # table is populated via /portfoliograph python functions.
   - create_indicators_table.sql
+  - create_indicatorhistory_table.sql
+  - search_function_pin.sql
+  - agg_function.sql
 extra_nycdb_test_data:
   # This is extra data our tests need that we don't
   # create ourselves via factories.

@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: auto;
 
   font-family: "Inconsolata";
   font-style: normal;
@@ -9,4 +10,72 @@
   font-size: 0.875rem;
   line-height: 100%;
   letter-spacing: 0.02em;
+
+  .PropertiesList__controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0.94rem;
+    border-bottom: 1px solid #d4d4d4;
+    background: #fff;
+
+    .form-input {
+      max-width: 28rem;
+      width: 100%;
+    }
+  }
+
+  .PropertiesList__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    white-space: nowrap;
+  }
+
+  table {
+    margin-bottom: 0;
+
+    th,
+    td {
+      vertical-align: middle;
+    }
+  }
+
+  .PropertiesList__sort {
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+  }
+
+  .PropertiesList__pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0.94rem;
+    border-top: 1px solid #d4d4d4;
+    background: #fff;
+    margin-top: auto;
+  }
+
+  .PropertiesList__page-size {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    select {
+      min-width: 4.25rem;
+    }
+  }
+
+  .PropertiesList__page-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
 }

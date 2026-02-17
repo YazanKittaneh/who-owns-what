@@ -74,6 +74,13 @@
     position: relative;
     border-bottom: 1px solid $gray-dark;
     width: 100%;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .AddressPage__overview {
+    display: flex;
+    flex-direction: column;
   }
 
   .AddressPage__summary {

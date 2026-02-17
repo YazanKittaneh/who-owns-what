@@ -211,6 +211,20 @@ To use new data, you'll need to update a few things:
 An example of all this in practice can be seen in [#209][],
 which upgrades WoW from PLUTO 18v2 to 19v2.
 
+### Chicago API fetch
+
+To refresh Chicago source CSVs from Socrata APIs (paged, no 50k cap), run:
+
+```
+python scripts/fetch_chi_data.py --output-dir data
+```
+
+Then rebuild tables:
+
+```
+python dbtool.py builddb --update
+```
+
 Note also that the
 [justfixnyc/nycdb-k8s-loader](https://github.com/justfixnyc/nycdb-k8s-loader)
 project may be useful for keeping the WoW database up-to-date on a day-to-day
