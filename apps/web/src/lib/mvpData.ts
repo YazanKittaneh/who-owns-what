@@ -10,6 +10,14 @@ export type AddressRecord = {
   permitsTotal: number;
 };
 
+export type PortfolioSummary = {
+  portfolioId: string;
+  ownerName: string;
+  pinCount: number;
+  totalViolationsOpen: number;
+  totalPermits: number;
+};
+
 export const SAMPLE_ADDRESSES: AddressRecord[] = [
   {
     pin: "17062010120000",
@@ -65,4 +73,19 @@ export function getAddressByPinFallback(pin: string): AddressRecord | null {
 
 export function getPortfolioByIdFallback(portfolioId: string): AddressRecord[] {
   return SAMPLE_ADDRESSES.filter((row) => row.portfolioId === portfolioId);
+}
+
+export function getPortfolioSummaryFallback(portfolioId: string): PortfolioSummary | null {
+  const rows = getPortfolioByIdFallback(portfolioId);
+  if (!rows.length) {
+    return null;
+  }
+
+  return {
+    portfolioId,
+    ownerName: rows[0].ownerName,
+    pinCount: rows.length,
+    totalViolationsOpen: rows.reduce((acc, row) => acc + row.violationsOpen, 0),
+    totalPermits: rows.reduce((acc, row) => acc + row.permitsTotal, 0),
+  };
 }

@@ -3,13 +3,16 @@ import { makeFunctionReference } from "convex/server";
 import {
   getAddressByPinFallback,
   getPortfolioByIdFallback,
+  getPortfolioSummaryFallback,
   searchAddressesFallback,
   type AddressRecord,
+  type PortfolioSummary,
 } from "@/lib/mvpData";
 
 const addressesSearchRef = makeFunctionReference<"query">("addresses:search");
 const addressByPinRef = makeFunctionReference<"query">("addresses:getByPin");
 const portfolioByIdRef = makeFunctionReference<"query">("portfolios:getById");
+const portfolioSummaryRef = makeFunctionReference<"query">("portfolios:getSummary");
 
 function getConvexUrl(): string {
   return process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL ?? "";
@@ -60,5 +63,21 @@ export async function getPortfolioById(portfolioId: string): Promise<AddressReco
     return (await client.query(portfolioByIdRef, { portfolioId })) as AddressRecord[];
   } catch {
     return getPortfolioByIdFallback(portfolioId);
+  }
+}
+
+export async function getPortfolioSummary(
+  portfolioId: string,
+): Promise<PortfolioSummary | null> {
+  const client = getServerClient();
+  if (!client) {
+    return getPortfolioSummaryFallback(portfolioId);
+  }
+
+  try {
+    const row = (await client.query(portfolioSummaryRef, { portfolioId })) as PortfolioSummary | null;
+    return row ?? getPortfolioSummaryFallback(portfolioId);
+  } catch {
+    return getPortfolioSummaryFallback(portfolioId);
   }
 }

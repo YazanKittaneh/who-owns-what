@@ -124,6 +124,9 @@ async function main() {
     );
   }
 
+  const portfolioResult = await client.mutation("portfolios:recomputeSummaries", {});
+  console.log("Recomputed portfolio summaries", portfolioResult);
+
   console.log(`Completed import: ${rows.length} rows from ${dataDir}`);
 }
 

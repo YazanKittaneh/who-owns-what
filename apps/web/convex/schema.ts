@@ -21,5 +21,7 @@ export default defineSchema({
     portfolioId: v.string(),
     ownerName: v.string(),
     pinCount: v.number(),
+    totalViolationsOpen: v.number(),
+    totalPermits: v.number(),
   }).index("by_portfolio_id", ["portfolioId"]),
 });
