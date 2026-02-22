@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -8,7 +7,7 @@ export const metadata: Metadata = {
   description: "Who Owns What MVP on OpenNext + Convex",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -16,9 +15,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ConvexAuthNextjsServerProvider storageNamespace="wow-mvp-auth">
-          <Providers>{children}</Providers>
-        </ConvexAuthNextjsServerProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

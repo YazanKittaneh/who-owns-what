@@ -14,7 +14,7 @@
     "convex:deploy": "convex deploy",
     "convex:import:mvp": "node scripts/importReducedData.mjs --limit 3000",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test e2e/address-search.spec.ts e2e/portfolio.spec.ts e2e/auth-pages.spec.ts"
+    "test:e2e:smoke": "playwright test e2e/address-search.spec.ts e2e/portfolio.spec.ts e2e/auth-pages.spec.ts e2e/protected-route.spec.ts"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",

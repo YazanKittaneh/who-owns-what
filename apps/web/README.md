@@ -58,8 +58,8 @@ npm run deploy:worker
 
 ## Auth and protected routes
 
-- Middleware protects `/account` and redirects unauthenticated users to `/login`.
-- Convex Auth actions are proxied through `/api/auth` by middleware.
+- `/account` uses a route guard (server env gate + client auth gate) and redirects unauthenticated users to `/login`.
+- Convex Auth actions are called directly from the client via Convex Auth provider.
 
 See the full cutover checklist:
 
