@@ -1,5 +1,10 @@
 const authConfig = {
-  providers: [],
+  providers: [
+    {
+      domain: "https://auth.convex.dev",
+      applicationID: "convex",
+    },
+  ],
 };
 
 export default authConfig;

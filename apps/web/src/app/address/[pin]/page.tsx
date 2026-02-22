@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import PropertySummary from "@/components/property/PropertySummary";
-import { getAddressByPin } from "@/lib/mvpData";
+import { getAddressByPin } from "@/lib/dataSource";
 
 type Props = {
   params: Promise<{ pin: string }>;
@@ -8,7 +8,7 @@ type Props = {
 
 export default async function AddressPage({ params }: Props) {
   const { pin } = await params;
-  const record = getAddressByPin(pin);
+  const record = await getAddressByPin(pin);
 
   if (!record) {
     notFound();

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAddressByPin } from "@/lib/mvpData";
+import { getAddressByPin } from "@/lib/dataSource";
 
 type Params = {
   params: Promise<{ pin: string }>;
@@ -7,7 +7,7 @@ type Params = {
 
 export async function GET(_: Request, { params }: Params) {
   const { pin } = await params;
-  const row = getAddressByPin(pin);
+  const row = await getAddressByPin(pin);
 
   if (!row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

@@ -11,11 +11,15 @@
     "preview:worker": "opennextjs-cloudflare build && wrangler dev",
     "deploy:worker": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "convex:dev": "convex dev",
-    "convex:deploy": "convex deploy"
+    "convex:deploy": "convex deploy",
+    "convex:import:mvp": "node scripts/importReducedData.mjs --limit 3000"
   },
   "dependencies": {
+    "@auth/core": "^0.34.3",
+    "@convex-dev/auth": "^0.0.90",
     "@opennextjs/cloudflare": "^1.16.5",
     "convex": "^1.32.0",
+    "csv-parse": "^6.1.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

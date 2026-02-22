@@ -46,7 +46,7 @@ export const SAMPLE_ADDRESSES: AddressRecord[] = [
   },
 ];
 
-export function searchAddresses(query: string): AddressRecord[] {
+export function searchAddressesFallback(query: string): AddressRecord[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
 
@@ -59,10 +59,10 @@ export function searchAddresses(query: string): AddressRecord[] {
   });
 }
 
-export function getAddressByPin(pin: string): AddressRecord | null {
+export function getAddressByPinFallback(pin: string): AddressRecord | null {
   return SAMPLE_ADDRESSES.find((row) => row.pin === pin) ?? null;
 }
 
-export function getPortfolioById(portfolioId: string): AddressRecord[] {
+export function getPortfolioByIdFallback(portfolioId: string): AddressRecord[] {
   return SAMPLE_ADDRESSES.filter((row) => row.portfolioId === portfolioId);
 }
