@@ -12,10 +12,12 @@
     "deploy:worker": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
-    "convex:import:mvp": "node scripts/importReducedData.mjs --limit 3000"
+    "convex:import:mvp": "node scripts/importReducedData.mjs --limit 3000",
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test e2e/address-search.spec.ts e2e/portfolio.spec.ts e2e/auth-pages.spec.ts"
   },
   "dependencies": {
-    "@auth/core": "^0.34.3",
+    "@auth/core": "^0.37.4",
     "@convex-dev/auth": "^0.0.90",
     "@opennextjs/cloudflare": "^1.16.5",
     "convex": "^1.32.0",
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@cloudflare/workerd-darwin-arm64": "^1.20260228.0",
+    "@playwright/test": "^1.58.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -43,3 +43,7 @@ next-env.d.ts
 # opennext
 /.open-next/
 /.wrangler/
+
+# playwright
+/playwright-report/
+/test-results/
