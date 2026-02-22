@@ -32,6 +32,7 @@ Cut over the MVP rewrite at `apps/web` to Cloudflare Workers (OpenNext) with Con
 
 - Any provider-specific auth values if additional providers are enabled.
 - Default password provider scaffold requires no extra provider secret.
+- For local/dev setup, copy `apps/web/.env.local.sample` to `apps/web/.env.local` and fill required values.
 
 ## One-Time Setup
 

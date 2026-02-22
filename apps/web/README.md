@@ -9,7 +9,13 @@ This workspace contains the in-progress MVP rewrite for Who Owns What.
 - Convex backend/runtime
 - Convex Auth (password provider)
 
-## Required environment variables
+## Environment setup
+
+```bash
+cp .env.local.sample .env.local
+```
+
+Required values:
 
 - `NEXT_PUBLIC_CONVEX_URL` (required for app runtime/auth)
 - `CONVEX_URL` (optional server-side override; usually same as `NEXT_PUBLIC_CONVEX_URL`)
@@ -22,12 +28,19 @@ npm install
 npm run dev
 ```
 
-## Build and worker bundle
+## Validation
+
+```bash
+npm run validate
+```
+
+Equivalent commands:
 
 ```bash
 npm run lint
 npm run build
 npm run build:worker
+npm run test:e2e:smoke
 ```
 
 ## Convex commands
@@ -42,12 +55,6 @@ Optional import flags:
 
 ```bash
 node scripts/importReducedData.mjs --limit 5000 --batch-size 200 --data-dir ../data/mvp
-```
-
-## E2E smoke tests
-
-```bash
-npm run test:e2e:smoke
 ```
 
 ## Cloudflare deploy
