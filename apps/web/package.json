@@ -15,7 +15,10 @@
     "convex:import:mvp": "node scripts/importReducedData.mjs --limit 3000",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test e2e/address-search.spec.ts e2e/portfolio.spec.ts e2e/auth-pages.spec.ts e2e/protected-route.spec.ts",
-    "validate": "npm run lint && npm run build && npm run build:worker && npm run test:e2e:smoke"
+    "validate": "npm run lint && npm run build && npm run build:worker && npm run test:e2e:smoke",
+    "check-env:runtime": "node scripts/checkEnv.mjs runtime",
+    "check-env:import": "node scripts/checkEnv.mjs import",
+    "check-env:deploy": "node scripts/checkEnv.mjs deploy"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",

@@ -23,6 +23,7 @@ Cut over the MVP rewrite at `apps/web` to Cloudflare Workers (OpenNext) with Con
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
+- `NEXT_PUBLIC_CONVEX_URL`
 
 ### Cloudflare Worker Runtime Vars
 
@@ -71,8 +72,9 @@ npm run test:e2e:smoke
 ## Deploy Steps
 
 1. Set Cloudflare secrets (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`) in GitHub.
-2. Ensure runtime env vars are present for the Worker deployment.
-3. Push to `main` or manually trigger:
+2. Set `NEXT_PUBLIC_CONVEX_URL` in GitHub secrets for build/deploy.
+3. Ensure runtime env vars are present for the Worker deployment.
+4. Push to `main` or manually trigger:
 
 ```bash
 # from apps/web

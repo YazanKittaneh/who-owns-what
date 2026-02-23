@@ -64,6 +64,14 @@ node scripts/importReducedData.mjs --limit 5000 --batch-size 200 --data-dir ../d
 
 ## Cloudflare deploy
 
+Before deploy, verify environment:
+
+```bash
+npm run check-env:deploy
+```
+
+Then deploy:
+
 ```bash
 npm run deploy:worker
 ```
