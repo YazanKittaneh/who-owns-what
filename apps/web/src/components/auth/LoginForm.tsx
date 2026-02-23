@@ -9,6 +9,7 @@ type Status = "idle" | "submitting" | "error" | "success";
 export default function LoginForm() {
   const authActions = useAuthActions();
   const router = useRouter();
+  const authEnabled = Boolean(process.env.NEXT_PUBLIC_CONVEX_URL);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -16,6 +17,11 @@ export default function LoginForm() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!authEnabled) {
+      setStatus("error");
+      setMessage("Auth is disabled. Configure NEXT_PUBLIC_CONVEX_URL.");
+      return;
+    }
     if (!authActions) {
       setStatus("error");
       setMessage("Convex Auth is not configured.");
@@ -54,6 +60,7 @@ export default function LoginForm() {
         type="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
+        disabled={!authEnabled}
         required
       />
       <label htmlFor="login-password">Password</label>
@@ -62,10 +69,11 @@ export default function LoginForm() {
         type="password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
+        disabled={!authEnabled}
         required
         minLength={8}
       />
-      <button type="submit" disabled={status === "submitting"}>
+      <button type="submit" disabled={status === "submitting" || !authEnabled}>
         {status === "submitting" ? "Signing in..." : "Sign in"}
       </button>
       {message ? <p>{message}</p> : null}

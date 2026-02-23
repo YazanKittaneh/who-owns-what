@@ -9,6 +9,7 @@ type Status = "idle" | "submitting" | "error" | "success";
 export default function RegisterForm() {
   const authActions = useAuthActions();
   const router = useRouter();
+  const authEnabled = Boolean(process.env.NEXT_PUBLIC_CONVEX_URL);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -16,6 +17,11 @@ export default function RegisterForm() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!authEnabled) {
+      setStatus("error");
+      setMessage("Auth is disabled. Configure NEXT_PUBLIC_CONVEX_URL.");
+      return;
+    }
     if (!authActions) {
       setStatus("error");
       setMessage("Convex Auth is not configured.");
@@ -54,6 +60,7 @@ export default function RegisterForm() {
         type="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
+        disabled={!authEnabled}
         required
       />
       <label htmlFor="register-password">Password</label>
@@ -62,10 +69,11 @@ export default function RegisterForm() {
         type="password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
+        disabled={!authEnabled}
         required
         minLength={8}
       />
-      <button type="submit" disabled={status === "submitting"}>
+      <button type="submit" disabled={status === "submitting" || !authEnabled}>
         {status === "submitting" ? "Creating account..." : "Create account"}
       </button>
       {message ? <p>{message}</p> : null}
