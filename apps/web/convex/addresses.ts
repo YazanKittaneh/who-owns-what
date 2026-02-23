@@ -15,7 +15,8 @@ export const search = queryGeneric({
     const q = args.query.trim().toLowerCase();
     if (!q) return [];
 
-    const rows = await ctx.db.query("addresses").take(200);
+    // MVP search is in-memory scoring, so scan a larger bounded window.
+    const rows = await ctx.db.query("addresses").take(5000);
     return rows
       .map((row) => ({
         row,
