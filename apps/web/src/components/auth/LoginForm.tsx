@@ -1,12 +1,14 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 
 type Status = "idle" | "submitting" | "error" | "success";
 
 export default function LoginForm() {
   const authActions = useAuthActions();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -24,13 +26,20 @@ export default function LoginForm() {
     setMessage("");
 
     try {
-      await authActions.signIn("password", {
+      const result = await authActions.signIn("password", {
         flow: "signIn",
         email,
         password,
       });
+
       setStatus("success");
-      setMessage("Signed in successfully.");
+
+      if (result.signingIn) {
+        router.replace("/account");
+        return;
+      }
+
+      setMessage("Sign-in started. Complete any verification step to continue.");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "Unable to sign in.");

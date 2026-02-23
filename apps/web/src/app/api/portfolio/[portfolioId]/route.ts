@@ -35,6 +35,10 @@ export async function GET(_: Request, { params }: Params) {
     summary,
     properties: rows.map((row) => ({
       pin: row.pin,
+      address: row.address,
+      ownerName: row.ownerName,
+      violationsOpen: row.violationsOpen,
+      permitsTotal: row.permitsTotal,
       prop_address: row.address,
       owner_name: row.ownerName,
       violations_open: row.violationsOpen,

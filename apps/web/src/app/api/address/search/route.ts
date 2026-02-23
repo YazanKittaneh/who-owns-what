@@ -6,6 +6,8 @@ export async function GET(request: NextRequest) {
   try {
     const results = (await searchAddresses(q)).map((row) => ({
       pin: row.pin,
+      address: row.address,
+      ownerName: row.ownerName,
       prop_address: row.address,
       owner_name: row.ownerName,
     }));
