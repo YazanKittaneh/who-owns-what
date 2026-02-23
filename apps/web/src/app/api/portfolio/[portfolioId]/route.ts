@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getPortfolioById, getPortfolioSummary } from "@/lib/dataSource";
+import {
+  DataSourceUnavailableError,
+  getPortfolioById,
+  getPortfolioSummary,
+} from "@/lib/dataSource";
+import type { AddressRecord, PortfolioSummary } from "@/lib/mvpData";
 
 type Params = {
   params: Promise<{ portfolioId: string }>;
@@ -7,10 +12,19 @@ type Params = {
 
 export async function GET(_: Request, { params }: Params) {
   const { portfolioId } = await params;
-  const [rows, summary] = await Promise.all([
-    getPortfolioById(portfolioId),
-    getPortfolioSummary(portfolioId),
-  ]);
+  let rows: AddressRecord[];
+  let summary: PortfolioSummary | null;
+  try {
+    [rows, summary] = await Promise.all([
+      getPortfolioById(portfolioId),
+      getPortfolioSummary(portfolioId),
+    ]);
+  } catch (error) {
+    if (error instanceof DataSourceUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
+    throw error;
+  }
 
   if (!rows.length) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

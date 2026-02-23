@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAddressByPin } from "@/lib/dataSource";
+import { DataSourceUnavailableError, getAddressByPin } from "@/lib/dataSource";
+import type { AddressRecord } from "@/lib/mvpData";
 
 type Params = {
   params: Promise<{ pin: string }>;
@@ -7,7 +8,15 @@ type Params = {
 
 export async function GET(_: Request, { params }: Params) {
   const { pin } = await params;
-  const row = await getAddressByPin(pin);
+  let row: AddressRecord | null;
+  try {
+    row = await getAddressByPin(pin);
+  } catch (error) {
+    if (error instanceof DataSourceUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
+    throw error;
+  }
 
   if (!row) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

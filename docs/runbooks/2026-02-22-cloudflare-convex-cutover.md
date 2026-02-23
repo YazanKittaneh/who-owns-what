@@ -17,6 +17,7 @@ Cut over the MVP rewrite at `apps/web` to Cloudflare Workers (OpenNext) with Con
 - `NEXT_PUBLIC_CONVEX_URL=https://<deployment>.convex.cloud`
 - Optional: `CONVEX_URL` (if server-side URL override is needed)
 - Optional for import scripts: `CONVEX_DEPLOY_KEY=<convex deploy key>`
+- Optional for local smoke tests only: `WOW_ALLOW_SAMPLE_DATA=1`
 
 ### GitHub Actions Secrets
 
@@ -27,6 +28,7 @@ Cut over the MVP rewrite at `apps/web` to Cloudflare Workers (OpenNext) with Con
 
 - `NEXT_PUBLIC_CONVEX_URL`
 - `CONVEX_URL` (recommended to match `NEXT_PUBLIC_CONVEX_URL`)
+- Do not set `WOW_ALLOW_SAMPLE_DATA` in production.
 
 ### Convex Dashboard Vars
 

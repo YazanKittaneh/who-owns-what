@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchAddresses } from "@/lib/dataSource";
+import { DataSourceUnavailableError, searchAddresses } from "@/lib/dataSource";
 
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q") ?? "";
-  const results = (await searchAddresses(q)).map((row) => ({
-    pin: row.pin,
-    prop_address: row.address,
-    owner_name: row.ownerName,
-  }));
+  try {
+    const results = (await searchAddresses(q)).map((row) => ({
+      pin: row.pin,
+      prop_address: row.address,
+      owner_name: row.ownerName,
+    }));
 
-  return NextResponse.json({ result: results });
+    return NextResponse.json({ result: results });
+  } catch (error) {
+    if (error instanceof DataSourceUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
+    throw error;
+  }
 }

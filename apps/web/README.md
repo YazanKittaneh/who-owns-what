@@ -21,6 +21,11 @@ Required values:
 - `CONVEX_URL` (optional server-side override; usually same as `NEXT_PUBLIC_CONVEX_URL`)
 - `CONVEX_DEPLOY_KEY` (required for import/deploy scripts that write data)
 
+Optional local-only value:
+
+- `WOW_ALLOW_SAMPLE_DATA=1` to use bundled sample records when Convex is unavailable.
+  Do not set this in production.
+
 ## Local development
 
 ```bash

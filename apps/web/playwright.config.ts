@@ -7,17 +7,20 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: "list",
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: "on-first-retry",
   },
   webServer: {
-    command: `npm run dev -- --port ${PORT}`,
+    command: `npm run build && npm run start -- --port ${PORT}`,
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: false,
     timeout: 120_000,
+    env: {
+      WOW_ALLOW_SAMPLE_DATA: "1",
+    },
   },
   projects: [
     {
