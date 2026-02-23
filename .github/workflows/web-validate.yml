@@ -1,0 +1,32 @@
+name: Validate Web (PR)
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/web-validate.yml"
+  push:
+    branches:
+      - codex/**
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/web-validate.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run validate
+        env:
+          NEXT_PUBLIC_CONVEX_URL: "https://dummy.convex.cloud"
+          WOW_ALLOW_SAMPLE_DATA: "1"

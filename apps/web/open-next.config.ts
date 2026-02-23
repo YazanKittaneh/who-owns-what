@@ -6,7 +6,7 @@ const config = {
       proxyExternalRequest: "fetch" as const,
       incrementalCache: "dummy" as const,
       tagCache: "dummy" as const,
-      queue: "direct" as const,
+      queue: "dummy" as const,
     },
   },
   edgeExternals: ["node:crypto"],
@@ -18,7 +18,7 @@ const config = {
       proxyExternalRequest: "fetch" as const,
       incrementalCache: "dummy" as const,
       tagCache: "dummy" as const,
-      queue: "direct" as const,
+      queue: "dummy" as const,
     },
   },
 };
