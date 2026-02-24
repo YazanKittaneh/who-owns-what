@@ -123,17 +123,22 @@ bash docker-update.sh
 
 (You will want to re-run that whenever you update your git repository, too.)
 
-Then start up the server:
+Then start up the backend + database:
 
 ```
 docker-compose up
 ```
 
-Eventually, you should see a message that says "You can now view client in the browser."
+Once running, the Django API is available at http://localhost:8000.
 
-Visit http://localhost:3000 and you should be good to go! If
-you installed test data, you can see useful results by
-clicking on the "All Year Management" portfolio on the
+If you also want to run the frontend locally, start it separately:
+
+```
+cd client && yarn start
+```
+
+Then visit http://localhost:3000. If you installed test data, you can see
+useful results by clicking on the "All Year Management" portfolio on the
 home page.
 
 Note: If you would like to connect your Docker instance to an external postgres database, you
