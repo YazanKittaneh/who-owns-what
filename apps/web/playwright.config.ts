@@ -20,6 +20,8 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       WOW_ALLOW_SAMPLE_DATA: "1",
+      NEXT_PUBLIC_CONVEX_URL: "",
+      NEXT_PUBLIC_CONVEX_SITE_URL: "",
     },
   },
   projects: [
