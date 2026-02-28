@@ -4,7 +4,7 @@ type Props = {
   params: Promise<{ pin: string }>;
 };
 
-export default async function PinOverviewPage({ params }: Props) {
+export default async function PinSummaryPage({ params }: Props) {
   const { pin } = await params;
-  return <AddressTabPage pin={pin} tab="overview" style="pin" />;
+  return <AddressTabPage pin={pin} tab="summary" style="pin" />;
 }

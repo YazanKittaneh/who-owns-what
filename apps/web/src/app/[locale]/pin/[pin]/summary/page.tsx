@@ -5,7 +5,7 @@ type Props = {
   params: Promise<{ locale: string; pin: string }>;
 };
 
-export default async function LocalizedAddressPage({ params }: Props) {
+export default async function LocalizedPinSummaryPage({ params }: Props) {
   const { locale, pin } = await params;
-  return <AddressTabPage pin={pin} tab="overview" style="address" locale={isSupportedLocale(locale) ? locale : undefined} />;
+  return <AddressTabPage pin={pin} tab="summary" style="pin" locale={isSupportedLocale(locale) ? locale : undefined} />;
 }

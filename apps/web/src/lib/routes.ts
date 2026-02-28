@@ -1,6 +1,9 @@
 export const SUPPORTED_LOCALES = ["en", "es"] as const;
+export const ADDRESS_TAB_KEYS = ["overview", "portfolio", "timeline", "summary"] as const;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+export type AddressTabKey = (typeof ADDRESS_TAB_KEYS)[number];
+export type AddressRouteStyle = "address" | "pin";
 
 export function isSupportedLocale(value: string): value is SupportedLocale {
   return (SUPPORTED_LOCALES as readonly string[]).includes(value);
@@ -10,6 +13,33 @@ export function withLocalePrefix(pathname: string, locale?: SupportedLocale): st
   if (!locale) return pathname;
   if (pathname === "/") return `/${locale}`;
   return `/${locale}${pathname}`;
+}
+
+export function buildAddressBasePath(
+  pin: string,
+  options?: { locale?: SupportedLocale; style?: AddressRouteStyle },
+): string {
+  const style = options?.style ?? "address";
+  const segment = style === "pin" ? "pin" : "address";
+  return withLocalePrefix(`/${segment}/${encodeURIComponent(pin)}`, options?.locale);
+}
+
+export function buildAddressTabPath(
+  pin: string,
+  tab: AddressTabKey,
+  options?: {
+    locale?: SupportedLocale;
+    style?: AddressRouteStyle;
+    timelineIndicator?: string;
+  },
+): string {
+  const base = buildAddressBasePath(pin, options);
+  if (tab === "overview") return base;
+  if (tab === "timeline") {
+    const indicator = options?.timelineIndicator?.trim();
+    return `${base}/timeline${indicator ? `/${encodeURIComponent(indicator)}` : ""}`;
+  }
+  return `${base}/${tab}`;
 }
 
 export function mapLegacySlugToModernPath(

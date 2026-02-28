@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgis/postgis:9.6-3.2
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wow
+      POSTGRES_PASSWORD: wow
+      POSTGRES_DB: wow
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wow -d wow"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://wow:wow@db/wow
+      PYTHONUNBUFFERED: "1"
+    working_dir: /wow
+    volumes:
+      - .:/wow
+    command: ["/bin/bash", "/wow/docker/proxmox-backend-start.sh"]
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
