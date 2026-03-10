@@ -1,0 +1,17 @@
+name = "who-owns-what"
+compatibility_date = "2024-01-01"
+
+# Cloudflare Pages configuration
+[site]
+bucket = "./build"
+
+# Environment variables to expose in the Pages project
+# These should be set in the Cloudflare dashboard or via wrangler CLI
+# 
+# Required vars for production:
+# - REACT_APP_API_BASE_URL
+# - REACT_APP_STREETVIEW_API_KEY
+# - REACT_APP_AMPLITUDE_API_KEY
+
+[vars]
+NODE_VERSION = "18"

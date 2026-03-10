@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 18, "column": 0}, "map": {"version":3,"sources":["file:///Users/yazankittaneh/code/Projects/who-owns-what/apps/web/src/app/account/page.tsx"],"sourcesContent":["import Link from \"next/link\";\n\nexport default function AccountPage() {\n  return (\n    <main style={{ padding: \"2rem\", display: \"grid\", gap: \"0.75rem\" }}>\n      <h1>Account</h1>\n      <p>You are authenticated and can access protected routes.</p>\n      <p>\n        Continue to <Link href=\"/\">home</Link>.\n      </p>\n    </main>\n  );\n}\n"],"names":[],"mappings":";;;;;AAAA;;;AAEe,SAAS;IACtB,qBACE,8OAAC;QAAK,OAAO;YAAE,SAAS;YAAQ,SAAS;YAAQ,KAAK;QAAU;;0BAC9D,8OAAC;0BAAG;;;;;;0BACJ,8OAAC;0BAAE;;;;;;0BACH,8OAAC;;oBAAE;kCACW,8OAAC,0LAAI;wBAAC,MAAK;kCAAI;;;;;;oBAAW;;;;;;;;;;;;;AAI9C"}}]
+}

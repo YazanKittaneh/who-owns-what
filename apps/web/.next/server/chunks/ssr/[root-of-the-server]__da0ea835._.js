@@ -1,0 +1,3 @@
+module.exports=[42602,(a,b,c)=>{"use strict";b.exports=a.r(18622)},87924,(a,b,c)=>{"use strict";b.exports=a.r(42602).vendored["react-ssr"].ReactJsxRuntime},72131,(a,b,c)=>{"use strict";b.exports=a.r(42602).vendored["react-ssr"].React},18622,(a,b,c)=>{b.exports=a.x("next/dist/compiled/next-server/app-page-turbo.runtime.prod.js",()=>require("next/dist/compiled/next-server/app-page-turbo.runtime.prod.js"))},14747,(a,b,c)=>{b.exports=a.x("path",()=>require("path"))},62562,(a,b,c)=>{b.exports=a.x("module",()=>require("module"))},43518,a=>{"use strict";var b=a.i(87924);function c({children:a}){return(0,b.jsx)(b.Fragment,{children:a})}a.i(59257),a.i(11241),a.s(["default",()=>c],43518)}];
+
+//# sourceMappingURL=%5Broot-of-the-server%5D__da0ea835._.js.map
