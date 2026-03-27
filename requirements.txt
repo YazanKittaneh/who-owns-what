@@ -1,7 +1,7 @@
 # This only contains dependencies for running the API
 # server. For all other dependencies, see requirements-dev.txt.
 psycopg2==2.8.6
-django==3.2.20
+django==4.2.20
 rollbar==0.16.3
 dj-database-url==0.5.0
 gunicorn==19.9.0
@@ -10,4 +10,4 @@ algoliasearch==2.6.1
 boto3==1.28.44
 requests==2.25.1
 types-requests==2.25.1
-django-cors-headers==4.3.0
+django-cors-headers==4.6.0
