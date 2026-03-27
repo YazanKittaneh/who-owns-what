@@ -16,3 +16,11 @@ db.sqlite3
 .ssh/
 .yalc/
 yalc*
+
+# Large data files
+data/*.tmp
+*.csv.tmp
+
+# Next.js build cache
+.next/
+*.sst
