@@ -108,6 +108,9 @@ CORS_ALLOWED_ORIGINS = [
     "https://demo-gce-screener.netlify.app",
     "https://goodcausenyc.org",
     "https://goodcauseny.org",
+    # Cloudflare Pages domains - add your custom domain here
+    "https://who-owns-what.pages.dev",
+    "https://*.who-owns-what.pages.dev",
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"https://deploy-preview-(?:\d{1,4})--wow-django-demo\.netlify\.app",
@@ -119,6 +122,28 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"https://([A-Za-z0-9\-\_]+)--wow-django-demo\.netlify\.app",
     r"https://([A-Za-z0-9\-\_]+)--gce-screener\.netlify\.app",
     r"https://([A-Za-z0-9\-\_]+)--demo-gce-screener\.netlify\.app",
+]
+
+# Django 4.0+ requires CSRF_TRUSTED_ORIGINS to include the scheme (http:// or https://)
+# This prevents CSRF verification failures on POST requests
+CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+    "https://wowserver.justfix.org",
+    "https://demo-wowserver.justfix.org",
+    "https://wow-django.herokuapp.com",
+    "https://wow-django-demo-ce7b326fc987.herokuapp.com",
+    "https://whoownswhat.justfix.org",
+    "https://demo-whoownswhat.justfix.org",
+    "https://signature-dashboard.netlify.app",
+    "https://signatureportfolio.org",
+    "https://gce-screener.netlify.app",
+    "https://demo-gce-screener.netlify.app",
+    "https://goodcausenyc.org",
+    "https://goodcauseny.org",
+    "https://who-owns-what.pages.dev",
 ]
 
 # This is based off the default Django logging configuration:
