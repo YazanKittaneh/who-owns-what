@@ -5,6 +5,7 @@ from . import views
 app_name = "wow"
 
 urlpatterns = [
+    path("health/", views.health_check, name="health_check"),
     path("address/search", views.address_search, name="address_search"),
     path("address", views.address_query, name="address_query"),
     path("address/aggregate", views.address_aggregate, name="address_aggregate"),

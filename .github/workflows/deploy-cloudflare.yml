@@ -1,0 +1,53 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: client/yarn.lock
+
+      - name: Install dependencies
+        working-directory: client
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        working-directory: client
+        run: yarn build
+        env:
+          REACT_APP_API_BASE_URL: ${{ secrets.REACT_APP_API_BASE_URL }}
+          REACT_APP_STREETVIEW_API_KEY: ${{ secrets.REACT_APP_STREETVIEW_API_KEY }}
+          REACT_APP_AMPLITUDE_API_KEY: ${{ secrets.REACT_APP_AMPLITUDE_API_KEY }}
+          REACT_APP_ROLLBAR_ACCESS_TOKEN: ${{ secrets.REACT_APP_ROLLBAR_ACCESS_TOKEN }}
+          REACT_APP_ALGOLIA_APP_ID: ${{ secrets.REACT_APP_ALGOLIA_APP_ID }}
+          REACT_APP_ALGOLIA_SEARCH_KEY: ${{ secrets.REACT_APP_ALGOLIA_SEARCH_KEY }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: who-owns-what
+          directory: client/build
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

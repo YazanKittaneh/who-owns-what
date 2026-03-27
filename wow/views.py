@@ -184,3 +184,23 @@ def server_error(request):
     from django.views import defaults
 
     return defaults.server_error(request)
+
+
+def health_check(request):
+    """Health check endpoint for container orchestration."""
+    try:
+        # Check database connectivity
+        with connections["wow"].cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+
+        return JsonResponse(
+            {"status": "healthy", "database": "connected"},
+            status=200
+        )
+    except Exception as e:
+        logger.exception("Health check failed")
+        return JsonResponse(
+            {"status": "unhealthy", "error": str(e)},
+            status=503
+        )

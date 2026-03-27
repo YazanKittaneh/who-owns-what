@@ -1,0 +1,59 @@
+# Production Dockerfile for Django Backend
+# Optimized for size and security
+
+FROM python:3.11-slim-bookworm
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    APP_HOME=/app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR ${APP_HOME}
+
+# Install Python dependencies first (for better caching)
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create non-root user for security
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser \
+    && chown -R appuser:appgroup ${APP_HOME}
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ || exit 1
+
+# Start Gunicorn
+# Using 4 workers (2-4 x CPU cores), 30s timeout
+CMD ["gunicorn", \
+    "--bind", "0.0.0.0:8000", \
+    "--workers", "4", \
+    "--timeout", "30", \
+    "--keep-alive", "2", \
+    "--max-requests", "1000", \
+    "--max-requests-jitter", "50", \
+    "--access-logfile", "-", \
+    "--error-logfile", "-", \
+    "--capture-output", \
+    "--enable-stdio-inheritance", \
+    "project.wsgi:application"]
