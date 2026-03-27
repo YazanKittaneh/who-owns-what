@@ -1,6 +1,22 @@
-version: "3.8"
-
 services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: wow-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=wow
+      - POSTGRES_PASSWORD=wow
+      - POSTGRES_DB=wow
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - wow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wow -d wow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Django Backend API
   api:
     build:
@@ -8,8 +24,8 @@ services:
       dockerfile: Dockerfile.prod
     container_name: wow-api
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - DEBUG=false
       - SECRET_KEY=${SECRET_KEY}
@@ -20,10 +36,13 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
     env_file:
       - .env
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - wow-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -36,6 +55,46 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
+
+  frontend:
+    build:
+      context: .
+      dockerfile: client/Dockerfile.prod
+      args:
+        REACT_APP_API_BASE_URL: ${FRONTEND_API_BASE_URL:-https://wow-api.yazan.io}
+        REACT_APP_ROLLBAR_ACCESS_TOKEN: ${FRONTEND_ROLLBAR_ACCESS_TOKEN:-}
+    container_name: wow-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - wow-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: wow-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - wow-network
+    profiles:
+      - with-cloudflare
 
   # Nginx Reverse Proxy (optional but recommended)
   nginx:
@@ -74,5 +133,6 @@ networks:
     driver: bridge
 
 volumes:
+  postgres-data:
   certbot-data:
   certbot-www:

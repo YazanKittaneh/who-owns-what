@@ -72,7 +72,12 @@ DATABASE_URL=postgres://username:password@host:5432/dbname
 # Django
 DEBUG=false
 SECRET_KEY=your-super-secret-random-key-here
-ALLOWED_HOSTS=api.yourdomain.com,localhost
+ALLOWED_HOSTS=wow-api.yazan.io,localhost,127.0.0.1
+CORS_EXTRA_ALLOWED_ORIGINS=https://wow.yazan.io
+CSRF_EXTRA_TRUSTED_ORIGINS=https://wow.yazan.io
+
+# Cloudflare Tunnel
+CLOUDFLARE_TUNNEL_TOKEN=your-cloudflare-tunnel-token
 
 # API Tokens
 ALERTS_API_TOKEN=your-alerts-token
@@ -100,13 +105,16 @@ Optional secrets:
 |--------|-------------|
 | `SLACK_WEBHOOK_URL` | For deployment notifications |
 
-### 4. Configure DNS
+### 4. Configure DNS / Cloudflare
 
-Point your domain/subdomain to your VM's IP:
+The current production setup uses Cloudflare-hosted domains:
 
 ```
-A Record: api.yourdomain.com → YOUR_VM_IP
+Frontend: https://wow.yazan.io
+API:      https://wow-api.yazan.io
 ```
+
+The API is published through a named Cloudflare Tunnel, so `wow-api.yazan.io` should point to the tunnel CNAME rather than directly to the VM IP.
 
 ### 5. Deploy
 
@@ -134,10 +142,10 @@ cd ~/who-owns-what
 git pull origin main
 
 # Build and start
-docker-compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml --profile with-cloudflare up -d --build
 
 # Check status
-docker-compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml --profile with-cloudflare ps
 ```
 
 ## SSL/HTTPS Setup (Let's Encrypt)
@@ -168,57 +176,26 @@ docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
   --email your-email@example.com
 ```
 
-### Option 2: Using Cloudflare Tunnel (Easier)
+### Option 2: Using Cloudflare Tunnel (Current Setup)
 
-If you're using Cloudflare for DNS:
+The active production setup uses Docker Compose plus a `cloudflared` sidecar container.
 
-1. Install cloudflared on your VM:
+1. Add the tunnel token to `.env`:
 
-```bash
-# Download and install
-wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
-sudo chmod +x /usr/local/bin/cloudflared
-
-# Authenticate
-cloudflared tunnel login
+```env
+CLOUDFLARE_TUNNEL_TOKEN=your-cloudflare-tunnel-token
 ```
 
-2. Create a tunnel:
+2. Start the stack with the tunnel profile:
 
 ```bash
-cloudflared tunnel create wow-api
+docker compose -f docker-compose.prod.yml --profile with-cloudflare up -d
 ```
 
-3. Configure the tunnel:
+3. In Cloudflare DNS, point `wow-api.yazan.io` at your tunnel hostname:
 
-```bash
-# Create config
-mkdir -p ~/.cloudflared
-cat > ~/.cloudflared/config.yml << EOF
-tunnel: YOUR_TUNNEL_ID
-credentials-file: /home/YOUR_USERNAME/.cloudflared/YOUR_TUNNEL_ID.json
-
-ingress:
-  - hostname: api.yourdomain.com
-    service: http://localhost:8000
-  - service: http_status:404
-EOF
-```
-
-4. Run the tunnel:
-
-```bash
-cloudflared tunnel route dns wow-api api.yourdomain.com
-cloudflared tunnel run wow-api
-```
-
-5. (Optional) Set up as a service:
-
-```bash
-sudo cloudflared service install
-sudo systemctl enable cloudflared
-sudo systemctl start cloudflared
+```text
+wow-api.yazan.io -> <tunnel-id>.cfargotunnel.com
 ```
 
 ## Monitoring & Logs

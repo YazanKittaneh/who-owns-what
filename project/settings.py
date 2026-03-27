@@ -29,6 +29,13 @@ def get_required_env(key: str) -> str:
     return value
 
 
+def get_csv_env(key: str, default: Optional[List[str]] = None) -> List[str]:
+    value = os.environ.get(key)
+    if value is None:
+        return list(default or [])
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 DEBUG = os.environ.get("DEBUG") == "true"
 
 SECRET_KEY = get_required_env("SECRET_KEY")
@@ -37,8 +44,7 @@ ALERTS_API_TOKEN = get_required_env("ALERTS_API_TOKEN")
 
 SIGNATURE_API_TOKEN = get_required_env("SIGNATURE_API_TOKEN")
 
-# TODO: Figure out if this can securely stay at '*'.
-ALLOWED_HOSTS: List[str] = ["*"]
+ALLOWED_HOSTS: List[str] = get_csv_env("ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
 
 ROOT_URLCONF = "project.urls"
 
@@ -112,6 +118,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://who-owns-what.pages.dev",
     "https://*.who-owns-what.pages.dev",
 ]
+CORS_ALLOWED_ORIGINS += get_csv_env("CORS_EXTRA_ALLOWED_ORIGINS")
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"https://deploy-preview-(?:\d{1,4})--wow-django-demo\.netlify\.app",
     r"https://deploy-preview-(?:\d{1,4})--signature-dashboard\.netlify\.app",
@@ -145,6 +152,10 @@ CSRF_TRUSTED_ORIGINS = [
     "https://goodcauseny.org",
     "https://who-owns-what.pages.dev",
 ]
+CSRF_TRUSTED_ORIGINS += get_csv_env("CSRF_EXTRA_TRUSTED_ORIGINS")
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # This is based off the default Django logging configuration:
 # https://github.com/django/django/blob/master/django/utils/log.py

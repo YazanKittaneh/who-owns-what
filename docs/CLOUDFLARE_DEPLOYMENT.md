@@ -8,7 +8,7 @@ This guide explains how to deploy the Who Owns What frontend to **Cloudflare Pag
 ┌─────────────────────┐         ┌──────────────────────┐
 │   Cloudflare Pages  │ ◄─────► │   Your Server        │
 │   (React Frontend)  │  CORS   │   (Django Backend)   │
-│   who-owns-what     │         │   IP:PORT            │
+│   wow.yazan.io      │         │   wow-api.yazan.io   │
 └─────────────────────┘         └──────────────────────┘
 ```
 
@@ -19,7 +19,7 @@ This guide explains how to deploy the Who Owns What frontend to **Cloudflare Pag
    - Public IP address
    - Python 3.11+ installed
    - PostgreSQL database
-   - Port 8000 (or your choice) open
+   - A Cloudflare Tunnel or another HTTPS entrypoint for the API
 
 ## Step 1: Configure Your Backend Server
 
@@ -79,7 +79,7 @@ cd client
 yarn install
 
 # Set your backend API URL
-export REACT_APP_API_BASE_URL=http://YOUR_SERVER_IP:8000
+export REACT_APP_API_BASE_URL=https://wow-api.yazan.io
 
 # Build the frontend
 yarn build
@@ -98,7 +98,7 @@ npx wrangler pages deploy build --project-name=who-owns-what
    - **Build output directory:** `build`
    - **Root directory:** `client`
 5. Add environment variables in Cloudflare Dashboard:
-   - `REACT_APP_API_BASE_URL` = `http://YOUR_SERVER_IP:8000`
+   - `REACT_APP_API_BASE_URL` = `https://wow-api.yazan.io`
 
 ## Step 3: Configure Environment Variables
 
@@ -108,7 +108,7 @@ Set these in Cloudflare Pages dashboard (Settings → Environment variables):
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `REACT_APP_API_BASE_URL` | Your backend server URL | `http://123.456.789.0:8000` |
+| `REACT_APP_API_BASE_URL` | Your backend server URL | `https://wow-api.yazan.io` |
 | `REACT_APP_STREETVIEW_API_KEY` | Google StreetView API key | `AIza...` |
 | `NODE_VERSION` | Node.js version | `18` |
 
@@ -122,8 +122,8 @@ Set these in Cloudflare Pages dashboard (Settings → Environment variables):
 
 ## Step 4: Update CORS on Backend
 
-After your Cloudflare Pages site is deployed, you'll get a URL like:
-`https://who-owns-what.pages.dev` or `https://abc123.who-owns-what.pages.dev`
+After your Cloudflare Pages site is deployed, use either the Pages URL or the custom domain:
+`https://who-owns-what.pages.dev` or `https://wow.yazan.io`
 
 Add this to your backend's `CORS_ALLOWED_ORIGINS` in `project/settings.py`:
 
@@ -141,7 +141,7 @@ Then restart your backend server.
 1. Visit your Cloudflare Pages URL
 2. Open browser console (F12)
 3. Try searching for an address
-4. Check Network tab - API calls should go to your server IP
+4. Check Network tab - API calls should go to `https://wow-api.yazan.io`
 5. Check for CORS errors - if present, verify CORS_ALLOWED_ORIGINS
 
 ## Troubleshooting
@@ -150,7 +150,7 @@ Then restart your backend server.
 
 If you see errors like:
 ```
-Access to XMLHttpRequest at 'http://YOUR_IP:8000/api/...' from origin 'https://who-owns-what.pages.dev' has been blocked by CORS policy
+Access to XMLHttpRequest at 'https://wow-api.yazan.io/api/...' from origin 'https://wow.yazan.io' has been blocked by CORS policy
 ```
 
 **Solution:**
@@ -161,8 +161,8 @@ Access to XMLHttpRequest at 'http://YOUR_IP:8000/api/...' from origin 'https://w
 ### API Not Responding
 
 Check:
-1. Server is running: `curl http://YOUR_IP:8000/`
-2. Firewall allows port 8000
+1. Server is running: `curl https://wow-api.yazan.io/api/health/`
+2. Cloudflare Tunnel is healthy
 3. Backend logs for errors
 
 ### Build Failures
@@ -193,14 +193,14 @@ Common issues:
 
 ```bash
 # Check backend is running
-curl http://YOUR_IP:8000/
+curl https://wow-api.yazan.io/api/health/
 
 # Test CORS
-curl -H "Origin: https://who-owns-what.pages.dev" \
+curl -H "Origin: https://wow.yazan.io" \
      -H "Access-Control-Request-Method: GET" \
      -H "Access-Control-Request-Headers: X-Requested-With" \
      -X OPTIONS \
-     http://YOUR_IP:8000/api/
+     https://wow-api.yazan.io/api/
 
 # View Cloudflare Pages logs
 npx wrangler pages deployment tail
