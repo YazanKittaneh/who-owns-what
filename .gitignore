@@ -21,6 +21,8 @@ yalc*
 data/*.tmp
 *.csv.tmp
 backups/
+data/fetch-smoke/
+data/full-refresh-*/
 
 # Next.js build cache
 .next/

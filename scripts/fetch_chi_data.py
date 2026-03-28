@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import csv
+import json
 import os
 import sys
 import time
@@ -14,6 +15,7 @@ import requests
 DEFAULT_LIMIT = 50000
 DEFAULT_TIMEOUT_SECS = 120
 DEFAULT_MAX_RETRIES = 6
+DEFAULT_SLEEP_SECS = 1.0
 
 
 @dataclass(frozen=True)
@@ -115,6 +117,20 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("SOCRATA_APP_TOKEN", ""),
         help="Socrata app token (or set SOCRATA_APP_TOKEN).",
     )
+    parser.add_argument(
+        "--sleep-secs",
+        type=float,
+        default=DEFAULT_SLEEP_SECS,
+        help=(
+            "Delay between successful page fetches in seconds "
+            f"(default: {DEFAULT_SLEEP_SECS})."
+        ),
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from an existing .tmp/.progress file if present.",
+    )
     return parser.parse_args()
 
 
@@ -191,6 +207,35 @@ def count_rows_in_page(csv_text: str) -> int:
     return max(len(rows) - 1, 0)
 
 
+def read_progress(progress_path: Path) -> Optional[Dict[str, int | bool]]:
+    if not progress_path.exists():
+        return None
+    return json.loads(progress_path.read_text())
+
+
+def write_progress(
+    progress_path: Path,
+    *,
+    offset: int,
+    page: int,
+    total_rows: int,
+    wrote_header: bool,
+) -> None:
+    progress_path.write_text(
+        json.dumps(
+            {
+                "offset": offset,
+                "page": page,
+                "total_rows": total_rows,
+                "wrote_header": wrote_header,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+
 def fetch_dataset(
     session: requests.Session,
     config: DatasetConfig,
@@ -200,13 +245,28 @@ def fetch_dataset(
     max_pages: int,
     timeout: int,
     max_retries: int,
+    sleep_secs: float,
+    resume: bool,
 ) -> int:
     output_path = output_dir / config.filename
     temp_path = output_path.with_suffix(output_path.suffix + ".tmp")
+    progress_path = output_path.with_suffix(output_path.suffix + ".progress")
     offset = 0
     page = 0
     total_rows = 0
     wrote_header = False
+
+    if resume:
+        progress = read_progress(progress_path)
+        if progress and temp_path.exists():
+            offset = int(progress["offset"])
+            page = int(progress["page"])
+            total_rows = int(progress["total_rows"])
+            wrote_header = bool(progress["wrote_header"])
+            print(
+                f"{config.name}: resuming at page={page} "
+                f"offset={offset} total={total_rows}"
+            )
 
     while True:
         if max_pages > 0 and page >= max_pages:
@@ -241,10 +301,20 @@ def fetch_dataset(
         total_rows += page_rows
         page += 1
         offset += limit
+        write_progress(
+            progress_path,
+            offset=offset,
+            page=page,
+            total_rows=total_rows,
+            wrote_header=wrote_header,
+        )
         print(f"{config.name}: page={page} rows={page_rows} total={total_rows}")
 
         if page_rows < limit:
             break
+
+        if sleep_secs > 0:
+            time.sleep(sleep_secs)
 
     if total_rows == 0:
         raise RuntimeError(
@@ -252,6 +322,8 @@ def fetch_dataset(
         )
 
     temp_path.replace(output_path)
+    if progress_path.exists():
+        progress_path.unlink()
     print(f"{config.name}: wrote {total_rows} rows to {output_path}")
     return total_rows
 
@@ -299,6 +371,8 @@ def main() -> None:
             max_pages=args.max_pages,
             timeout=args.timeout,
             max_retries=args.max_retries,
+            sleep_secs=args.sleep_secs,
+            resume=args.resume,
         )
 
     print("Fetch complete:")
