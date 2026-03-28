@@ -20,6 +20,7 @@ yalc*
 # Large data files
 data/*.tmp
 *.csv.tmp
+backups/
 
 # Next.js build cache
 .next/

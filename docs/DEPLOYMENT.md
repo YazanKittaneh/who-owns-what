@@ -272,6 +272,41 @@ Notes:
 - The current repository snapshot under `data/chi_*.csv` is only a partial Chicago dataset, not a full production-scale export.
 - To refresh the source CSVs themselves, use `scripts/fetch_chi_data.py` and verify row counts before rebuilding.
 
+### Restore CSV snapshots from MinIO
+
+If you have backed up the CSV snapshots to the local MinIO instance, you can restore them back into the repo with `minio/mc`:
+
+```bash
+docker run --rm --entrypoint /bin/sh \
+  --network akg4s0w8o8swoog08oogc0s0 \
+  -v "$PWD:/work" \
+  minio/mc \
+  -c "mc alias set local http://supabase-minio:9000 \"$MINIO_ROOT_USER\" \"$MINIO_ROOT_PASSWORD\" >/dev/null && mc cp --recursive local/wow-backups/who-owns-what/<timestamp>/data /work/ && mc cp --recursive local/wow-backups/who-owns-what/<timestamp>/tests/data /work/tests/"
+```
+
+Replace `<timestamp>` with the backup prefix you want to restore.
+
+### Back up the database
+
+To create a portable PostgreSQL backup of the running WOW database:
+
+```bash
+mkdir -p backups
+
+docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T db \
+  pg_dump -U wow -d wow -Fc > backups/wow-$(date -u +%Y%m%dT%H%M%SZ).dump
+```
+
+To upload that dump into MinIO:
+
+```bash
+docker run --rm --entrypoint /bin/sh \
+  --network akg4s0w8o8swoog08oogc0s0 \
+  -v "$PWD:/work" \
+  minio/mc \
+  -c "mc alias set local http://supabase-minio:9000 \"$MINIO_ROOT_USER\" \"$MINIO_ROOT_PASSWORD\" >/dev/null && mc mb --ignore-existing local/wow-backups >/dev/null && mc cp /work/backups/<dump-file> local/wow-backups/who-owns-what/<timestamp>/db/<dump-file>"
+```
+
 ## Troubleshooting
 
 ### Container won't start

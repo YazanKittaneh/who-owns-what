@@ -58,6 +58,20 @@ Alternatively, you can load a small test dataset with:
 python dbtool.py loadtestdata
 ```
 
+Note: the checked-in `data/chi_*.csv` snapshot may be only a partial Chicago export. If you need a full refresh, pull newer source CSVs before rebuilding.
+
+If you are running the production Docker stack, the current rebuild flow is:
+
+```bash
+docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T db \
+  psql -U wow -d wow -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'
+
+docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T api \
+  python dbtool.py builddb --update
+```
+
+CSV snapshots and database dumps can also be backed up to the local MinIO instance. See `docs/DEPLOYMENT.md` for the restore and backup commands.
+
 After that, make sure you have Node 12 or higher installed as well as [yarn](https://yarnpkg.com/en/), and then run:
 
 ```
