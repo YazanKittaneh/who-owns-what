@@ -254,6 +254,24 @@ docker-compose -f docker-compose.prod.yml up -d
 docker image prune -f
 ```
 
+## Data Refresh
+
+To rebuild the production WOW tables from the checked-in Chicago CSV snapshots:
+
+```bash
+docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T db \
+  psql -U wow -d wow -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'
+
+docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T api \
+  python dbtool.py builddb --update
+```
+
+Notes:
+
+- `dbtool.py builddb --update` reloads the source `chi_*.csv` files and recreates the derived WOW tables.
+- The current repository snapshot under `data/chi_*.csv` is only a partial Chicago dataset, not a full production-scale export.
+- To refresh the source CSVs themselves, use `scripts/fetch_chi_data.py` and verify row counts before rebuilding.
+
 ## Troubleshooting
 
 ### Container won't start
