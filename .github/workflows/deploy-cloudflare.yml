@@ -36,6 +36,7 @@ jobs:
         working-directory: client
         run: yarn build
         env:
+          NODE_OPTIONS: --openssl-legacy-provider
           REACT_APP_API_BASE_URL: ${{ secrets.REACT_APP_API_BASE_URL }}
           REACT_APP_STREETVIEW_API_KEY: ${{ secrets.REACT_APP_STREETVIEW_API_KEY }}
           REACT_APP_AMPLITUDE_API_KEY: ${{ secrets.REACT_APP_AMPLITUDE_API_KEY }}
