@@ -7,6 +7,7 @@ client/src/**/*.css
 dist
 scripts/*
 !scripts/fetch_chi_data.py
+!scripts/weekly_refresh_prod.sh
 nycdb/
 .mypy_cache/
 docker-compose.override.yml
@@ -24,6 +25,8 @@ backups/
 data/fetch-smoke/
 data/full-refresh-*/
 data/pre-full-refresh-*/
+data/weekly-refresh-staging/
+data/pre-weekly-refresh-*/
 
 # Next.js build cache
 .next/
