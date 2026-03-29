@@ -9,19 +9,21 @@ const EngagementPanel: React.FC<{
   location: SocialShareLocation;
 }> = (props) => (
   <div className="EngagementPanel">
-    <Trans render="h5">Join the fight for tenant rights!</Trans>
+    <Trans render="h5">Share this project</Trans>
     <div className="EngagementWrapper">
       <div className="EngagementItem">
         <p>
-          <Trans>Share with your neighbors</Trans>
+          <Trans>Share with others</Trans>
         </p>
         <SocialShare location={props.location} />
       </div>
       <div className="EngagementItem">
         <p>
-          <Trans>Visit our website</Trans>
+          <Trans>Built and maintained by Yazan</Trans>
         </p>
-        <Link href="https://www.justfix.org/">www.JustFix.org</Link>
+        <Link href="https://yazan.io">yazan.io</Link>
+        <br />
+        <Link href="https://github.com/yazankittaneh">github.com/yazankittaneh</Link>
       </div>
     </div>
   </div>

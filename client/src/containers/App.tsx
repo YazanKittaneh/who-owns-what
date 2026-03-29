@@ -50,7 +50,6 @@ import UnsubscribePage from "./UnsubscribePage";
 import LoginPage from "./LoginPage";
 import { JFLogo } from "components/JFLogo";
 import { STANDALONE_PAGES } from "components/StandalonePage";
-import { JFLogoDivider } from "components/JFLogoDivider";
 import { LoadingPage } from "components/Loader";
 
 const BRANCH_NAME = process.env.REACT_APP_BRANCH;
@@ -64,19 +63,21 @@ const HomeLink = withI18n()((props: withI18nProps) => {
 
   return (
     <JFCLLocaleLink
-      aria-label={i18n._(t`Who owns what`)}
+      aria-label={i18n._(t`Who owns what by Yazan`)}
       onClick={() => {
         window.gtag("event", "site-title");
       }}
       to={isLegacyPath(pathname) ? legacy.home : home}
     >
       <JFLogo className={classnames("jf-logo", isLegacyPath(pathname) && "legacy-styling")} />
-      <JFLogoDivider
-        className={classnames("jf-logo-divider", isLegacyPath(pathname) && "legacy-styling")}
-      />
-      <h1 className={classnames("page-title", isLegacyPath(pathname) && "legacy-styling")}>
-        {widont(title)}
-      </h1>
+      <div className="page-brand">
+        <h1 className={classnames("page-title", isLegacyPath(pathname) && "legacy-styling")}>
+          {widont(title)}
+        </h1>
+        <span className={classnames("page-subtitle", isLegacyPath(pathname) && "legacy-styling")}>
+          {i18n._(t`Independent adaptation by Yazan`)}
+        </span>
+      </div>
     </JFCLLocaleLink>
   );
 });
@@ -260,8 +261,11 @@ const getMainNavLinks = (isLegacyPath?: boolean) => {
     >
       <Trans>How to use</Trans>
     </LocaleNavLink>,
-    <a href="https://donorbox.org/donate-to-justfix-nyc" key={4}>
-      <Trans>Donate</Trans>
+    <a href="https://yazan.io" key={4} target="_blank" rel="noopener noreferrer">
+      <Trans>Yazan.io</Trans>
+    </a>,
+    <a href="https://github.com/yazankittaneh" key={5} target="_blank" rel="noopener noreferrer">
+      <Trans>GitHub</Trans>
     </a>,
   ];
 };
@@ -381,7 +385,7 @@ const App = () => {
               <AppBody />
               {surveyId && surveyCookie !== "2" && (
                 <StickyModal
-                  label={"Help us build tenant power in NYC!"}
+                  label={"Help improve this project"}
                   verticalPosition="bottom"
                   horizontalPosition="right"
                   onClose={hideSurveyButton}
@@ -395,7 +399,7 @@ const App = () => {
                     onClose={closeSurvey}
                     onSubmit={() => (surveySubmitted = true)}
                   >
-                    Take our short survey
+                    Take a short survey
                   </SliderButton>
                 </StickyModal>
               )}

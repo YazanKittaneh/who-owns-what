@@ -6,16 +6,14 @@ import helpers from "../util/helpers";
 import { getSiteOrigin } from "../routes";
 
 const metadata = {
-  keywords: t`Landlord, Portfolio, Tenant, Displacement, Map, JustFix, Chicago, Housing, Who Owns What`,
-  description: t`Use this free tool from JustFix to research your building and investigate landlords in Chicago. We use property ownership mapping to identify a landlord's portfolio and provide indicators like permits, violations, and 311 requests.`,
+  keywords: t`Chicago housing, property ownership, landlord portfolio, public data, housing research, Who Owns What`,
+  description: t`Independent fan-made adaptation of Who Owns What for Chicago. Search public property ownership data, portfolios, permits, violations, and related indicators. Built and maintained by Yazan at yazan.io.`,
   siteName: t`Who owns what`,
 };
 
-export const FB_APP_ID = "247990609143668";
-const TWITTER_HANDLE = "@JustFixOrg";
+export const FB_APP_ID = "";
 const ORIGIN_URL = getSiteOrigin();
 const SHARE_IMAGE_URL = "https://i.imgur.com/6WL74DZ.png";
-const FB_PIXEL_CODE = "o2zqsblxwru6hs8nojpihj5l7lacv4";
 
 type PageProps = {
   title?: string;
@@ -66,17 +64,13 @@ const Page = withI18n()((props: PageProps & withI18nProps) => {
         <meta name="twitter:title" content={title} />
         <meta name="description" content={i18n._(metadata.description)} />
         <meta name="keywords" content={i18n._(metadata.keywords)} />
-        <meta name="author" content="JustFix" />
-        <meta property="fb:app_id" content={FB_APP_ID} />
-        <meta name="facebook-domain-verification" content={FB_PIXEL_CODE} />
+        <meta name="author" content="Yazan" />
         <meta property="og:site_name" content={i18n._(metadata.siteName)} />
         <meta property="og:description" content={i18n._(metadata.description)} />
         <meta property="og:url" content={ORIGIN_URL} />
         <meta property="og:image" content={SHARE_IMAGE_URL} />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content={TWITTER_HANDLE} />
-        <meta name="twitter:creator" content={TWITTER_HANDLE} />
         <meta name="twitter:description" content={i18n._(metadata.description)} />
         <meta name="twitter:url" content={ORIGIN_URL} />
         <meta name="twitter:image" content={SHARE_IMAGE_URL} />

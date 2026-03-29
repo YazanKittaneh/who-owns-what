@@ -23,7 +23,8 @@ export const DeprecationModal = () => {
       </h5>
       <p>
         <Trans>
-          In March 2023 this version will be discontinued. Switch to the new version or learn more.
+          This legacy portfolio view is still available for comparison while the independent
+          adaptation continues to evolve.
         </Trans>
       </p>
     </Modal>

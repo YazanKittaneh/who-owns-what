@@ -880,18 +880,18 @@
           {
             "data": {},
             "marks": [],
-            "value": "Our code is open source and accessible ",
+            "value": "This adaptation is open source and accessible ",
             "nodeType": "text"
           },
           {
             "data": {
-              "uri": "https://github.com/JustFixNYC/who-owns-what"
+              "uri": "https://github.com/yazankittaneh"
             },
             "content": [
               {
                 "data": {},
                 "marks": [],
-                "value": "via our GitHub",
+                "value": "via GitHub",
                 "nodeType": "text"
               }
             ],
@@ -900,18 +900,18 @@
           {
             "data": {},
             "marks": [],
-            "value": ". For additional questions, or help with research, you can email us at ",
+            "value": ". For additional questions, or help with research, you can email ",
             "nodeType": "text"
           },
           {
             "data": {
-              "uri": "mailto:support@justfix.org"
+              "uri": "mailto:hi@yazan.io"
             },
             "content": [
               {
                 "data": {},
                 "marks": [],
-                "value": "support@justfix.org",
+                "value": "hi@yazan.io",
                 "nodeType": "text"
               }
             ],

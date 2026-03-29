@@ -23,10 +23,10 @@ export type SocialShareContent = {
 };
 
 const defaultSocialContent: SocialShareContent = {
-  tweet: t`Who’s responsible for issues in your apartment & building? #WhoOwnsWhat helps you research Chicago property owners using public, open data. A free tool built by @JustFixOrg, it works on any device with an internet connection! Search your address here: `,
-  emailSubject: t`All the public info on your landlord`,
+  tweet: t`Search a Chicago address to explore who owns what using public data. This independent adaptation is inspired by the original Who Owns What project by JustFix and is maintained by Yazan. `,
+  emailSubject: t`Research property ownership in Chicago`,
   getEmailBody: (url: string) =>
-    t`Who Owns What is a free tool built by JustFix to research property owners in Chicago. It helps tenants and organizers find out who really owns their building, what other properties their landlord owns, and other critical information like permits, violations, and 311 requests. Search your address here: ${url}`,
+    t`Who Owns What is an independent fan-made adaptation inspired by the original project by JustFix. It helps people explore property ownership, landlord portfolios, and related public data in Chicago. Built and maintained by Yazan at yazan.io. Search here: ${url}`,
 };
 
 export type SocialShareLocation =

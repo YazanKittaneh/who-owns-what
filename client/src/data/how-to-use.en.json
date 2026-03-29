@@ -233,7 +233,7 @@
                           {
                             "data": {},
                             "marks": [],
-                            "value": "If there is a decrease in rent stabilized units, there may be illegal deregulation of units, rent overcharges, or potential harassment of tenants occurring. Request your rent history via our ",
+                    "value": "If there is a decrease in rent stabilized units, there may be illegal deregulation of units, rent overcharges, or potential harassment of tenants occurring. Request your rent history via this external ",
                             "nodeType": "text"
                           },
                           {
@@ -372,7 +372,7 @@
                   {
                     "data": {},
                     "marks": [],
-                    "value": "Check the “Complaint History” list in the “HPD Building Profile” for full details on the issues and to see which one of your neighbors is constantly calling 311 with complaints. If you have their contact info, send them their building profile via Facebook, Twitter, email, or text by using the share buttons, or give them an immediate list of actions to take by sharing the “Take Action on JustFix.org” page on the “Overview” tab.",
+                    "value": "Check the “Complaint History” list in the “HPD Building Profile” for full details on the issues and to see which one of your neighbors is constantly calling 311 with complaints. If you have their contact info, send them their building profile via Facebook, Twitter, email, or text by using the share buttons, or give them an immediate list of actions to take by sharing this site from the “Overview” tab.",
                     "nodeType": "text"
                   }
                 ],
@@ -645,7 +645,7 @@
           {
             "data": {},
             "marks": [],
-            "value": " - If your building has more than two units or your landlord (or immediate family) doesn’t live there, your landlord has a duty to register their building. If their registration has lapsed, they can get fined, and may be trying to illegally raise your rent. Report the lack of building registration using our free ",
+            "value": " - If your building has more than two units or your landlord (or immediate family) doesn’t live there, your landlord has a duty to register their building. If their registration has lapsed, they can get fined, and may be trying to illegally raise your rent. Report the lack of building registration using this external ",
             "nodeType": "text"
           },
           {
@@ -669,7 +669,7 @@
           {
             "data": {},
             "marks": [],
-            "value": ", and while you're at it, request your rent history via our ",
+            "value": ", and while you're at it, request your rent history via the external ",
             "nodeType": "text"
           },
           {

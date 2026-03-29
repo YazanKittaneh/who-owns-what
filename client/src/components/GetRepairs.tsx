@@ -21,7 +21,8 @@ const GetRepairsWithoutI18n = () => {
                 </label>
                 <div className="table-content">
                   <Trans render="div" className="card-description">
-                    Send a free, legally vetted letter to notify your landlord of repair issues.
+                    Use the external JustFix repair letter tool to notify your landlord of repair
+                    issues.
                   </Trans>
 
                   <JFCLLink
@@ -31,7 +32,7 @@ const GetRepairsWithoutI18n = () => {
                     className="jfcl-link"
                     icon="external"
                   >
-                    <Trans>Get Repairs</Trans>
+                    <Trans>Open repair letter tool</Trans>
                   </JFCLLink>
                 </div>
               </div>

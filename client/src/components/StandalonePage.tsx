@@ -21,16 +21,16 @@ export const STANDALONE_PAGES = [
   "unsubscribe",
 ];
 
-export const JustFixLogoLink = (props: { eventParams: any }) => {
+export const HomeBrandLink = (props: { eventParams: any }) => {
   const { home } = createWhoOwnsWhatRoutePaths();
 
   return (
     <LocaleLink
       className="jf-logo"
-      title="JustFix"
+      title="Who Owns What"
       to={home}
       onClick={() => {
-        window.gtag("event", "standalone-justfix-logo-click", {
+        window.gtag("event", "standalone-home-logo-click", {
           ...props.eventParams,
           branch: BRANCH_NAME,
         });
@@ -57,7 +57,15 @@ export const StandalonePageFooter = (props: { eventParams: any }) => {
       >
         Who Owns What
       </JFCLLocaleLink>{" "}
-      by JustFix.
+      by Yazan.
+      <br />
+      <a href="https://yazan.io" target="_blank" rel="noopener noreferrer">
+        yazan.io
+      </a>{" "}
+      |{" "}
+      <a href="https://github.com/yazankittaneh" target="_blank" rel="noopener noreferrer">
+        GitHub
+      </a>
       <br />
       Read our{" "}
       <JFCLLocaleLink to={privacyPolicy} target="_blank" rel="noopener noreferrer">
@@ -88,7 +96,7 @@ const StandalonePage = withI18n()((props: StandalonePageProps) => {
     <Page title={title}>
       <div className={classNames("StandalonePage Page", className)} id={id}>
         <div className="page-container">
-          <JustFixLogoLink eventParams={eventParams} />
+          <HomeBrandLink eventParams={eventParams} />
           <div className="standalone-container">{children}</div>
           <StandalonePageFooter eventParams={eventParams} />
         </div>

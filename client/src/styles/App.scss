@@ -144,11 +144,25 @@
 
   h1.page-title {
     @include mobile-h2;
-    margin: 0 0 0 1.5rem;
+    margin: 0;
     color: $justfix-white;
     @include for-phone-only {
-      margin: 1.5rem 0;
+      margin: 0;
     }
+  }
+
+  .page-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-left: 1rem;
+  }
+
+  .page-subtitle {
+    color: $justfix-white;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    text-align: left;
   }
 
   & > a,
@@ -166,14 +180,6 @@
 
     .jf-logo {
       color: $justfix-white;
-      margin-right: 1.5rem;
-      @include for-phone-only {
-        display: none;
-      }
-    }
-
-    .jf-logo-divider {
-      color: $justfix-white;
       @include for-phone-only {
         display: none;
       }
@@ -181,6 +187,16 @@
 
     .legacy-styling {
       color: black;
+    }
+
+    @include for-phone-only {
+      .page-brand {
+        margin-left: 0;
+      }
+
+      .page-subtitle {
+        display: none;
+      }
     }
   }
 

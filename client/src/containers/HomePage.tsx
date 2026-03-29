@@ -33,16 +33,23 @@ const HomePage: React.FC<HomePageProps> = ({ useNewPortfolioMethod }) => {
     }
   };
 
-  const labelText = (
-    <Trans>Enter a Chicago address to find other parcels your landlord might own:</Trans>
-  );
+  const labelText = <Trans>Search a Chicago address</Trans>;
 
   return (
     <Page>
       <div className="HomePage Page">
         <div className="HomePage__content">
           <div className="HomePage__search">
-            <h1 className="text-center">{labelText}</h1>
+            <h1 className="text-center">
+              <Trans>Search a Chicago address to explore who owns what</Trans>
+            </h1>
+            <p className="text-center">
+              <Trans>
+                An independent fan-made adaptation inspired by the original Who Owns What
+                project by JustFix. Built and maintained by Yazan at yazan.io. Not
+                affiliated with or endorsed by JustFix.
+              </Trans>
+            </p>
             <AddressSearch labelText={labelText} labelClass="text-assistive" onFormSubmit={handleFormSubmit} />
           </div>
           <LegalFooter />

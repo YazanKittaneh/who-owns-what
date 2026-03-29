@@ -16,30 +16,39 @@ const LegalFooter = () => {
         <div className="Disclaimer column col-8 col-md-12">
           <p>
             <Trans>
-              Disclaimer: The information in JustFix does not constitute legal advice and must not
-              be used as a substitute for the advice of a lawyer qualified to give advice on legal
-              issues pertaining to housing. We can help direct you to free legal services if
-              necessary.
+              Information on this site is for informational purposes only and is not legal advice.
             </Trans>
           </p>
           <p>
-            <Trans>JustFix, Inc is a registered 501(c)(3) nonprofit organization.</Trans>
+            <Trans>
+              This site is an independent fan-made adaptation inspired by the original Who Owns
+              What project by JustFix.
+            </Trans>
+          </p>
+          <p>
+            <Trans>Built and maintained by Yazan at yazan.io.</Trans>
+          </p>
+          <p>
+            <Trans>Not affiliated with or endorsed by JustFix.</Trans>
           </p>
         </div>
         <div className="Links column col-4 col-md-12">
           <div className="d-flex">
             <p>
               <Trans>
-                Made by the team at <a href="https://www.justfix.org/">JustFix.org</a>
+                Built by <a href="https://yazan.io">Yazan</a>
               </Trans>
             </p>
             <nav className="inline">
+              <a target="_blank" rel="noopener noreferrer" href="https://yazan.io">
+                <Trans>Yazan.io</Trans>
+              </a>
               <a
+                href="https://github.com/yazankittaneh"
                 target="_blank"
                 rel="noopener noreferrer"
-                href="https://donorbox.org/donate-to-justfix-nyc"
               >
-                <Trans>Donate</Trans>
+                <Trans>GitHub</Trans>
               </a>
               <NavLink to={isLegacyPath(pathname) ? legacy.termsOfUse : termsOfUse}>
                 <Trans>Terms of use</Trans>
@@ -52,7 +61,7 @@ const LegalFooter = () => {
                 <Trans>Methodology</Trans>
               </NavLink>
               <a
-                href="https://github.com/JustFixNYC/who-owns-what"
+                href="https://github.com/yazankittaneh"
                 target="_blank"
                 rel="noopener noreferrer"
               >
