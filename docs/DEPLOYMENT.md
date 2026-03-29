@@ -272,6 +272,20 @@ Notes:
 - The current repository snapshot under `data/chi_*.csv` is only a partial Chicago dataset, not a full production-scale export.
 - To refresh the source CSVs themselves, use `scripts/fetch_chi_data.py` and verify row counts before rebuilding.
 
+### Large dataset rebuilds
+
+For full-city CSV refreshes, do not copy the giant source files into the long-running `api` container before rebuilding. That duplicates the CSV storage in Docker's writable layer and can exhaust disk during the SQL build.
+
+Use a one-off container with the host `data/` directory mounted into `/app/data` instead:
+
+```bash
+docker compose -f docker-compose.prod.yml --profile with-cloudflare run --rm -T \
+  -v "$PWD/data:/app/data" \
+  api python dbtool.py builddb --update
+```
+
+This reuses the host CSVs directly and is the safest method for very large refreshes like the 13M+ row `chi_311` dataset.
+
 ### Restore CSV snapshots from MinIO
 
 If you have backed up the CSV snapshots to the local MinIO instance, you can restore them back into the repo with `minio/mc`:

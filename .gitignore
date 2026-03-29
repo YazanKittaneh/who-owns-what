@@ -23,6 +23,7 @@ data/*.tmp
 backups/
 data/fetch-smoke/
 data/full-refresh-*/
+data/pre-full-refresh-*/
 
 # Next.js build cache
 .next/
