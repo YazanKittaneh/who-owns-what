@@ -69,6 +69,7 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
   const [availableDatasets, setAvailableDatasets] = React.useState<IndicatorsDatasetId[]>([]);
   const [isLoading, setLoading] = React.useState(false);
   const [hasError, setHasError] = React.useState(false);
+  const activeVisRef = React.useRef(activeVis);
 
   const timelinePathBase = React.useMemo(
     () => removeIndicatorSuffix(location.pathname),
@@ -78,6 +79,10 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
     () => getXAxisViewableColumns(activeTimeSpan),
     [activeTimeSpan]
   );
+
+  React.useEffect(() => {
+    activeVisRef.current = activeVis;
+  }, [activeVis]);
 
   React.useEffect(() => {
     if (!isVisible) return;
@@ -97,8 +102,8 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
         if (!isMounted) return;
         setTimelineData(historyData.data);
         setAvailableDatasets(historyData.availableDatasets);
-        const nextActiveVis = historyData.availableDatasets.includes(activeVis)
-          ? activeVis
+        const nextActiveVis = historyData.availableDatasets.includes(activeVisRef.current)
+          ? activeVisRef.current
           : historyData.availableDatasets[0] || DEFAULT_DATASET;
         setActiveVis(nextActiveVis);
         setActiveTimeSpan(getRecommendedTimeSpan(nextActiveVis, historyData.data));
