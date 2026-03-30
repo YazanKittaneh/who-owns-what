@@ -231,7 +231,11 @@ const helpers = {
     addr: { boro?: string; housenumber: string; streetname: string } | null | undefined,
     utm_medium: string
   ) {
-    const subdomain = process.env.REACT_APP_DEMO_SITE === "1" ? "demo" : "app";
+    const tenantPlatformOrigin = process.env.REACT_APP_TENANT_PLATFORM_SITE_ORIGIN;
+    if (!tenantPlatformOrigin) {
+      reportError("Take action URL requested without REACT_APP_TENANT_PLATFORM_SITE_ORIGIN.");
+      return "";
+    }
     if (addr && addr.boro && (addr.housenumber || addr.streetname)) {
       const formattedBoro = addr.boro.toUpperCase().replace(/ /g, "_");
       if (["BROOKLYN", "QUEENS", "BRONX", "MANHATTAN", "STATEN_ISLAND"].includes(formattedBoro)) {
@@ -240,7 +244,7 @@ const helpers = {
           (addr.housenumber && addr.streetname && " ") +
           addr.streetname
         ).trim();
-        return `https://${subdomain}.justfix.org/ddo?address=${encodeURIComponent(
+        return `${tenantPlatformOrigin}/ddo?address=${encodeURIComponent(
           fullAddress
         )}&borough=${encodeURIComponent(
           formattedBoro
@@ -248,7 +252,7 @@ const helpers = {
       }
     } else {
       reportError(`Address improperly formatted for DDO: ${addr || "<falsy value>"}`);
-      return `https://${subdomain}.justfix.org/?utm_source=whoownswhat&utm_content=take_action_failed_attempt&utm_medium=${utm_medium}`;
+      return `${tenantPlatformOrigin}/?utm_source=whoownswhat&utm_content=take_action_failed_attempt&utm_medium=${utm_medium}`;
     }
   },
 

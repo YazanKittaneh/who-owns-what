@@ -57,7 +57,7 @@ export const StandalonePageFooter = (props: { eventParams: any }) => {
       >
         Who Owns What
       </JFCLLocaleLink>{" "}
-      by Yazan.
+      Chicago version by Yazan.
       <br />
       <a href="https://yazan.io" target="_blank" rel="noopener noreferrer">
         yazan.io

@@ -23,7 +23,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "This version of Who Owns What is an independent fan-made adaptation inspired by the original project created by JustFix. I built it to preserve and continue the spirit of that work while making my own changes and taking responsibility for how this version is run.",
+            "value": "This Chicago version of Who Owns What is made and maintained by Yazan through yazan.io. I modified the project to fit Chicago and I am responsible for how this version is run.",
             "marks": [],
             "data": {}
           }
@@ -35,7 +35,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "Who Owns What was originally created to help people better understand landlord ownership patterns through public data. This adaptation keeps that core idea alive for Chicago users while giving the project an independent home.",
+            "value": "This version is focused on helping people better understand landlord ownership patterns through public data in Chicago.",
             "marks": [],
             "data": {}
           }
@@ -47,7 +47,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "Credit to the original team",
+            "value": "Relationship to the original project",
             "marks": [],
             "data": {}
           }
@@ -59,7 +59,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "The original Who Owns What project was created by JustFix. Their work shaped the idea, purpose, and public value of this tool. This adaptation is a tribute to that work, not an official continuation by JustFix.",
+            "value": "This site builds on the original Who Owns What concept, but it is not a JustFix project. JustFix does not operate, maintain, or endorse this Chicago version.",
             "marks": [],
             "data": {}
           }
@@ -83,7 +83,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "This version is built and maintained independently by Yazan. You can learn more at ",
+            "value": "This version is run independently by Yazan. You can learn more at ",
             "marks": [],
             "data": {}
           },
@@ -135,7 +135,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "This site is not affiliated with or endorsed by JustFix.",
+            "value": "All decisions about this site, including Chicago-specific changes, are made independently by Yazan.",
             "marks": [],
             "data": {}
           }

@@ -75,7 +75,7 @@ const HomeLink = withI18n()((props: withI18nProps) => {
           {widont(title)}
         </h1>
         <span className={classnames("page-subtitle", isLegacyPath(pathname) && "legacy-styling")}>
-          {i18n._(t`Independent adaptation by Yazan`)}
+          {i18n._(t`Chicago version by Yazan`)}
         </span>
       </div>
     </JFCLLocaleLink>

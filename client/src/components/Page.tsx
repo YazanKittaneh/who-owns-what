@@ -7,7 +7,7 @@ import { getSiteOrigin } from "../routes";
 
 const metadata = {
   keywords: t`Chicago housing, property ownership, landlord portfolio, public data, housing research, Who Owns What`,
-  description: t`Independent fan-made adaptation of Who Owns What for Chicago. Search public property ownership data, portfolios, permits, violations, and related indicators. Built and maintained by Yazan at yazan.io.`,
+  description: t`Chicago version of Who Owns What built and maintained by Yazan at yazan.io. Search public property ownership data, portfolios, permits, violations, and related indicators for Chicago.`,
   siteName: t`Who owns what`,
 };
 

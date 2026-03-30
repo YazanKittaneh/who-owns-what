@@ -797,18 +797,10 @@
                     "data": {}
                   },
                   {
-                    "nodeType": "hyperlink",
-                    "data": {
-                      "uri": "https://github.com/JustFixNYC/nyc-doffer"
-                    },
-                    "content": [
-                      {
-                        "nodeType": "text",
-                        "value": "NYC Doffer",
-                        "marks": [],
-                        "data": {}
-                      }
-                    ]
+                    "nodeType": "text",
+                    "value": "NYC Doffer",
+                    "marks": [],
+                    "data": {}
                   },
                   {
                     "nodeType": "text",

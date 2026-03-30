@@ -800,18 +800,10 @@
                     "nodeType": "text"
                   },
                   {
-                    "data": {
-                      "uri": "https://github.com/JustFixNYC/nyc-doffer"
-                    },
-                    "content": [
-                      {
-                        "data": {},
-                        "marks": [],
-                        "value": "NYC Doffer",
-                        "nodeType": "text"
-                      }
-                    ],
-                    "nodeType": "hyperlink"
+                    "data": {},
+                    "marks": [],
+                    "value": "NYC Doffer",
+                    "nodeType": "text"
                   },
                   {
                     "data": {},

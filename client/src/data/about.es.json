@@ -23,7 +23,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "Esta version de Who Owns What es una adaptacion independiente hecha por un fan e inspirada en el proyecto original creado por JustFix. La hice para preservar y continuar el espiritu de ese trabajo mientras hago mis propios cambios y asumo la responsabilidad de como se opera esta version.",
+            "value": "Esta version de Chicago de Who Owns What fue hecha y es mantenida por Yazan a traves de yazan.io. Modifique el proyecto para ajustarlo a Chicago y soy responsable de como se opera esta version.",
             "marks": [],
             "data": {}
           }
@@ -35,7 +35,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "Who Owns What fue creado originalmente para ayudar a las personas a entender mejor los patrones de propiedad de los arrendadores mediante datos publicos. Esta adaptacion mantiene viva esa idea central para usuarios en Chicago mientras le da al proyecto un hogar independiente.",
+            "value": "Esta version esta enfocada en ayudar a las personas a entender mejor los patrones de propiedad de los arrendadores mediante datos publicos en Chicago.",
             "marks": [],
             "data": {}
           }
@@ -47,7 +47,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "Credito al equipo original",
+            "value": "Relacion con el proyecto original",
             "marks": [],
             "data": {}
           }
@@ -59,7 +59,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "El proyecto original Who Owns What fue creado por JustFix. Su trabajo dio forma a la idea, el proposito y el valor publico de esta herramienta. Esta adaptacion es un homenaje a ese trabajo, no una continuacion oficial de JustFix.",
+            "value": "Este sitio se basa en el concepto original de Who Owns What, pero no es un proyecto de JustFix. JustFix no opera, mantiene ni respalda esta version de Chicago.",
             "marks": [],
             "data": {}
           }
@@ -83,7 +83,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "Esta version esta construida y mantenida de forma independiente por Yazan. Puedes conocer mas en ",
+            "value": "Esta version es operada de forma independiente por Yazan. Puedes conocer mas en ",
             "marks": [],
             "data": {}
           },
@@ -135,7 +135,7 @@
         "content": [
           {
             "nodeType": "text",
-            "value": "Este sitio no esta afiliado ni respaldado por JustFix.",
+            "value": "Todas las decisiones sobre este sitio, incluidos los cambios especificos para Chicago, son tomadas de forma independiente por Yazan.",
             "marks": [],
             "data": {}
           }

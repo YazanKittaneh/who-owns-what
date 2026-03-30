@@ -7,6 +7,8 @@ import { Alert, AlertProps } from "./Alert";
 import { logAmplitudeEvent } from "./Amplitude";
 import Modal from "./Modal";
 import { isLegacyPath } from "./WowzaToggle";
+import { LocaleLink } from "../i18n";
+import { createWhoOwnsWhatRoutePaths } from "../routes";
 
 export const BIG_PORTFOLIO_THRESHOLD = 300;
 
@@ -17,6 +19,7 @@ type PortfolioAlertProps = Omit<AlertProps, "children"> & {
 export const BigPortfolioAlert = ({ portfolioSize, className, ...props }: PortfolioAlertProps) => {
   const [isLearnMoreModalVisible, setModalVisibility] = useState(false);
   const { pathname } = useLocation();
+  const { methodology, legacy } = createWhoOwnsWhatRoutePaths();
 
   // Preload modal image when BigPortfolioBanner mounts:
   useEffect(() => {
@@ -65,15 +68,11 @@ export const BigPortfolioAlert = ({ portfolioSize, className, ...props }: Portfo
           <p>
             <Trans>
               We’ve improved Who Owns What to dig deeper into the data and offer you a more complete
-              picture of buildings associated with your landlord.{" "}
-              <a
-                href="https://medium.com/justfixorg/untangling-nycs-web-of-real-estate-who-owns-what-s-latest-release-b22aac917617"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Read more in our methodology article
-              </a>
-            </Trans>
+              picture of buildings associated with your landlord.
+            </Trans>{" "}
+            <LocaleLink to={isLegacyPath(pathname) ? legacy.methodology : methodology}>
+              <Trans>Read more in our methodology article</Trans>
+            </LocaleLink>
           </p>
         </Modal>
       </>

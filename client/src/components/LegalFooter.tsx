@@ -21,15 +21,15 @@ const LegalFooter = () => {
           </p>
           <p>
             <Trans>
-              This site is an independent fan-made adaptation inspired by the original Who Owns
-              What project by JustFix.
+              This Chicago version of Who Owns What is built and operated independently by
+              Yazan.
             </Trans>
           </p>
           <p>
-            <Trans>Built and maintained by Yazan at yazan.io.</Trans>
+            <Trans>It is not a JustFix project.</Trans>
           </p>
           <p>
-            <Trans>Not affiliated with or endorsed by JustFix.</Trans>
+            <Trans>This version was modified to fit Chicago and is not affiliated with or endorsed by JustFix.</Trans>
           </p>
         </div>
         <div className="Links column col-4 col-md-12">

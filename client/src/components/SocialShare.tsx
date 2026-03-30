@@ -23,10 +23,10 @@ export type SocialShareContent = {
 };
 
 const defaultSocialContent: SocialShareContent = {
-  tweet: t`Search a Chicago address to explore who owns what using public data. This independent adaptation is inspired by the original Who Owns What project by JustFix and is maintained by Yazan. `,
+  tweet: t`Search a Chicago address to explore who owns what using public data. This Chicago version is built and maintained by Yazan at yazan.io and modified to fit Chicago. `,
   emailSubject: t`Research property ownership in Chicago`,
   getEmailBody: (url: string) =>
-    t`Who Owns What is an independent fan-made adaptation inspired by the original project by JustFix. It helps people explore property ownership, landlord portfolios, and related public data in Chicago. Built and maintained by Yazan at yazan.io. Search here: ${url}`,
+    t`Who Owns What helps people explore property ownership, landlord portfolios, and related public data in Chicago. This Chicago version is built and maintained by Yazan at yazan.io, was modified to fit Chicago, and is not a JustFix project. Search here: ${url}`,
 };
 
 export type SocialShareLocation =

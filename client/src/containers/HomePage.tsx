@@ -45,9 +45,9 @@ const HomePage: React.FC<HomePageProps> = ({ useNewPortfolioMethod }) => {
             </h1>
             <p className="text-center">
               <Trans>
-                An independent fan-made adaptation inspired by the original Who Owns What
-                project by JustFix. Built and maintained by Yazan at yazan.io. Not
-                affiliated with or endorsed by JustFix.
+                This Chicago version of Who Owns What is built and maintained by Yazan at
+                yazan.io. It is not a JustFix project. This version was modified to fit
+                Chicago and is operated independently.
               </Trans>
             </p>
             <AddressSearch labelText={labelText} labelClass="text-assistive" onFormSubmit={handleFormSubmit} />

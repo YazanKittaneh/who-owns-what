@@ -54,8 +54,14 @@ class SubscribeWithoutI18n extends React.Component<SubscribeProps, State> {
       return;
     }
 
-    const tenantPlatformOrigin =
-      process.env.REACT_APP_TENANT_PLATFORM_SITE_ORIGIN || "https://demo.justfix.org";
+    const tenantPlatformOrigin = process.env.REACT_APP_TENANT_PLATFORM_SITE_ORIGIN;
+
+    if (!tenantPlatformOrigin) {
+      this.setState({
+        response: i18n._(t`Email signup is unavailable in this Chicago version.`),
+      });
+      return;
+    }
 
     fetch(`${tenantPlatformOrigin}/mailchimp/subscribe`, {
       method: "POST",

@@ -226,27 +226,7 @@
                         "content": [
                           {
                             "nodeType": "text",
-                            "value": "Si la cantidad de apartamentos de renta estabilizada ha disminuido, puede ser que los apartamentos se hayan desregulado ilegalmente, que el dueno este cobrando renta de mas o que este hostigando a los inquilinos. Puedes solicitar tu historial de renta a traves de este recurso externo: ",
-                            "marks": [],
-                            "data": {}
-                          },
-                          {
-                            "nodeType": "hyperlink",
-                            "data": {
-                              "uri": "https://app.justfix.org/es/rh/splash?utm_source=who_owns_what"
-                            },
-                            "content": [
-                              {
-                                "nodeType": "text",
-                                "value": "Formulario en Línea",
-                                "marks": [],
-                                "data": {}
-                              }
-                            ]
-                          },
-                          {
-                            "nodeType": "text",
-                            "value": " o enviando un mensaje de texto con el texto \"HISTORIAL DE ALQUILER\" al (646) 783-0627 para obtener más información, comprobar si tu apartamento es de renta estabilizada y calcular si te están cobrando de más.",
+                            "value": "Si la cantidad de apartamentos de renta estabilizada ha disminuido, esta orientacion proviene de la version original del proyecto para NYC. La version de Chicago no enlaza aqui herramientas externas para solicitar historial de renta, asi que consulta directamente recursos locales para inquilinos en Chicago.",
                             "marks": [],
                             "data": {}
                           }
@@ -578,47 +558,7 @@
           },
           {
             "nodeType": "text",
-            "value": ": si tu edificio tiene mas de dos unidades o si el dueno (o su familia inmediata) no vive alli, el dueno tiene el deber de registrar el edificio formalmente en los registros de la ciudad. Si el certificado de registro del edificio ha caducado, el dueno puede recibir una multa. Esto puede ser un indicio de que el dueno vaya a intentar aumentar la renta ilegalmente. Con esta ",
-            "marks": [],
-            "data": {}
-          },
-          {
-            "nodeType": "hyperlink",
-            "data": {
-              "uri": "https://app.justfix.org/es/loc/splash?utm_source=who_owns_what"
-            },
-            "content": [
-              {
-                "nodeType": "text",
-                "value": "herramienta Carta de Queja",
-                "marks": [],
-                "data": {}
-              }
-            ]
-          },
-          {
-            "nodeType": "text",
-            "value": " te puedes quejar a tu dueno por la falta de registro. Ademas, puedes solicitar tu historial de renta a traves de este recurso externo: ",
-            "marks": [],
-            "data": {}
-          },
-          {
-            "nodeType": "hyperlink",
-            "data": {
-              "uri": "https://app.justfix.org/es/rh/splash?utm_source=who_owns_what"
-            },
-            "content": [
-              {
-                "nodeType": "text",
-                "value": "Formulario en Línea",
-                "marks": [],
-                "data": {}
-              }
-            ]
-          },
-          {
-            "nodeType": "text",
-            "value": " o enviando un mensaje de texto con el texto \"HISTORIAL DE ALQUILER\" al (646) 783-0627 para obtener más información, comprobar si su apartamento es de renta estabilizada y calcular si te están cobrando de más.",
+            "value": ": esta orientacion proviene de la version original del proyecto para NYC. La version de Chicago no enlaza aqui herramientas externas para quejas sobre registro del edificio ni para historial de renta, asi que consulta directamente recursos locales para inquilinos y agencias de la ciudad de Chicago.",
             "marks": [],
             "data": {}
           }
