@@ -117,6 +117,16 @@ export type SummaryStatsRecord = {
   violations_open: number;
   violations_total: number;
   requests_311_total: number;
+  parcels_with_tax_sale_history: number;
+  tax_sale_event_count: number;
+  annual_tax_sale_count: number;
+  scavenger_tax_sale_count: number;
+  total_tax_sale_amount_paid: number;
+  parcels_with_recorder_history: number;
+  recorder_doc_count: number;
+  mortgage_doc_count: number;
+  quitclaim_doc_count: number;
+  foreclosure_doc_count: number;
   violations_open_per_parcel: number;
   violations_open_per_unit: number;
 };
