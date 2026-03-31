@@ -30,6 +30,70 @@
         ]
       },
       {
+        "nodeType": "heading-6",
+        "data": {},
+        "content": [
+          {
+            "nodeType": "text",
+            "value": "Creditos de codigo abierto",
+            "marks": [],
+            "data": {}
+          }
+        ]
+      },
+      {
+        "nodeType": "paragraph",
+        "data": {},
+        "content": [
+          {
+            "nodeType": "text",
+            "value": "Esta version tambien se beneficio de ideas y trabajo publico compartido en ",
+            "marks": [],
+            "data": {}
+          },
+          {
+            "nodeType": "hyperlink",
+            "data": {
+              "uri": "https://github.com/landlordmapper/opndb"
+            },
+            "content": [
+              {
+                "nodeType": "text",
+                "value": "landlordmapper/opndb",
+                "marks": [],
+                "data": {}
+              }
+            ]
+          },
+          {
+            "nodeType": "text",
+            "value": " y ",
+            "marks": [],
+            "data": {}
+          },
+          {
+            "nodeType": "hyperlink",
+            "data": {
+              "uri": "https://github.com/landlordmapper/chicago-data"
+            },
+            "content": [
+              {
+                "nodeType": "text",
+                "value": "landlordmapper/chicago-data",
+                "marks": [],
+                "data": {}
+              }
+            ]
+          },
+          {
+            "nodeType": "text",
+            "value": ". Esos repos ayudaron a informar partes del enfoque de modelado de datos y de vinculacion usado aqui.",
+            "marks": [],
+            "data": {}
+          }
+        ]
+      },
+      {
         "nodeType": "paragraph",
         "data": {},
         "content": [

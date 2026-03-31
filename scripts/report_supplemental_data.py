@@ -51,12 +51,21 @@ QUERIES = [
     (
         "business_linkage_examples",
         """
-        SELECT p.address, p.pin, b.business_name_match_count, b.business_address_match_count, b.matched_business_names[1:5]
+        SELECT p.address, p.pin, b.business_name_match_count, b.business_address_match_count, b.business_ambiguous_match_count, b.business_best_match_score, b.matched_business_names[1:5]
         FROM wow_business_linkage_summary AS b
         JOIN wow_parcels AS p USING (pin)
         WHERE b.business_name_match_count > 0 OR b.business_address_match_count > 0
         ORDER BY b.business_name_match_count DESC, b.business_address_match_count DESC
         LIMIT 10
+        """,
+    ),
+    (
+        "business_linkage_match_types",
+        """
+        SELECT match_type, count(*), count(*) FILTER (WHERE is_ambiguous)
+        FROM wow_business_linkage_matches
+        GROUP BY 1
+        ORDER BY 2 DESC
         """,
     ),
 ]
