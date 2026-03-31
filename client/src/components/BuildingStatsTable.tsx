@@ -61,6 +61,16 @@ const BuildingStatsTable: React.FC<BuildingStatsTableProps> = ({ addr }) => {
       value: formatValue(addr.requests_311_total ?? addr.totalcomplaints),
       info: i18n._("311 complaints associated with this property."),
     },
+    {
+      label: i18n._("Tax sale events"),
+      value: formatValue(addr.tax_sale_event_count),
+      info: i18n._("Recorded annual or scavenger tax sale events tied to this parcel PIN."),
+    },
+    {
+      label: i18n._("Recorder documents"),
+      value: formatValue(addr.recorder_doc_count),
+      info: i18n._("Recorded mortgage, quit claim, and related recorder documents tied to this parcel PIN."),
+    },
   ];
 
   return (

@@ -8,6 +8,8 @@ dist
 scripts/*
 !scripts/fetch_chi_data.py
 !scripts/weekly_refresh_prod.sh
+!scripts/load_supplemental_data.py
+!scripts/report_supplemental_data.py
 nycdb/
 .mypy_cache/
 docker-compose.override.yml
@@ -27,6 +29,7 @@ data/full-refresh-*/
 data/pre-full-refresh-*/
 data/weekly-refresh-staging/
 data/pre-weekly-refresh-*/
+data/supplemental-*/**/*.csv
 
 # Next.js build cache
 .next/

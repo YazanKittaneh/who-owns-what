@@ -23,9 +23,27 @@ SELECT
     i.permits_total,
     i.violations_open,
     i.violations_total,
-    i.requests_311_total
+    i.requests_311_total,
+    tax.annual_tax_sale_count,
+    tax.scavenger_tax_sale_count,
+    tax.tax_sale_event_count,
+    tax.latest_tax_sale_year,
+    tax.latest_tax_sale_buyer_name,
+    tax.latest_tax_sale_sold_at_sale,
+    tax.total_tax_sale_amount_paid,
+    rec.recorder_doc_count,
+    rec.mortgage_doc_count,
+    rec.quitclaim_doc_count,
+    rec.foreclosure_doc_count,
+    rec.latest_recorder_doc_date,
+    rec.latest_mortgage_date,
+    rec.latest_mortgage_amount,
+    rec.latest_quitclaim_date,
+    rec.latest_quitclaim_amount
 FROM wow_parcels AS p
 LEFT JOIN wow_indicators AS i USING(pin)
+LEFT JOIN wow_tax_sale_summary AS tax USING(pin)
+LEFT JOIN wow_recorder_summary AS rec USING(pin)
 WHERE p.pin = ANY(
     SELECT unnest(pins)
     FROM wow_portfolios

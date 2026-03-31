@@ -13,11 +13,19 @@ const ENV_VAR_NAME = "REACT_APP_VERSION";
 const ENV_FILE_NAME = ".env.production.local";
 const VERSION_FILE_NAME = "public/version.txt";
 
-const rev = child_process
-  .execSync("git rev-parse HEAD", {
-    encoding: "utf-8",
-  })
-  .trim();
+let rev = process.env.BUILD_GIT_SHA || "";
+
+if (!rev) {
+  try {
+    rev = child_process
+      .execSync("git rev-parse HEAD", {
+        encoding: "utf-8",
+      })
+      .trim();
+  } catch (err) {
+    rev = "unknown";
+  }
+}
 
 console.log(`Writing ${ENV_VAR_NAME} to ${ENV_FILE_NAME}.`);
 

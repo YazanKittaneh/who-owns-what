@@ -35,6 +35,11 @@ done
 $COMPOSE exec -T db psql -U wow -d wow -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'
 $COMPOSE run --rm -T -v "$DATA_DIR:/app/data" api python dbtool.py builddb --update
 
+if [ -d "$DATA_DIR/supplemental-20260329" ]; then
+    $COMPOSE run --rm -T -v "$REPO_DIR:/app" api \
+        python scripts/load_supplemental_data.py --data-dir data/supplemental-20260329 --summaries-only
+fi
+
 rm -f "$STAGE_DIR"/*.progress "$STAGE_DIR"/*.tmp
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] weekly refresh complete"

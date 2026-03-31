@@ -146,6 +146,34 @@ const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n }) => {
                     </div>
                   </div>
 
+                  {(detailAddr.tax_sale_event_count || detailAddr.recorder_doc_count) && (
+                    <div className="card-body-registration">
+                      {detailAddr.tax_sale_event_count ? (
+                        <p>
+                          <b>
+                            <Trans>Tax sale history:</Trans>
+                          </b>{" "}
+                          {detailAddr.tax_sale_event_count} <Trans>event(s)</Trans>
+                          {detailAddr.latest_tax_sale_year ? `, latest ${detailAddr.latest_tax_sale_year}` : ""}
+                          {detailAddr.latest_tax_sale_buyer_name
+                            ? `, ${detailAddr.latest_tax_sale_buyer_name}`
+                            : ""}
+                        </p>
+                      ) : null}
+                      {detailAddr.recorder_doc_count ? (
+                        <p>
+                          <b>
+                            <Trans>Recorder history:</Trans>
+                          </b>{" "}
+                          {detailAddr.recorder_doc_count} <Trans>document(s)</Trans>
+                          {detailAddr.latest_mortgage_amount
+                            ? `, latest mortgage $${Math.round(detailAddr.latest_mortgage_amount).toLocaleString()}`
+                            : ""}
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
+
                   {(detailAddr.lastregistrationdate || detailAddr.registrationenddate) && (
                     <div className="card-body-registration">
                       {detailAddr.lastregistrationdate && (

@@ -3,3 +3,7 @@ client/node_modules/
 nycdb/
 .mypy_cache/
 venv/
+.git/
+backups/
+data/
+tests/data/

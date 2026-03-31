@@ -26,7 +26,23 @@ RETURNS TABLE (
     permits_total integer,
     violations_open integer,
     violations_total integer,
-    requests_311_total integer
+    requests_311_total integer,
+    annual_tax_sale_count integer,
+    scavenger_tax_sale_count integer,
+    tax_sale_event_count integer,
+    latest_tax_sale_year integer,
+    latest_tax_sale_buyer_name text,
+    latest_tax_sale_sold_at_sale boolean,
+    total_tax_sale_amount_paid numeric,
+    recorder_doc_count integer,
+    mortgage_doc_count integer,
+    quitclaim_doc_count integer,
+    foreclosure_doc_count integer,
+    latest_recorder_doc_date date,
+    latest_mortgage_date date,
+    latest_mortgage_amount numeric,
+    latest_quitclaim_date date,
+    latest_quitclaim_amount numeric
 ) AS $$
     SELECT
         p.pin,
@@ -53,9 +69,27 @@ RETURNS TABLE (
         i.permits_total::integer,
         i.violations_open::integer,
         i.violations_total::integer,
-        i.requests_311_total::integer
+        i.requests_311_total::integer,
+        tax.annual_tax_sale_count::integer,
+        tax.scavenger_tax_sale_count::integer,
+        tax.tax_sale_event_count::integer,
+        tax.latest_tax_sale_year::integer,
+        tax.latest_tax_sale_buyer_name,
+        tax.latest_tax_sale_sold_at_sale,
+        tax.total_tax_sale_amount_paid,
+        rec.recorder_doc_count::integer,
+        rec.mortgage_doc_count::integer,
+        rec.quitclaim_doc_count::integer,
+        rec.foreclosure_doc_count::integer,
+        rec.latest_recorder_doc_date,
+        rec.latest_mortgage_date,
+        rec.latest_mortgage_amount,
+        rec.latest_quitclaim_date,
+        rec.latest_quitclaim_amount
     FROM wow_parcels AS p
     LEFT JOIN wow_indicators AS i USING(pin)
+    LEFT JOIN wow_tax_sale_summary AS tax USING(pin)
+    LEFT JOIN wow_recorder_summary AS rec USING(pin)
     WHERE p.pin = ANY(
         SELECT unnest(pins)
         FROM wow_portfolios

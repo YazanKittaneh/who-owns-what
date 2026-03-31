@@ -6,7 +6,7 @@ from django.http import HttpResponse, JsonResponse
 from django.db import ProgrammingError, connections
 
 from .dbutil import call_db_func, exec_db_query
-from .datautil import int_or_none
+from .datautil import float_or_none, int_or_none, str_or_none
 from . import csvutil, apiutil
 from .apiutil import api, get_validated_form_data
 from .forms import PinForm, PinListForm, AddressSearchForm, PinOrBblForm
@@ -28,6 +28,21 @@ def clean_addr_dict(addr):
         "violations_open": int_or_none(addr.get("violations_open")),
         "violations_total": int_or_none(addr.get("violations_total")),
         "requests_311_total": int_or_none(addr.get("requests_311_total")),
+        "annual_tax_sale_count": int_or_none(addr.get("annual_tax_sale_count")),
+        "scavenger_tax_sale_count": int_or_none(addr.get("scavenger_tax_sale_count")),
+        "tax_sale_event_count": int_or_none(addr.get("tax_sale_event_count")),
+        "latest_tax_sale_year": int_or_none(addr.get("latest_tax_sale_year")),
+        "latest_tax_sale_buyer_name": str_or_none(addr.get("latest_tax_sale_buyer_name")),
+        "total_tax_sale_amount_paid": float_or_none(addr.get("total_tax_sale_amount_paid")),
+        "recorder_doc_count": int_or_none(addr.get("recorder_doc_count")),
+        "mortgage_doc_count": int_or_none(addr.get("mortgage_doc_count")),
+        "quitclaim_doc_count": int_or_none(addr.get("quitclaim_doc_count")),
+        "foreclosure_doc_count": int_or_none(addr.get("foreclosure_doc_count")),
+        "latest_recorder_doc_date": str_or_none(addr.get("latest_recorder_doc_date")),
+        "latest_mortgage_date": str_or_none(addr.get("latest_mortgage_date")),
+        "latest_mortgage_amount": float_or_none(addr.get("latest_mortgage_amount")),
+        "latest_quitclaim_date": str_or_none(addr.get("latest_quitclaim_date")),
+        "latest_quitclaim_amount": float_or_none(addr.get("latest_quitclaim_amount")),
     }
 
 

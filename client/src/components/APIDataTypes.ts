@@ -58,6 +58,22 @@ export type AddressRecord = {
   violations_open: number | null;
   violations_total: number | null;
   requests_311_total: number | null;
+  annual_tax_sale_count?: number | null;
+  scavenger_tax_sale_count?: number | null;
+  tax_sale_event_count?: number | null;
+  latest_tax_sale_year?: number | null;
+  latest_tax_sale_buyer_name?: string | null;
+  latest_tax_sale_sold_at_sale?: boolean | null;
+  total_tax_sale_amount_paid?: number | null;
+  recorder_doc_count?: number | null;
+  mortgage_doc_count?: number | null;
+  quitclaim_doc_count?: number | null;
+  foreclosure_doc_count?: number | null;
+  latest_recorder_doc_date?: string | null;
+  latest_mortgage_date?: string | null;
+  latest_mortgage_amount?: number | null;
+  latest_quitclaim_date?: string | null;
+  latest_quitclaim_amount?: number | null;
   mapType?: "base" | "search";
   // Legacy NYC fields kept optional for compatibility with unused UI pieces.
   bbl?: string;

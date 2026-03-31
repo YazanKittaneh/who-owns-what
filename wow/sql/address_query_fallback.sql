@@ -57,7 +57,23 @@ SELECT
     NULL::integer AS permits_total,
     NULL::integer AS violations_open,
     NULL::integer AS violations_total,
-    NULL::integer AS requests_311_total
+    NULL::integer AS requests_311_total,
+    NULL::integer AS annual_tax_sale_count,
+    NULL::integer AS scavenger_tax_sale_count,
+    NULL::integer AS tax_sale_event_count,
+    NULL::integer AS latest_tax_sale_year,
+    NULL::text AS latest_tax_sale_buyer_name,
+    NULL::boolean AS latest_tax_sale_sold_at_sale,
+    NULL::numeric AS total_tax_sale_amount_paid,
+    NULL::integer AS recorder_doc_count,
+    NULL::integer AS mortgage_doc_count,
+    NULL::integer AS quitclaim_doc_count,
+    NULL::integer AS foreclosure_doc_count,
+    NULL::date AS latest_recorder_doc_date,
+    NULL::date AS latest_mortgage_date,
+    NULL::numeric AS latest_mortgage_amount,
+    NULL::date AS latest_quitclaim_date,
+    NULL::numeric AS latest_quitclaim_amount
 FROM latest_parcels AS p
 LEFT JOIN latest_owners AS o USING(pin)
 WHERE p.pin = %(pin)s;
