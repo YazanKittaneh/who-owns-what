@@ -28,6 +28,9 @@ export type FilterSelections = {
   zip: string[];
   rsunitslatest?: boolean;
   commercialOnly?: boolean;
+  taxSaleHistory?: boolean;
+  recorderHistory?: boolean;
+  foreclosureDocs?: boolean;
 };
 
 export type IFilterContext = {
@@ -49,6 +52,9 @@ export const defaultFilterContext: IFilterContext = {
   filterSelections: {
     rsunitslatest: false,
     commercialOnly: false,
+    taxSaleHistory: false,
+    recorderHistory: false,
+    foreclosureDocs: false,
     ownernames: [],
     unitsres: { type: "default", values: [NUMBER_RANGE_DEFAULT] },
     zip: [],
@@ -75,6 +81,9 @@ export const filterAddresses = (addrs: AddressRecord[], filterSelections: Filter
   const {
     rsunitslatest: filterRsunitslatest,
     commercialOnly: filterCommercialOnly,
+    taxSaleHistory: filterTaxSaleHistory,
+    recorderHistory: filterRecorderHistory,
+    foreclosureDocs: filterForeclosureDocs,
     ownernames: filterOwnernames,
     unitsres: filterUnitsres,
     zip: filterZip,
@@ -89,6 +98,18 @@ export const filterAddresses = (addrs: AddressRecord[], filterSelections: Filter
 
     if (keepAddr && filterCommercialOnly) {
       keepAddr = (addr.unitsres ?? addr.units_res ?? 0) <= 0;
+    }
+
+    if (keepAddr && filterTaxSaleHistory) {
+      keepAddr = (addr.tax_sale_event_count || 0) > 0;
+    }
+
+    if (keepAddr && filterRecorderHistory) {
+      keepAddr = (addr.recorder_doc_count || 0) > 0;
+    }
+
+    if (keepAddr && filterForeclosureDocs) {
+      keepAddr = (addr.foreclosure_doc_count || 0) > 0;
     }
 
     if (keepAddr && !!filterOwnernames.length) {

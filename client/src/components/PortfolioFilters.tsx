@@ -95,6 +95,51 @@ const PortfolioFiltersWithoutI18n = React.memo(
       });
     };
 
+    const [taxSaleHistoryActive, setTaxSaleHistoryActive] = React.useState(false);
+    const updateTaxSaleHistory = () => {
+      logPortfolioAnalytics(taxSaleHistoryActive ? "filterCleared" : "filterApplied", {
+        column: "taxSaleHistory",
+      });
+      setTaxSaleHistoryActive(!taxSaleHistoryActive);
+      setFilterContext({
+        ...filterContext,
+        filterSelections: {
+          ...filterContext.filterSelections,
+          taxSaleHistory: !filterContext.filterSelections.taxSaleHistory,
+        },
+      });
+    };
+
+    const [recorderHistoryActive, setRecorderHistoryActive] = React.useState(false);
+    const updateRecorderHistory = () => {
+      logPortfolioAnalytics(recorderHistoryActive ? "filterCleared" : "filterApplied", {
+        column: "recorderHistory",
+      });
+      setRecorderHistoryActive(!recorderHistoryActive);
+      setFilterContext({
+        ...filterContext,
+        filterSelections: {
+          ...filterContext.filterSelections,
+          recorderHistory: !filterContext.filterSelections.recorderHistory,
+        },
+      });
+    };
+
+    const [foreclosureDocsActive, setForeclosureDocsActive] = React.useState(false);
+    const updateForeclosureDocs = () => {
+      logPortfolioAnalytics(foreclosureDocsActive ? "filterCleared" : "filterApplied", {
+        column: "foreclosureDocs",
+      });
+      setForeclosureDocsActive(!foreclosureDocsActive);
+      setFilterContext({
+        ...filterContext,
+        filterSelections: {
+          ...filterContext.filterSelections,
+          foreclosureDocs: !filterContext.filterSelections.foreclosureDocs,
+        },
+      });
+    };
+
     const [ownernamesActive, setOwnernamesActive] = React.useState(false);
     const [ownernamesIsOpen, setOwnernamesIsOpen] = React.useState(false);
     const onOwnernamesApply = (selectedList: string[]) => {
@@ -150,6 +195,9 @@ const PortfolioFiltersWithoutI18n = React.memo(
     const clearFilters = () => {
       logPortfolioAnalytics("filterCleared", { column: "_all" });
       setCommercialOnlyActive(false);
+      setTaxSaleHistoryActive(false);
+      setRecorderHistoryActive(false);
+      setForeclosureDocsActive(false);
       setOwnernamesActive(false);
       setUnitsresActive(false);
       setZipActive(false);
@@ -157,6 +205,9 @@ const PortfolioFiltersWithoutI18n = React.memo(
         ...filterContext,
         filterSelections: {
           commercialOnly: false,
+          taxSaleHistory: false,
+          recorderHistory: false,
+          foreclosureDocs: false,
           rsunitslatest: false,
           ownernames: [],
           unitsres: { type: "default", values: [NUMBER_RANGE_DEFAULT] },
@@ -165,7 +216,15 @@ const PortfolioFiltersWithoutI18n = React.memo(
       });
     };
 
-    const activeFilters = { commercialOnlyActive, ownernamesActive, unitsresActive, zipActive };
+    const activeFilters = {
+      commercialOnlyActive,
+      taxSaleHistoryActive,
+      recorderHistoryActive,
+      foreclosureDocsActive,
+      ownernamesActive,
+      unitsresActive,
+      zipActive,
+    };
 
     const ownernamesInfoModalContents = React.useMemo(
       () => (
@@ -227,6 +286,39 @@ const PortfolioFiltersWithoutI18n = React.memo(
               <div className="checkbox">{commercialOnlyActive && <Icon icon="check" />}</div>
               <span>
                 <Trans>Commercial buildings only</Trans>
+              </span>
+            </button>
+            <button
+              aria-pressed={taxSaleHistoryActive}
+              onClick={updateTaxSaleHistory}
+              className="filter filter-toggle"
+              aria-label={i18n._(t`Tax sale history filter`)}
+            >
+              <div className="checkbox">{taxSaleHistoryActive && <Icon icon="check" />}</div>
+              <span>
+                <Trans>Tax sale history</Trans>
+              </span>
+            </button>
+            <button
+              aria-pressed={recorderHistoryActive}
+              onClick={updateRecorderHistory}
+              className="filter filter-toggle"
+              aria-label={i18n._(t`Recorder history filter`)}
+            >
+              <div className="checkbox">{recorderHistoryActive && <Icon icon="check" />}</div>
+              <span>
+                <Trans>Recorder history</Trans>
+              </span>
+            </button>
+            <button
+              aria-pressed={foreclosureDocsActive}
+              onClick={updateForeclosureDocs}
+              className="filter filter-toggle"
+              aria-label={i18n._(t`Foreclosure documents filter`)}
+            >
+              <div className="checkbox">{foreclosureDocsActive && <Icon icon="check" />}</div>
+              <span>
+                <Trans>Foreclosure docs</Trans>
               </span>
             </button>
             <FilterAccordion
@@ -295,7 +387,15 @@ const PortfolioFiltersWithoutI18n = React.memo(
             </FilterAccordion>
           </FiltersWrapper>
 
-          {(commercialOnlyActive || ownernamesActive || unitsresActive || zipActive) && (
+          {(
+            commercialOnlyActive ||
+            taxSaleHistoryActive ||
+            recorderHistoryActive ||
+            foreclosureDocsActive ||
+            ownernamesActive ||
+            unitsresActive ||
+            zipActive
+          ) && (
             <div className="filter-status">
               <div className="filter-status-info">
                 <span className="results-count" role="status">

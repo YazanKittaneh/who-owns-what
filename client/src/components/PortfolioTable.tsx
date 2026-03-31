@@ -237,6 +237,36 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
         ],
       },
       {
+        header: i18n._(t`Chicago Signals`),
+        footer: (props) => props.column.id,
+        columns: [
+          {
+            accessorKey: "tax_sale_event_count",
+            header: i18n._(t`Tax Sale Events`),
+            cell: (info) => info.getValue() ?? null,
+            footer: (props) => props.column.id,
+            size: "auto",
+            filterFn: "isNonZero",
+          },
+          {
+            accessorKey: "recorder_doc_count",
+            header: i18n._(t`Recorder Docs`),
+            cell: (info) => info.getValue() ?? null,
+            footer: (props) => props.column.id,
+            size: "auto",
+            filterFn: "isNonZero",
+          },
+          {
+            accessorKey: "foreclosure_doc_count",
+            header: i18n._(t`Foreclosure Docs`),
+            cell: (info) => info.getValue() ?? null,
+            footer: (props) => props.column.id,
+            size: "auto",
+            filterFn: "isNonZero",
+          },
+        ],
+      },
+      {
         header: i18n._(t`RS Units`),
         footer: (props) => props.column.id,
         columns: [
@@ -562,8 +592,11 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
   });
 
   React.useEffect(() => {
-    const { rsunitslatest, ownernames, unitsres, zip } = filterSelections;
+    const { rsunitslatest, taxSaleHistory, recorderHistory, foreclosureDocs, ownernames, unitsres, zip } = filterSelections;
     table.getColumn("rsunitslatest").setFilterValue(rsunitslatest);
+    table.getColumn("tax_sale_event_count").setFilterValue(taxSaleHistory);
+    table.getColumn("recorder_doc_count").setFilterValue(recorderHistory);
+    table.getColumn("foreclosure_doc_count").setFilterValue(foreclosureDocs);
     table.getColumn("ownernames").setFilterValue(ownernames);
     table.getColumn("unitsres").setFilterValue(unitsres.values);
     table.getColumn("zip").setFilterValue(zip);
