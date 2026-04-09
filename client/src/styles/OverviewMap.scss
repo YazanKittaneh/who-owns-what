@@ -1,0 +1,88 @@
+.OverviewMap {
+  position: relative;
+  border: 1px solid #727e96;
+  background: #fff;
+
+  .leaflet-container {
+    height: 72vh;
+    width: 100%;
+    background: #f8f8f8;
+  }
+
+  .OverviewMap__status {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 10;
+    width: min(24rem, calc(100% - 2rem));
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid #727e96;
+    padding: 0.75rem 1rem;
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .OverviewMap__legend {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.96);
+    border-left: 1px solid #727e96;
+    border-top: 1px solid #727e96;
+    padding: 0.85rem 1rem;
+
+    p {
+      margin: 0 0 0.75rem;
+      font-size: 0.875rem;
+      text-align: center;
+    }
+  }
+
+  .OverviewMap__legendEntries {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    div {
+      display: flex;
+      align-items: center;
+      font-size: 0.75rem;
+
+      &::before {
+        content: "";
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        margin-right: 0.35rem;
+        border-radius: 50%;
+      }
+    }
+
+    .overview-marker::before {
+      background: #454d5d;
+    }
+
+    .portfolio-marker::before {
+      background: #ff813a;
+    }
+
+    .selected-marker::before {
+      background: #00b4ff;
+    }
+  }
+
+  @media (max-width: 599px) {
+    .leaflet-container {
+      height: 60vh;
+    }
+
+    .OverviewMap__legend {
+      left: 0;
+      right: 0;
+      border-right: 1px solid #727e96;
+    }
+  }
+}

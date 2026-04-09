@@ -1,0 +1,79 @@
+.PropertyOverviewModal {
+  inset: 5vh auto auto 50% !important;
+  transform: translateX(-50%);
+  width: min(72rem, 92vw) !important;
+  max-height: 90vh;
+  padding: 1.5rem !important;
+
+  .PropertyOverviewModal__content {
+    padding-top: 1rem;
+  }
+
+  .PropertyOverviewModal__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    h2 {
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  .PropertyOverviewModal__meta {
+    min-width: 10rem;
+    border: 1px solid #727e96;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .PropertyOverviewModal__metaValue {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .PropertyOverviewModal__metaLabel {
+    display: block;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+  }
+
+  .PropertyOverviewModal__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+    gap: 1.5rem;
+  }
+
+  .PropertyOverviewModal__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .PropertyOverviewModal__actions .btn {
+    width: 100%;
+  }
+
+  .PropertyOverviewModal__loading {
+    min-height: 14rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 899px) {
+    .PropertyOverviewModal__header,
+    .PropertyOverviewModal__grid {
+      display: block;
+    }
+
+    .PropertyOverviewModal__meta {
+      margin-top: 1rem;
+    }
+
+    .PropertyOverviewModal__sidebar {
+      margin-top: 1.5rem;
+    }
+  }
+}

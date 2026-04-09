@@ -10,6 +10,57 @@ With this website, you can find crucial information about who is responsible for
 
 **This project is currently in active development!**
 
+## Session updates (2026-04)
+
+This repository was updated with a Chicago-focused source expansion and related UI/API fixes.
+
+- Added new source staging and normalization under `data/supplemental-20260331/`.
+- Added parser/loader scripts:
+  - `scripts/fetch_source_expansion.py`
+  - `scripts/parse_ihs_html.py`
+  - `scripts/extract_woodstock_metadata.py`
+  - `scripts/scrape_bor_decisions.py`
+  - `scripts/load_source_expansion.py`
+- Added SQL definitions for expansion datasets:
+  - `sql/create_ihs_tables.sql`
+  - `sql/create_woodstock_tables.sql`
+  - `sql/create_bor_tables.sql`
+- Added IHS timeline integration query:
+  - `wow/sql/address_indicatorhistory_chi_with_ihs.sql`
+- Updated timeline API selection logic in `wow/views.py` to use IHS-enhanced query for Chicago pins.
+- Added IHS indicator datasets to the frontend timeline controls.
+- Fixed owner-name filter behavior to avoid substring false positives (for example `SURE LLC` matching inside `FORECLOSURE LLC`).
+- Added a map-first home page that loads parcels by viewport and opens a property modal on click.
+- Split the main Chicago UX into two primary pages:
+  - `/` for the overview map
+  - `/pin/:pin` for the dedicated property profile page
+- Added first-pass nearby-owner workflows:
+  - `GET /api/address/overview-map`
+  - `GET /api/address/nearby?pin=&radius_m=&limit=`
+  - `GET /api/owner/current?owner_id=` or `?owner_name=`
+- Added a lightweight owner profile page and browser-local saved lists page:
+  - `/owner/id/:ownerKey` or `/owner/name/:ownerKey`
+  - `/saved-lists`
+
+### Data caveats from current snapshot
+
+- The current validated `chi_owners` snapshot in this environment covers years `2025-2026`, not full historical depth.
+- Older owner history is still missing relative to the upstream source, so longitudinal ownership analysis remains incomplete.
+- If multi-year owner history is required, refresh source CSVs and rebuild with `python dbtool.py builddb --update`.
+- See `docs/data-catalog.md` for the current validated DB snapshot and dataset status.
+
+### Current product surface
+
+- Home page: a Chicago parcel overview map with click-to-open property modal and portfolio highlighting.
+- Property page: current owner/mail-to info, parcel stats, portfolio context, nearby-owner section, timeline, and associated parcel list.
+- Owner page: current parcel rollup for a current owner grouping key (`owner_id` first, then `owner_name`).
+- Saved lists: browser-local saved owners and nearby parcels with CSV export.
+
+Important limitation:
+
+- Nearby-owner and owner-profile workflows currently rely on current `wow_parcels` owner rows.
+- They are not yet full normalized owner-entity resolution, server-side saved lists, or full prospect-list workflows.
+
 ## Architecture
 
 This site is built on a Chicago-focused data pipeline that loads open data into a PostgreSQL instance.
@@ -66,9 +117,13 @@ If you are running the production Docker stack, the current rebuild flow is:
 docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T db \
   psql -U wow -d wow -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'
 
-docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T api \
+docker compose -f docker-compose.prod.yml --profile with-cloudflare run --rm -T \
+  -v "$PWD/data:/app/data" \
+  api \
   python dbtool.py builddb --update
 ```
+
+The production image excludes `data/`, so data refreshes should use one-off `run -v "$PWD/data:/app/data" api ...` commands rather than `exec api ...`.
 
 CSV snapshots and database dumps can also be backed up to the local MinIO instance. See `docs/DEPLOYMENT.md` for the restore and backup commands.
 

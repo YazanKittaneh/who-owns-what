@@ -7,6 +7,12 @@ export type AddressPageUrlParams = {
   indicator?: string;
 };
 
+export type OwnerPageUrlParams = {
+  ownerType: "id" | "name";
+  ownerKey: string;
+  locale?: string;
+};
+
 export type AddressPageRoutes = ReturnType<typeof createAddressPageRoutes>;
 
 export const isAddressPageRoute = (pathname: string) => {
@@ -15,7 +21,10 @@ export const isAddressPageRoute = (pathname: string) => {
   return path.startsWith("/pin");
 };
 
-export const createRouteForAddressPage = (params: AddressPageUrlParams, isLegacyRoute?: boolean) => {
+export const createRouteForAddressPage = (
+  params: AddressPageUrlParams,
+  isLegacyRoute?: boolean
+) => {
   let route = `/pin/${encodeURIComponent(params.pin)}`;
 
   const allowChangingPortfolioMethod =
@@ -50,6 +59,38 @@ export const createAddressPageRoutes = (
   };
 };
 
+export const createRouteForOwnerPage = (params: OwnerPageUrlParams, isLegacyRoute?: boolean) => {
+  let route = `/owner/${encodeURIComponent(params.ownerType)}/${encodeURIComponent(
+    params.ownerKey
+  )}`;
+
+  const allowChangingPortfolioMethod =
+    process.env.REACT_APP_ENABLE_NEW_WOWZA_PORTFOLIO_MAPPING === "1";
+
+  if (isLegacyRoute && allowChangingPortfolioMethod) route = "/legacy" + route;
+
+  if (params.locale) {
+    route = `/${params.locale}${route}`;
+  }
+
+  return route;
+};
+
+export const createRouteForSavedListsPage = (locale?: string, isLegacyRoute?: boolean) => {
+  let route = "/saved-lists";
+
+  const allowChangingPortfolioMethod =
+    process.env.REACT_APP_ENABLE_NEW_WOWZA_PORTFOLIO_MAPPING === "1";
+
+  if (isLegacyRoute && allowChangingPortfolioMethod) route = "/legacy" + route;
+
+  if (locale) {
+    route = `/${locale}${route}`;
+  }
+
+  return route;
+};
+
 export const removeIndicatorSuffix = (pathname: string) =>
   pathname.replace(/(\/timeline)(\/[^/]+)?$/, "$1");
 
@@ -78,6 +119,8 @@ export const createCoreRoutePaths = (prefix?: string) => {
   return {
     home: `${pathPrefix}/`,
     addressPage: createAddressPageRoutes(`${pathPrefix}/pin/:pin(\\d{14})`),
+    ownerPage: `${pathPrefix}/owner/:ownerType(id|name)/:ownerKey`,
+    savedLists: `${pathPrefix}/saved-lists`,
     account: createAccountRoutePaths(`${pathPrefix}/account`),
     about: `${pathPrefix}/about`,
     howToUse: `${pathPrefix}/how-to-use`,

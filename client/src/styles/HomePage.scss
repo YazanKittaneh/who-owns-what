@@ -133,6 +133,45 @@
     }
   }
 
+  &.HomePage--map {
+    .HomePage__content {
+      width: min(94vw, 88rem);
+    }
+
+    .HomePage__search {
+      margin: 2rem auto 1.5rem auto;
+    }
+
+    .HomePage__search--map {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1.5rem;
+
+      .AddressSearch {
+        flex: 0 0 min(26rem, 100%);
+        margin: 0;
+      }
+
+      h1 {
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        margin-bottom: 0;
+        max-width: 42rem;
+      }
+
+      @include for-phone-only() {
+        display: block;
+
+        .AddressSearch {
+          margin-top: 1rem;
+        }
+      }
+    }
+  }
+
   .HomePage__samples {
     margin: 0 auto 30px auto;
 

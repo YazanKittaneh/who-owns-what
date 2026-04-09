@@ -1,0 +1,160 @@
+.NearbyOwners {
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+
+  .NearbyOwners__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    h3 {
+      margin-bottom: 0.4rem;
+    }
+
+    p {
+      margin-bottom: 0;
+      max-width: 42rem;
+    }
+  }
+
+  .NearbyOwners__controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+
+  .NearbyOwners__toggleGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-end;
+  }
+
+  .NearbyOwners__savedLink {
+    font-size: 0.875rem;
+  }
+
+  .NearbyOwners__radius {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .NearbyOwners__viewMode {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .NearbyOwners__radius button,
+  .NearbyOwners__viewMode button {
+    border: 1px solid #727e96;
+    background: #fff;
+    padding: 0.4rem 0.7rem;
+    cursor: pointer;
+
+    &.active {
+      background: #242323;
+      border-color: #242323;
+      color: #fff;
+    }
+  }
+
+  .NearbyOwners__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 1rem;
+  }
+
+  .NearbyOwners__item {
+    border: 1px solid #d3d7de;
+    padding: 1rem;
+    background: #fff;
+  }
+
+  .NearbyOwners__actions {
+    margin-bottom: 0.75rem;
+
+    button {
+      border: 1px solid #727e96;
+      background: #fff;
+      padding: 0.35rem 0.6rem;
+      cursor: pointer;
+    }
+  }
+
+  .NearbyOwners__parcelLinks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+
+    a,
+    .NearbyOwners__moreParcels {
+      font-size: 0.875rem;
+    }
+  }
+
+  .NearbyOwners__itemHeader {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+
+    h4 {
+      margin-bottom: 0.25rem;
+      font-size: 1rem;
+    }
+
+    p {
+      margin-bottom: 0;
+    }
+  }
+
+  .NearbyOwners__mailing {
+    margin-bottom: 0.75rem;
+    color: #454d5d;
+  }
+
+  .NearbyOwners__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+    white-space: nowrap;
+  }
+
+  .NearbyOwners__sameOwner {
+    background: #ffefe0;
+    color: #9a4300;
+    padding: 0.15rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .NearbyOwners__status {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 599px) {
+    .NearbyOwners__header {
+      display: block;
+    }
+
+    .NearbyOwners__controls,
+    .NearbyOwners__toggleGroup {
+      align-items: flex-start;
+    }
+
+    .NearbyOwners__radius {
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .NearbyOwners__viewMode {
+      flex-wrap: wrap;
+    }
+  }
+}

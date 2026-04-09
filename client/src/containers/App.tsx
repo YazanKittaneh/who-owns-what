@@ -26,6 +26,8 @@ import { useMachine } from "@xstate/react";
 
 import HomePage from "./HomePage";
 import AddressPage from "./AddressPage";
+import PropertyPage from "./PropertyPage";
+import OwnerPage from "./OwnerPage";
 import AboutPage from "./AboutPage";
 import HowToUsePage from "./HowToUsePage";
 import MethodologyPage from "./Methodology";
@@ -48,6 +50,7 @@ import ResetPasswordPage from "./ResetPasswordPage";
 import ForgotPasswordPage from "./ForgotPasswordPage";
 import UnsubscribePage from "./UnsubscribePage";
 import LoginPage from "./LoginPage";
+import SavedListsPage from "./SavedListsPage";
 import { JFLogo } from "components/JFLogo";
 import { STANDALONE_PAGES } from "components/StandalonePage";
 import { LoadingPage } from "components/Loader";
@@ -112,7 +115,7 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
       />
       <Route
         path={paths.legacy.addressPage.overview}
-        render={(props) => <AddressPage currentTab={0} {...machineProps} {...props} />}
+        render={(props) => <PropertyPage {...machineProps} {...props} />}
         exact
       />
       <Route
@@ -130,8 +133,7 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
       <Route
         path={paths.addressPage.overview}
         render={(props) => (
-          <AddressPage
-            currentTab={0}
+          <PropertyPage
             {...machineProps}
             {...props}
             useNewPortfolioMethod={allowChangingPortfolioMethod}
@@ -139,6 +141,10 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
         )}
         exact
       />
+      <Route path={paths.ownerPage} component={OwnerPage} exact />
+      <Route path={paths.legacy.ownerPage} component={OwnerPage} exact />
+      <Route path={paths.savedLists} component={SavedListsPage} exact />
+      <Route path={paths.legacy.savedLists} component={SavedListsPage} exact />
       <Route
         path={paths.addressPage.portfolio}
         render={(props) => (
@@ -245,11 +251,14 @@ const getAccountNavLinks = (fromPath: string, isSignedIn?: boolean) => {
 };
 
 const getMainNavLinks = (isLegacyPath?: boolean) => {
-  const { about, howToUse, legacy } = createWhoOwnsWhatRoutePaths();
+  const { about, howToUse, legacy, savedLists } = createWhoOwnsWhatRoutePaths();
   return [
     <SearchLink key={1} />,
     <LocaleNavLink to={isLegacyPath ? legacy.about : about} key={2}>
       <Trans>About</Trans>
+    </LocaleNavLink>,
+    <LocaleNavLink to={isLegacyPath ? legacy.savedLists : savedLists} key={4}>
+      <Trans>Saved lists</Trans>
     </LocaleNavLink>,
     <LocaleNavLink
       to={isLegacyPath ? legacy.howToUse : howToUse}

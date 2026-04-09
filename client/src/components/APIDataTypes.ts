@@ -137,6 +137,68 @@ export type BuildingInfoResults = {
   result: BuildingInfoRecord[];
 };
 
+export type OverviewMapProperty = {
+  pin: string;
+  housenumber?: string | null;
+  streetname?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  owner_name?: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+export type OverviewMapResults = {
+  result: OverviewMapProperty[];
+  total_count: number;
+  truncated: boolean;
+};
+
+export type NearbyPropertyRecord = {
+  pin: string;
+  housenumber?: string | null;
+  streetname?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  owner_id?: string | null;
+  owner_name?: string | null;
+  mailing_address?: string | null;
+  mailing_city?: string | null;
+  mailing_state?: string | null;
+  mailing_zip?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  distance_m?: number | null;
+  same_owner?: boolean;
+};
+
+export type NearbyPropertiesResults = {
+  seed: {
+    pin: string;
+    radius_m: number;
+  };
+  result: NearbyPropertyRecord[];
+};
+
+export type OwnerProfileSummary = {
+  owner_id?: string | null;
+  owner_name?: string | null;
+  parcel_count: number;
+  mailing_address?: string | null;
+  mailing_city?: string | null;
+  mailing_state?: string | null;
+  mailing_zip?: string | null;
+};
+
+export type OwnerProfileResults = {
+  owner: OwnerProfileSummary;
+  result: AddressRecord[];
+};
+
 export type IndicatorsHistoryRecord = {
   month: string;
   permits_total?: number;

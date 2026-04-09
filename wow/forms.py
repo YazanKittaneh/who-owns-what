@@ -65,3 +65,43 @@ class PinListForm(forms.Form):
 
 class AddressSearchForm(forms.Form):
     q = forms.CharField(required=True)
+
+
+class MapViewportForm(forms.Form):
+    north = forms.FloatField(required=True)
+    south = forms.FloatField(required=True)
+    east = forms.FloatField(required=True)
+    west = forms.FloatField(required=True)
+    limit = forms.IntegerField(required=False, min_value=1, max_value=2000, initial=800)
+
+    def clean(self):
+        data = super().clean()
+        north = data.get("north")
+        south = data.get("south")
+        east = data.get("east")
+        west = data.get("west")
+
+        if north is not None and south is not None and south >= north:
+            raise ValidationError("south must be less than north.")
+        if east is not None and west is not None and west >= east:
+            raise ValidationError("west must be less than east.")
+
+        return data
+
+
+class NearbyPropertiesForm(PinForm):
+    radius_m = forms.IntegerField(required=False, min_value=25, max_value=5000, initial=200)
+    limit = forms.IntegerField(required=False, min_value=1, max_value=100, initial=25)
+
+
+class CurrentOwnerForm(forms.Form):
+    owner_id = forms.CharField(required=False)
+    owner_name = forms.CharField(required=False)
+
+    def clean(self):
+        data = super().clean()
+        owner_id = data.get("owner_id")
+        owner_name = data.get("owner_name")
+        if not owner_id and not owner_name:
+            raise ValidationError("Either owner_id or owner_name is required.")
+        return data

@@ -1,4 +1,11 @@
-import { SearchResults, BuildingInfoResults, IndicatorsHistoryResults } from "./APIDataTypes";
+import {
+  SearchResults,
+  BuildingInfoResults,
+  IndicatorsHistoryResults,
+  OverviewMapResults,
+  NearbyPropertiesResults,
+  OwnerProfileResults,
+} from "./APIDataTypes";
 import { SearchAddress } from "./AddressSearch";
 import { NetworkError, HTTPError } from "error-reporting";
 import {
@@ -9,6 +16,7 @@ import {
   IndicatorsDatasetId,
   nycIndicatorsDatasetIds,
   standardIndicatorsDatasetIds,
+  ihsIndicatorsDatasetIds,
 } from "./IndicatorsTypes";
 
 function searchForAddress(searchAddress: SearchAddress): Promise<SearchResults> {
@@ -22,6 +30,49 @@ function getBuildingInfo(pin: string): Promise<BuildingInfoResults> {
   return getApiJson(`/api/address/buildinginfo?pin=${encodeURIComponent(pin)}`);
 }
 
+function getPortfolioByPin(pin: string): Promise<SearchResults> {
+  return searchForAddress({ pin, housenumber: "", streetname: "", city: "", state: "", zip: "" });
+}
+
+function getOverviewMapProperties(bounds: {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+  limit?: number;
+}): Promise<OverviewMapResults> {
+  const params = new URLSearchParams({
+    north: String(bounds.north),
+    south: String(bounds.south),
+    east: String(bounds.east),
+    west: String(bounds.west),
+  });
+  if (bounds.limit) {
+    params.set("limit", String(bounds.limit));
+  }
+  return getApiJson(`/api/address/overview-map?${params.toString()}`);
+}
+
+function getNearbyProperties(
+  pin: string,
+  radiusM = 200,
+  limit = 25
+): Promise<NearbyPropertiesResults> {
+  const params = new URLSearchParams({
+    pin,
+    radius_m: String(radiusM),
+    limit: String(limit),
+  });
+  return getApiJson(`/api/address/nearby?${params.toString()}`);
+}
+
+function getCurrentOwnerProfile(ownerType: "id" | "name", ownerKey: string): Promise<OwnerProfileResults> {
+  const params = new URLSearchParams(
+    ownerType === "id" ? { owner_id: ownerKey } : { owner_name: ownerKey }
+  );
+  return getApiJson(`/api/owner/current?${params.toString()}`);
+}
+
 const indicatorColumns: Record<IndicatorsDatasetId, string[]> = {
   hpdcomplaints: ["emergency", "nonemergency", "total"],
   hpdviolations: ["class_a", "class_b", "class_c", "class_i", "total"],
@@ -33,6 +84,11 @@ const indicatorColumns: Record<IndicatorsDatasetId, string[]> = {
   permits: ["total"],
   violations: ["total"],
   service_requests: ["total"],
+  ihs_sales: ["total"],
+  ihs_foreclosures: ["total"],
+  ihs_mortgages: ["total"],
+  ihs_auctions: ["total"],
+  ihs_business_buyers: ["total"],
 };
 
 const detectTimelineMode = (schemaHint: unknown, rawJson: any[]): IndicatorTimelineMode => {
@@ -89,7 +145,9 @@ function createVizData(rawJson: any[], dataset: IndicatorsDatasetId): Indicators
 function getAvailableDatasets(mode: IndicatorTimelineMode, rawJson: any[]): IndicatorsDatasetId[] {
   const row = rawJson[0] || {};
   const candidateIds: IndicatorsDatasetId[] =
-    mode === "nyc" ? [...nycIndicatorsDatasetIds] : [...standardIndicatorsDatasetIds];
+    mode === "nyc"
+      ? [...nycIndicatorsDatasetIds]
+      : [...standardIndicatorsDatasetIds, ...ihsIndicatorsDatasetIds];
 
   if (!rawJson.length) {
     return candidateIds;
@@ -183,6 +241,10 @@ async function getApiJson(url: string): Promise<any> {
 const Client = {
   searchForAddress,
   getBuildingInfo,
+  getPortfolioByPin,
+  getOverviewMapProperties,
+  getNearbyProperties,
+  getCurrentOwnerProfile,
   getIndicatorHistory,
 };
 
