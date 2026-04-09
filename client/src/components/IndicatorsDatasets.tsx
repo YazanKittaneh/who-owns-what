@@ -280,4 +280,130 @@ export const INDICATORS_DATASETS: Record<IndicatorsDatasetId, IndicatorsDataset>
       },
     ],
   },
+  // IHS Community Area Indicators
+  ihs_sales: {
+    mode: "standard",
+    name: (i18n) => i18n._(t`Property Sales (Community Area)`),
+    analyticsName: "ihs_sales",
+    quantity: (_i18n, value) => `${value} sales`,
+    startYear: 2005,
+    yAxisLabel: (i18n) => i18n._(t`Sales`),
+    explanation: (i18n) => (
+      <Trans render="span">
+        Total property sales in this community area from the{" "}
+        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+          Institute for Housing Studies
+        </a>
+        . Shows market activity trends over time.
+      </Trans>
+    ),
+    series: [
+      {
+        key: "total",
+        label: (i18n) => i18n._(t`Property Sales`),
+        backgroundColor: "rgba(70, 130, 180, 0.6)",
+        borderColor: "rgba(70, 130, 180, 1)",
+      },
+    ],
+  },
+  ihs_foreclosures: {
+    mode: "standard",
+    name: (i18n) => i18n._(t`Foreclosure Filings (Community Area)`),
+    analyticsName: "ihs_foreclosures",
+    quantity: (_i18n, value) => `${value} filings`,
+    startYear: 2005,
+    yAxisLabel: (i18n) => i18n._(t`Filings`),
+    explanation: (i18n) => (
+      <Trans render="span">
+        Foreclosure filing activity in this community area from the{" "}
+        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+          Institute for Housing Studies
+        </a>
+        . Indicates housing distress levels.
+      </Trans>
+    ),
+    series: [
+      {
+        key: "total",
+        label: (i18n) => i18n._(t`Foreclosure Filings`),
+        backgroundColor: "rgba(220, 20, 60, 0.6)",
+        borderColor: "rgba(220, 20, 60, 1)",
+      },
+    ],
+  },
+  ihs_mortgages: {
+    mode: "standard",
+    name: (i18n) => i18n._(t`Mortgage Activity (Community Area)`),
+    analyticsName: "ihs_mortgages",
+    quantity: (_i18n, value) => `${value} mortgages`,
+    startYear: 2005,
+    yAxisLabel: (i18n) => i18n._(t`Mortgages`),
+    explanation: (i18n) => (
+      <Trans render="span">
+        Mortgage lending activity in this community area from the{" "}
+        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+          Institute for Housing Studies
+        </a>
+        . Shows credit access trends.
+      </Trans>
+    ),
+    series: [
+      {
+        key: "total",
+        label: (i18n) => i18n._(t`Mortgages`),
+        backgroundColor: "rgba(34, 139, 34, 0.6)",
+        borderColor: "rgba(34, 139, 34, 1)",
+      },
+    ],
+  },
+  ihs_auctions: {
+    mode: "standard",
+    name: (i18n) => i18n._(t`Foreclosure Auctions (Community Area)`),
+    analyticsName: "ihs_auctions",
+    quantity: (_i18n, value) => `${value} auctions`,
+    startYear: 2005,
+    yAxisLabel: (i18n) => i18n._(t`Auctions`),
+    explanation: (i18n) => (
+      <Trans render="span">
+        Completed foreclosure auctions in this community area from the{" "}
+        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+          Institute for Housing Studies
+        </a>
+        . Shows REO property flow into the market.
+      </Trans>
+    ),
+    series: [
+      {
+        key: "total",
+        label: (i18n) => i18n._(t`Foreclosure Auctions`),
+        backgroundColor: "rgba(255, 140, 0, 0.6)",
+        borderColor: "rgba(255, 140, 0, 1)",
+      },
+    ],
+  },
+  ihs_business_buyers: {
+    mode: "standard",
+    name: (i18n) => i18n._(t`Business Buyer Share (Community Area)`),
+    analyticsName: "ihs_business_buyers",
+    quantity: (_i18n, value) => `${value}% business buyers`,
+    startYear: 2005,
+    yAxisLabel: (i18n) => i18n._(t`Percent`),
+    explanation: (i18n) => (
+      <Trans render="span">
+        Share of property sales to business buyers (investors) in this community area from the{" "}
+        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+          Institute for Housing Studies
+        </a>
+        . High levels may indicate distressed markets.
+      </Trans>
+    ),
+    series: [
+      {
+        key: "total",
+        label: (i18n) => i18n._(t`Business Buyer Share`),
+        backgroundColor: "rgba(128, 0, 128, 0.6)",
+        borderColor: "rgba(128, 0, 128, 1)",
+      },
+    ],
+  },
 };

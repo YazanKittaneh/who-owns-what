@@ -344,6 +344,7 @@ const PortfolioFiltersWithoutI18n = React.memo(
                 aria-label={i18n._(t`Landlord filter`)}
                 isOpen={ownernamesIsOpen}
                 defaultSelections={valuesAsMultiselectOptions(ownernamesSelections)}
+                filterOption={ownernamesFilterOption}
               />
             </FilterAccordion>
             <FilterAccordion
@@ -648,6 +649,28 @@ function valuesAsMultiselectOptions(values: string[]): Option[] {
     ? values.map((val: string) => ({ value: val, label: val }))
     : [];
   return formattedOptions;
+}
+
+function normalizeForTokenSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function ownernamesFilterOption(option: { label: string; value: string }, rawInput: string): boolean {
+  const query = normalizeForTokenSearch(rawInput);
+  if (!query) return true;
+
+  const queryTokens = query.split(" ").filter(Boolean);
+  const labelTokens = normalizeForTokenSearch(option.label).split(" ").filter(Boolean);
+
+  if (!queryTokens.length) return true;
+
+  return queryTokens.every((queryToken) =>
+    labelTokens.some((labelToken) => labelToken.startsWith(queryToken))
+  );
 }
 
 function getOwnernamesOptions(addrs: AddressRecord[]) {

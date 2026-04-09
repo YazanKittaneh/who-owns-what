@@ -20,6 +20,7 @@ type Props = withI18nProps &
   mobileShow: boolean;
   onClose: () => void;
   onAddrChange: (pin: string) => void;
+  timelineHref: string;
 };
 
 const NUM_COMPLAINT_TYPES_TO_SHOW = 3;
@@ -32,7 +33,7 @@ type GroupedContact = [
 export const sortContactsByImportance = (contact: GroupedContact) =>
   contact[1].find((c) => c.title === "HeadOfficer" || c.title.includes("Owner")) ? -1 : 0;
 
-const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n }) => {
+const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelineHref }) => {
   const isMobile = Browser.isMobile();
   const { detailAddr } = state.context.portfolioData;
   const addressLine =
@@ -73,7 +74,7 @@ const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n }) => {
                   </h4>
                 </div>
                 <div className="card-body">
-                  <BuildingStatsTable addr={detailAddr} />
+                  <BuildingStatsTable addr={detailAddr} timelineHref={timelineHref} />
 
                   <div className="card-body-complaints">
                     <div>

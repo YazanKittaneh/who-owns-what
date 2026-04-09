@@ -4,11 +4,13 @@ import { Icon } from "@justfixnyc/component-library";
 import { Trans } from "@lingui/macro";
 import { i18n } from "@lingui/core";
 import Modal from "./Modal";
+import { Link } from "react-router-dom";
 
 import "styles/BuildingStatsTable.css";
 
 type BuildingStatsTableProps = {
   addr: AddressRecord;
+  timelineHref?: string;
 };
 
 type StatRow = {
@@ -20,7 +22,7 @@ type StatRow = {
 const formatValue = (value: string | number | null | undefined) =>
   value === null || value === undefined || value === "" ? "N/A" : String(value);
 
-const BuildingStatsTable: React.FC<BuildingStatsTableProps> = ({ addr }) => {
+const BuildingStatsTable: React.FC<BuildingStatsTableProps> = ({ addr, timelineHref }) => {
   const [showInfoModal, setShowInfoModal] = React.useState(false);
   const [infoModalTitle, setInfoModalTitle] = React.useState("");
   const [infoModalContent, setInfoModalContent] = React.useState("");
@@ -33,7 +35,7 @@ const BuildingStatsTable: React.FC<BuildingStatsTableProps> = ({ addr }) => {
     },
     {
       label: i18n._("Residential units"),
-      value: formatValue(addr.units_res),
+      value: formatValue(addr.units_res ?? addr.unitsres),
       info: i18n._("Residential unit count from parcel data."),
     },
     {
@@ -105,9 +107,15 @@ const BuildingStatsTable: React.FC<BuildingStatsTableProps> = ({ addr }) => {
           </tbody>
         </table>
         <div className="table-row">
-          <div className="timeline-link">
-            <Trans>View trends over time</Trans> &rarr;
-          </div>
+          {timelineHref ? (
+            <Link className="timeline-link" to={timelineHref}>
+              <Trans>View trends over time</Trans> &rarr;
+            </Link>
+          ) : (
+            <div className="timeline-link">
+              <Trans>View trends over time</Trans> &rarr;
+            </div>
+          )}
         </div>
       </div>
     </>

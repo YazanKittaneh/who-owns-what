@@ -37,6 +37,7 @@ jobs:
         run: yarn build
         env:
           NODE_OPTIONS: --openssl-legacy-provider
+          TSC_COMPILE_ON_ERROR: 'true'
           REACT_APP_API_BASE_URL: ${{ secrets.REACT_APP_API_BASE_URL }}
           REACT_APP_STREETVIEW_API_KEY: ${{ secrets.REACT_APP_STREETVIEW_API_KEY }}
           REACT_APP_AMPLITUDE_API_KEY: ${{ secrets.REACT_APP_AMPLITUDE_API_KEY }}

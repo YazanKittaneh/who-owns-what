@@ -72,23 +72,44 @@ export default class AddressPage extends Component<AddressPageProps, State> {
   }
 
   componentDidMount() {
-    const { state, send, match } = this.props;
-    if (
-      state.matches("portfolioFound") &&
-      searchAddrsAreEqual(state.context.portfolioData.searchAddr, validateRouteParams(match.params))
-    )
-      return;
-    send({
-      type: "SEARCH",
-      address: validateRouteParams(match.params),
-      useNewPortfolioMethod: this.props.useNewPortfolioMethod || false,
-    });
-    this.handleCloseDetail();
+    this.syncRouteToState();
   }
 
-  componentDidUpdate(prevProps: AddressPageProps, prevState: State) {
-    return;
+  componentDidUpdate() {
+    this.syncRouteToState();
   }
+
+  syncRouteToState = () => {
+    const routeAddr = validateRouteParams(this.props.match.params);
+    const { state, send, useNewPortfolioMethod } = this.props;
+
+    if (state.matches("searchInProgress")) {
+      return;
+    }
+
+    if (state.matches("portfolioFound")) {
+      const { assocAddrs, detailAddr } = state.context.portfolioData;
+      if (detailAddr.pin === routeAddr.pin) {
+        return;
+      }
+
+      if (_find(assocAddrs, { pin: routeAddr.pin })) {
+        send({ type: "SELECT_DETAIL_ADDR", pin: routeAddr.pin });
+        return;
+      }
+    }
+
+    if (searchAddrsAreEqual(state.context.searchAddrParams || {}, routeAddr)) {
+      return;
+    }
+
+    send({
+      type: "SEARCH",
+      address: routeAddr,
+      useNewPortfolioMethod: useNewPortfolioMethod || false,
+    });
+    this.handleCloseDetail();
+  };
 
   handleOpenDetail = () => {
     this.setState({
@@ -234,6 +255,7 @@ export default class AddressPage extends Component<AddressPageProps, State> {
                   mobileShow={this.state.detailMobileSlide}
                   onClose={this.handleCloseDetail}
                   onAddrChange={(pin: string) => this.handleAddrChange(pin)}
+                  timelineHref={removeIndicatorSuffix(routes.timeline)}
                 />
               </div>
             </div>

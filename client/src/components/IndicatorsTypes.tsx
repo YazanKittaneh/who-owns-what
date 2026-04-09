@@ -14,9 +14,18 @@ export const standardIndicatorsDatasetIds = [
   "service_requests",
 ] as const;
 
+export const ihsIndicatorsDatasetIds = [
+  "ihs_sales",
+  "ihs_foreclosures",
+  "ihs_mortgages",
+  "ihs_auctions",
+  "ihs_business_buyers",
+] as const;
+
 export const indicatorsDatasetIds = [
   ...nycIndicatorsDatasetIds,
   ...standardIndicatorsDatasetIds,
+  ...ihsIndicatorsDatasetIds,
 ] as const;
 
 export type IndicatorsDatasetId = typeof indicatorsDatasetIds[number];
@@ -114,6 +123,36 @@ export const indicatorsInitialDataStructure: IndicatorsDataFromAPI = {
       permits: null,
       violations: null,
       service_requests: null,
+      total: null,
+    },
+  },
+  ihs_sales: {
+    labels: null,
+    values: {
+      total: null,
+    },
+  },
+  ihs_foreclosures: {
+    labels: null,
+    values: {
+      total: null,
+    },
+  },
+  ihs_mortgages: {
+    labels: null,
+    values: {
+      total: null,
+    },
+  },
+  ihs_auctions: {
+    labels: null,
+    values: {
+      total: null,
+    },
+  },
+  ihs_business_buyers: {
+    labels: null,
+    values: {
       total: null,
     },
   },
