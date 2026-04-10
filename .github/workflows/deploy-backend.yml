@@ -93,11 +93,13 @@ jobs:
             exit 1
           fi
 
+          cp /home/actions/who-owns-what.env .env
+
           echo "=== Deploying Who Owns What containers ==="
 
           docker compose \
             --project-name "$COMPOSE_PROJECT_NAME" \
-            --env-file /home/actions/who-owns-what.env \
+            --env-file .env \
             -f docker-compose.prod.yml \
             up -d --build --remove-orphans
 
@@ -116,14 +118,14 @@ jobs:
           echo "❌ Health check failed after deployment"
           docker compose \
             --project-name "$COMPOSE_PROJECT_NAME" \
-            --env-file /home/actions/who-owns-what.env \
+            --env-file .env \
             -f docker-compose.prod.yml \
             logs --tail=100 api
           exit 1
 
       # Notify on failure
       - name: Notify on failure
-        if: failure()
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v1.24.0
         with:
           payload: |
