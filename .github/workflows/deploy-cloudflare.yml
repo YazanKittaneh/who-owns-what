@@ -45,6 +45,54 @@ jobs:
           REACT_APP_ALGOLIA_APP_ID: ${{ secrets.REACT_APP_ALGOLIA_APP_ID }}
           REACT_APP_ALGOLIA_SEARCH_KEY: ${{ secrets.REACT_APP_ALGOLIA_SEARCH_KEY }}
 
+      - name: Ensure Cloudflare Pages project exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT_NAME: who-owns-what
+          PRODUCTION_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "$PRODUCTION_BRANCH" != "main" ] && [ "$PRODUCTION_BRANCH" != "master" ]; then
+            PRODUCTION_BRANCH="master"
+          fi
+
+          project_url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}"
+          create_url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects"
+
+          project_status=$(curl -sS -o /tmp/cf-project.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "$project_url")
+
+          if [ "$project_status" = "200" ]; then
+            echo "Cloudflare Pages project '${PROJECT_NAME}' already exists."
+            exit 0
+          fi
+
+          if [ "$project_status" != "404" ]; then
+            echo "Unexpected Cloudflare API response while checking project: HTTP ${project_status}"
+            exit 1
+          fi
+
+          echo "Cloudflare Pages project '${PROJECT_NAME}' not found. Creating it now..."
+
+          create_status=$(curl -sS -o /tmp/cf-create-project.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "$create_url" \
+            --data "{\"name\":\"${PROJECT_NAME}\",\"production_branch\":\"${PRODUCTION_BRANCH}\"}")
+
+          if [ "$create_status" = "200" ] || [ "$create_status" = "201" ]; then
+            echo "Created Cloudflare Pages project '${PROJECT_NAME}'."
+            exit 0
+          fi
+
+          echo "Failed to create Cloudflare Pages project: HTTP ${create_status}"
+          exit 1
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
