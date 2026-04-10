@@ -16,6 +16,8 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    env:
+      CLOUDFLARE_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME != '' && secrets.CLOUDFLARE_PAGES_PROJECT_NAME || 'who-owns-what' }}
     
     steps:
       - name: Checkout
@@ -49,7 +51,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          PROJECT_NAME: who-owns-what
+          PROJECT_NAME: ${{ env.CLOUDFLARE_PROJECT_NAME }}
           PRODUCTION_BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -98,6 +100,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: who-owns-what
+          projectName: ${{ env.CLOUDFLARE_PROJECT_NAME }}
           directory: client/build
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
