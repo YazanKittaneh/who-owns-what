@@ -88,8 +88,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ ! -f /root/who-owns-what/.env ]; then
-            echo "❌ Missing /root/who-owns-what/.env on production runner"
+          if [ ! -f /home/actions/who-owns-what.env ]; then
+            echo "❌ Missing /home/actions/who-owns-what.env on production runner"
             exit 1
           fi
 
@@ -97,7 +97,7 @@ jobs:
 
           docker compose \
             --project-name "$COMPOSE_PROJECT_NAME" \
-            --env-file /root/who-owns-what/.env \
+            --env-file /home/actions/who-owns-what.env \
             -f docker-compose.prod.yml \
             up -d --build --remove-orphans
 
@@ -116,7 +116,7 @@ jobs:
           echo "❌ Health check failed after deployment"
           docker compose \
             --project-name "$COMPOSE_PROJECT_NAME" \
-            --env-file /root/who-owns-what/.env \
+            --env-file /home/actions/who-owns-what.env \
             -f docker-compose.prod.yml \
             logs --tail=100 api
           exit 1
