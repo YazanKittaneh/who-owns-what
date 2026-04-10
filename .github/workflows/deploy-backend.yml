@@ -72,62 +72,54 @@ jobs:
   # Deploy to production server
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, production]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     environment: production
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Deploy via SSH
-      - name: Deploy to production server
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || '22' }}
-          script: |
-            set -e
-            
-            echo "=== Deploying Who Owns What Backend ==="
-            
-            # Navigate to app directory
-            cd ~/who-owns-what || exit 1
-            
-            # Pull latest docker-compose and env files if you store them in git
-            # git pull origin main
-            
-            # Login to GitHub Container Registry
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # Pull the latest image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            
-            # Stop and remove old container
-            docker-compose -f docker-compose.prod.yml down
-            
-            # Start new container
-            docker-compose -f docker-compose.prod.yml up -d
-            
-            # Clean up old images
-            docker image prune -f
-            
-            # Health check
-            echo "Waiting for container to start..."
-            sleep 10
-            
-            if curl -f http://localhost:8000/health/ > /dev/null 2>&1; then
+      - name: Deploy locally on production runner
+        env:
+          COMPOSE_PROJECT_NAME: who-owns-what
+        run: |
+          set -euo pipefail
+
+          if [ ! -f /root/who-owns-what/.env ]; then
+            echo "❌ Missing /root/who-owns-what/.env on production runner"
+            exit 1
+          fi
+
+          echo "=== Deploying Who Owns What containers ==="
+
+          docker compose \
+            --project-name "$COMPOSE_PROJECT_NAME" \
+            --env-file /root/who-owns-what/.env \
+            -f docker-compose.prod.yml \
+            up -d --build --remove-orphans
+
+          docker image prune -f
+
+          echo "Waiting for API health check..."
+          for attempt in {1..12}; do
+            if curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
               echo "✅ Deployment successful! Health check passed."
-            else
-              echo "❌ Health check failed! Rolling back..."
-              docker-compose -f docker-compose.prod.yml down
-              docker-compose -f docker-compose.prod.yml up -d
-              exit 1
+              exit 0
             fi
-            
-            echo "=== Deployment Complete ==="
+            echo "Health check not ready yet (attempt ${attempt}/12)."
+            sleep 10
+          done
+
+          echo "❌ Health check failed after deployment"
+          docker compose \
+            --project-name "$COMPOSE_PROJECT_NAME" \
+            --env-file /root/who-owns-what/.env \
+            -f docker-compose.prod.yml \
+            logs --tail=100 api
+          exit 1
 
       # Notify on failure
       - name: Notify on failure
