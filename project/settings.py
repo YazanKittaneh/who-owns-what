@@ -13,6 +13,17 @@ except ImportError:
     # We don't have development dependencies installed.
     pass
 
+# Also try to load from .env file directly if dotenv is not available
+import os
+if not os.environ.get("SECRET_KEY"):
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                if line.strip() and not line.startswith("#"):
+                    key, value = line.strip().split("=", 1)
+                    os.environ.setdefault(key, value)
+
 MY_DIR = Path(__file__).parent.resolve()
 
 BASE_DIR = MY_DIR.parent
@@ -43,6 +54,8 @@ SECRET_KEY = get_required_env("SECRET_KEY")
 ALERTS_API_TOKEN = get_required_env("ALERTS_API_TOKEN")
 
 SIGNATURE_API_TOKEN = get_required_env("SIGNATURE_API_TOKEN")
+
+ADMIN_API_TOKEN = os.environ.get("ADMIN_API_TOKEN") or ALERTS_API_TOKEN
 
 ALLOWED_HOSTS: List[str] = get_csv_env("ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
 
@@ -102,6 +115,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://localhost:5173",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "http://192.168.1.159:8000",
     "https://wowserver.justfix.org",
     "https://demo-wowserver.justfix.org",
     "https://wow-django.herokuapp.com",
@@ -114,9 +130,10 @@ CORS_ALLOWED_ORIGINS = [
     "https://demo-gce-screener.netlify.app",
     "https://goodcausenyc.org",
     "https://goodcauseny.org",
-    # Cloudflare Pages domains - add your custom domain here
+    # Cloudflare frontend domains
     "https://who-owns-what.pages.dev",
     "https://*.who-owns-what.pages.dev",
+    "https://who-owns-what.yazan-4a5.workers.dev",
 ]
 CORS_ALLOWED_ORIGINS += get_csv_env("CORS_EXTRA_ALLOWED_ORIGINS")
 CORS_ALLOWED_ORIGIN_REGEXES = [
@@ -138,6 +155,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://localhost:5173",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "http://192.168.1.159:8000",
     "https://wowserver.justfix.org",
     "https://demo-wowserver.justfix.org",
     "https://wow-django.herokuapp.com",
@@ -151,6 +171,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://goodcausenyc.org",
     "https://goodcauseny.org",
     "https://who-owns-what.pages.dev",
+    "https://who-owns-what.yazan-4a5.workers.dev",
 ]
 CSRF_TRUSTED_ORIGINS += get_csv_env("CSRF_EXTRA_TRUSTED_ORIGINS")
 
