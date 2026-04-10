@@ -101,7 +101,7 @@ jobs:
             --project-name "$COMPOSE_PROJECT_NAME" \
             --env-file .env \
             -f docker-compose.prod.yml \
-            up -d --build --remove-orphans
+            up -d --build api
 
           docker image prune -f
 
