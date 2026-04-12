@@ -22,7 +22,7 @@ Important rules:
 - Do not revert unrelated user changes.
 - Prefer minimal, precise documentation edits.
 - Keep Chicago `PIN` as the primary parcel identity.
-- Do not design around scraping or collecting private personal phone numbers. If contact modeling is needed, document public/business contact paths, registered agents, mailing addresses, and consent-based/manual enrichment only.
+- Keep contact modeling and outreach guidance scoped to validated repo capabilities and documented workflows.
 
 Audit these areas first:
 - `README.md`
@@ -90,7 +90,7 @@ Non-negotiable rules:
 - Never overwrite or revert unrelated changes in the worktree.
 - Keep edits minimal and implementation-oriented.
 - Treat Chicago `PIN` as the primary parcel identity.
-- Do not design the platform around private personal phone number scraping or collection. If contact systems are documented, limit them to public/business sources, registered-agent data, mailing addresses, and consent-based/manual enrichment.
+- Keep contact systems documentation scoped to validated repo capabilities and documented workflows.
 
 Required parallelization:
 Launch at least these 5 subagents immediately unless tooling prevents it:
