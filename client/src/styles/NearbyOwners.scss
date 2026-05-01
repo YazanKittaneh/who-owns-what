@@ -36,6 +36,20 @@
     font-size: 0.875rem;
   }
 
+  .NearbyOwners__exportFormat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.875rem;
+
+    select {
+      min-width: 10rem;
+      border: 1px solid #727e96;
+      background: #fff;
+      padding: 0.4rem 0.55rem;
+    }
+  }
+
   .NearbyOwners__radius {
     display: flex;
     gap: 0.5rem;
