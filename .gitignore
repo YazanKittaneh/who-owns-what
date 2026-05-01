@@ -22,14 +22,30 @@ yalc*
 
 # Large data files
 data/*.tmp
+data/*.csv
+data/**/*.csv
+data/exports/
 *.csv.tmp
+backups
 backups/
 data/fetch-smoke/
 data/full-refresh-*/
 data/pre-full-refresh-*/
-data/weekly-refresh-staging/
+data/weekly-refresh-staging*
 data/pre-weekly-refresh-*/
-data/supplemental-*/**/*.csv
+data/supplemental-*/
+
+# Local agent/tooling state
+.agents/
+.claude/
+.opencode/commands/
+.opencode/package-lock.json
+AGENTS.md
+skills/
+skills-lock.json
+
+# Local environments
+.venv/
 
 # Next.js build cache
 .next/
