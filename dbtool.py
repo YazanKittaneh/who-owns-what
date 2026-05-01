@@ -10,21 +10,42 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple, Iterable, Literal
 from urllib.parse import urlparse
 
+from csv_limits import set_max_csv_field_size_limit
+from load_audit import build_run_id, ensure_load_audit_table, record_load_audit
 from portfoliograph.table import export_portfolios_table_json, populate_portfolios_table
 
-try:
-    from dotenv import load_dotenv
-
-    load_dotenv()
-    dotenv_loaded = False
-except ModuleNotFoundError:
-    dotenv_loaded = False
-
-
 ROOT_DIR = Path(__file__).parent.resolve()
+
+
+def load_repo_env() -> bool:
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+        dotenv_loaded = True
+    except ModuleNotFoundError:
+        dotenv_loaded = False
+
+    env_path = ROOT_DIR / ".env"
+    if env_path.exists():
+        with env_path.open() as handle:
+            for line in handle:
+                raw = line.strip()
+                if not raw or raw.startswith("#") or "=" not in raw:
+                    continue
+                key, value = raw.split("=", 1)
+                os.environ.setdefault(key, value)
+
+    return dotenv_loaded
+
+
+dotenv_loaded = load_repo_env()
+
 SQL_DIR = ROOT_DIR / "sql"
 WOW_YML = yaml.full_load((ROOT_DIR / "who-owns-what.yml").read_text())
 TESTS_DIR = ROOT_DIR / "tests"
+
+set_max_csv_field_size_limit()
 
 # Just an alias for our database connection.
 DbConnection = Any
@@ -480,6 +501,31 @@ DATASETS: Dict[str, DatasetSpec] = {
             ("location", "text"),
         ],
     ),
+    "chi_foreclosed_rental_properties": DatasetSpec(
+        name="chi_foreclosed_rental_properties",
+        table="chi_foreclosed_rental_properties",
+        csv_filename="chi_foreclosed_rental_properties.csv",
+        columns=[
+            ("id", "text"),
+            ("property_address", "text"),
+            ("submission_date", "text"),
+            ("owner_name", "text"),
+            ("owner_date", "text"),
+            ("owner_management_agent_name", "text"),
+            ("owner_notices_agent_name", "text"),
+            ("owner_notices_agent_phone", "text"),
+            ("owner_notices_agent_email", "text"),
+            ("owner_address", "text"),
+            ("owner_city", "text"),
+            ("owner_state", "text"),
+            ("owner_zip", "text"),
+            ("owner_management_agent_address", "text"),
+            ("owner_management_agent_city", "text"),
+            ("owner_management_agent_state", "text"),
+            ("owner_management_agent_zip", "text"),
+            ("location", "text"),
+        ],
+    ),
     "chi_geographies": DatasetSpec(
         name="chi_geographies",
         table="chi_geographies",
@@ -510,6 +556,7 @@ class ChiDbBuilder:
     conn: DbConnection
     data_dir: Path
     is_testing: bool
+    run_id: str
 
     def __init__(self, db: DbContext, is_testing: bool, data_dir: Path | None = None) -> None:
         self.db = db
@@ -524,6 +571,8 @@ class ChiDbBuilder:
         self.data_dir = data_dir
 
         self.conn = db.connection()
+        self.run_id = build_run_id("core-test" if is_testing else "core")
+        ensure_load_audit_table(self.conn)
 
     def do_tables_exist(self, *names: str) -> bool:
         with self.conn:
@@ -558,46 +607,85 @@ class ChiDbBuilder:
         csv_path = self.data_dir / spec.csv_filename
         if not csv_path.exists():
             print(f"Skipping {spec.name}: {csv_path.name} not found in {self.data_dir}.")
+            record_load_audit(
+                self.conn,
+                dataset_name=spec.name,
+                table_name=spec.table,
+                row_count=0,
+                source_ref=str(csv_path),
+                run_id=self.run_id,
+                status="skipped",
+                details={"reason": "source_csv_missing", "is_testing": self.is_testing},
+            )
             return
 
         expected_column_set = {name for name, _ in spec.columns}
-        with self.conn:
-            with self.conn.cursor() as cursor:
-                cursor.execute(f"TRUNCATE {spec.table}")
-                with csv_path.open("r", newline="") as f:
-                    header = next(csv.reader(f), None)
-                    if not header:
-                        raise ValueError(f"{csv_path} is missing a CSV header row.")
+        row_count = 0
+        columns_to_load: list[str] = []
+        try:
+            with self.conn:
+                with self.conn.cursor() as cursor:
+                    cursor.execute(f"TRUNCATE {spec.table}")
+                    with csv_path.open("r", newline="", encoding="utf-8", errors="replace") as f:
+                        header = next(csv.reader(f), None)
+                        if not header:
+                            raise ValueError(f"{csv_path} is missing a CSV header row.")
 
-                    columns_to_load = [name for name in header if name in expected_column_set]
-                    if not columns_to_load:
-                        raise ValueError(
-                            f"{csv_path} has no columns matching table {spec.table}."
-                        )
+                        columns_to_load = [name for name in header if name in expected_column_set]
+                        if not columns_to_load:
+                            raise ValueError(
+                                f"{csv_path} has no columns matching table {spec.table}."
+                            )
 
-                    columns = ",".join(columns_to_load)
-                    has_unknown_columns = len(columns_to_load) != len(header)
-                    f.seek(0)
+                        columns = ",".join(columns_to_load)
+                        f.seek(0)
 
-                    if has_unknown_columns:
-                        # Legacy fixtures can include columns that are no longer
-                        # present in the table schema; write a filtered CSV stream.
+                        # Always stage through a filtered CSV so we can count rows
+                        # and ignore legacy columns that are no longer in the schema.
                         reader = csv.DictReader(f)
-                        with tempfile.NamedTemporaryFile(mode="w+", newline="") as filtered:
+                        with tempfile.NamedTemporaryFile(
+                            mode="w+", newline="", encoding="utf-8"
+                        ) as filtered:
                             writer = csv.DictWriter(filtered, fieldnames=columns_to_load)
                             writer.writeheader()
                             for row in reader:
+                                row_count += 1
                                 writer.writerow({name: row.get(name, "") for name in columns_to_load})
                             filtered.seek(0)
                             cursor.copy_expert(
                                 f"COPY {spec.table} ({columns}) FROM STDIN WITH CSV HEADER",
                                 filtered,
                             )
-                    else:
-                        cursor.copy_expert(
-                            f"COPY {spec.table} ({columns}) FROM STDIN WITH CSV HEADER",
-                            f,
-                        )
+        except Exception as error:
+            record_load_audit(
+                self.conn,
+                dataset_name=spec.name,
+                table_name=spec.table,
+                row_count=0,
+                source_ref=str(csv_path),
+                run_id=self.run_id,
+                status="failed",
+                details={
+                    "reason": "load_failed",
+                    "error": str(error),
+                    "is_testing": self.is_testing,
+                },
+            )
+            raise
+        record_load_audit(
+            self.conn,
+            dataset_name=spec.name,
+            table_name=spec.table,
+            row_count=row_count,
+            source_ref=str(csv_path),
+            run_id=self.run_id,
+            status="success",
+            details={
+                "is_testing": self.is_testing,
+                "columns_loaded": columns_to_load,
+                "loader": "core",
+            },
+        )
         print(f"Loaded {spec.name} from {csv_path.name}.")
 
     def ensure_dataset(self, name: str, force_refresh: bool = False) -> None:
