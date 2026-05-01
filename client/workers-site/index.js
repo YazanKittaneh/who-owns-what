@@ -4,11 +4,26 @@ addEventListener("fetch", (event) => {
   event.respondWith(handleEvent(event));
 });
 
+function shouldBypassCache(request) {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+
+  if (pathname === "/" || pathname.endsWith(".html")) {
+    return true;
+  }
+
+  // SPA routes do not have file extensions and should always resolve fresh
+  // index.html so newly deployed asset hashes are picked up immediately.
+  return !pathname.includes(".");
+}
+
 async function handleEvent(event) {
+  const bypassCache = shouldBypassCache(event.request);
+
   try {
     return await getAssetFromKV(event, {
       cacheControl: {
-        bypassCache: false,
+        bypassCache,
       },
     });
   } catch (_error) {
@@ -24,7 +39,7 @@ async function handleEvent(event) {
         },
         {
           cacheControl: {
-            bypassCache: false,
+            bypassCache: true,
           },
         },
       );
