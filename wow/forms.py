@@ -105,3 +105,24 @@ class CurrentOwnerForm(forms.Form):
         if not owner_id and not owner_name:
             raise ValidationError("Either owner_id or owner_name is required.")
         return data
+
+
+class EntitySearchForm(forms.Form):
+    """Form for searching entities by name."""
+    q = forms.CharField(required=True, min_length=2, max_length=500)
+    entity_type = forms.ChoiceField(
+        choices=[('all', 'All'), ('business', 'Business'), ('individual', 'Individual')],
+        required=False,
+        initial='all'
+    )
+    limit = forms.IntegerField(required=False, min_value=1, max_value=100, initial=20)
+
+
+class ContactConfidenceFilterForm(forms.Form):
+    """Form for filtering contacts by confidence score."""
+    min_confidence = forms.IntegerField(required=False, min_value=0, max_value=100, initial=70)
+    contact_type = forms.ChoiceField(
+        choices=[('all', 'All'), ('phone', 'Phone'), ('email', 'Email'), ('mailing_address', 'Address')],
+        required=False,
+        initial='all'
+    )

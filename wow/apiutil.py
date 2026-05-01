@@ -86,6 +86,10 @@ def authorize_for_signature(request):
     authorize_with_token(request, "bearer", settings.SIGNATURE_API_TOKEN)
 
 
+def authorize_for_admin(request):
+    authorize_with_token(request, "token", settings.ADMIN_API_TOKEN)
+
+
 def authorize_for_gce(request):
     authorize_with_token(request, "bearer", settings.GCE_API_TOKEN)
 

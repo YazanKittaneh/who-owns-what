@@ -78,6 +78,7 @@ class DbContext:
         with self.connect() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 cur.execute("CREATE EXTENSION IF NOT EXISTS POSTGIS")
+                cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
 
     @contextmanager
     def connect(self):
