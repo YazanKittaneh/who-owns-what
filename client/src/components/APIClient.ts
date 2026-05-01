@@ -19,6 +19,80 @@ import {
   ihsIndicatorsDatasetIds,
 } from "./IndicatorsTypes";
 
+export interface EntitySearchResult {
+  entity_id: number;
+  entity_type: string;
+  name: string;
+  match_score: number;
+  parcel_count: number;
+}
+
+export interface EntityContact {
+  type: string;
+  value: string;
+  confidence: number;
+  source: string;
+  is_primary: boolean;
+  is_verified: boolean;
+  first_seen?: string;
+  last_seen?: string;
+}
+
+export interface EntityContactsResult {
+  entity: {
+    id: number;
+    type: string;
+    name: string;
+    parcel_count: number;
+  };
+  contacts: EntityContact[];
+  min_confidence: number;
+}
+
+export interface ParcelEntity {
+  entity_id: number;
+  entity_type: string;
+  name: string;
+  mapping_confidence: number;
+  owner_name_at_time: string | null;
+  contacts: EntityContact[];
+}
+
+export interface ParcelEntitiesResult {
+  pin: string;
+  entities: ParcelEntity[];
+  nearby?: {
+    radius_m: number;
+    owners: Array<{
+      owner_key: string;
+      owner_id?: string | null;
+      owner_name?: string | null;
+      mailing_address?: string | null;
+      mailing_city?: string | null;
+      mailing_state?: string | null;
+      mailing_zip?: string | null;
+      parcel_count: number;
+      nearest_distance_m?: number | null;
+      same_owner: boolean;
+      parcels: Array<{ pin: string; address?: string | null; distance_m?: number | null }>;
+      contacts: EntityContact[];
+    }>;
+    parcels: Array<{
+      pin: string;
+      address?: string | null;
+      owner_id?: string | null;
+      owner_name?: string | null;
+      mailing_address?: string | null;
+      mailing_city?: string | null;
+      mailing_state?: string | null;
+      mailing_zip?: string | null;
+      distance_m?: number | null;
+      same_owner?: boolean;
+      contacts: EntityContact[];
+    }>;
+  };
+}
+
 function searchForAddress(searchAddress: SearchAddress): Promise<SearchResults> {
   if (!searchAddress.pin) {
     return Promise.resolve({ addrs: [], geosearch: undefined });
@@ -200,6 +274,31 @@ async function getIndicatorHistory(pin: string, bbl?: string): Promise<Indicator
   };
 }
 
+// Contact Data API Functions
+
+async function searchEntities(query: string, entityType: string = "all", limit: number = 20): Promise<EntitySearchResult[]> {
+  const params = new URLSearchParams({
+    q: query,
+    entity_type: entityType,
+    limit: String(limit),
+  });
+  const result = await getApiJson(`/api/entity/search?${params.toString()}`);
+  return result.result || [];
+}
+
+async function getEntityContacts(entityId: number, minConfidence: number = 70): Promise<EntityContactsResult> {
+  const params = new URLSearchParams({
+    entity_id: String(entityId),
+    min_confidence: String(minConfidence),
+  });
+  return getApiJson(`/api/entity/contacts?${params.toString()}`);
+}
+
+async function getParcelEntities(pin: string): Promise<ParcelEntitiesResult> {
+  const params = new URLSearchParams({ pin });
+  return getApiJson(`/api/parcel/entities?${params.toString()}`);
+}
+
 const friendlyFetch: typeof fetch = async (input, init) => {
   let response: Response;
   try {
@@ -246,6 +345,10 @@ const Client = {
   getNearbyProperties,
   getCurrentOwnerProfile,
   getIndicatorHistory,
+  // Contact data
+  searchEntities,
+  getEntityContacts,
+  getParcelEntities,
 };
 
 export default Client;

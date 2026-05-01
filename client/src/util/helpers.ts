@@ -2,9 +2,10 @@ import { defaultLocale, SupportedLocale } from "../i18n-base";
 import { AddressRecord, HpdContactAddress } from "components/APIDataTypes";
 import { reportError } from "error-reporting";
 import { t } from "@lingui/macro";
-import { I18n, MessageDescriptor } from "@lingui/core";
+import { MessageDescriptor } from "@lingui/core";
 import React, { useEffect, useState, ChangeEvent } from "react";
 import _ from "lodash";
+import { getI18nLocale, I18nLike } from "./i18n-compat";
 type AreaProperties = any;
 
 const hpdComplaintTypeTranslations = new Map([
@@ -113,12 +114,16 @@ const createTranslationFunctionFromMap = (
   map: Map<string, MessageDescriptor>,
   description: string,
   localeOverride?: SupportedLocale
-) => (textToTranslate: string, i18n: I18n) => {
+) => (textToTranslate: string, i18n: I18nLike) => {
   const translatedType = map.get(textToTranslate);
   if (!translatedType) {
     reportError(`The ${description} "${textToTranslate}" isn't internationalized`);
     return textToTranslate;
-  } else return i18n.use(localeOverride || i18n.language)._(translatedType);
+  }
+
+  const locale = localeOverride || getI18nLocale(i18n);
+  const localizedI18n = typeof i18n.use === "function" ? i18n.use(locale) : i18n;
+  return localizedI18n._(translatedType);
 };
 
 const translateComplaintType = createTranslationFunctionFromMap(
@@ -344,9 +349,9 @@ const helpers = {
    * - 'Head Officer' if the target language is English
    * - 'Oficial principal ("Head Officer" en inglés)"' if the target language is Spanish
    */
-  translateContactTitleAndIncludeEnglish(textToTranslate: string, i18n: I18n) {
+  translateContactTitleAndIncludeEnglish(textToTranslate: string, i18n: I18nLike) {
     const translation = translateContactTitle(textToTranslate, i18n);
-    if (i18n.language === "en") return translation;
+    if (getI18nLocale(i18n) === "en") return translation;
     else {
       const textInEnglish = getContactTitleInEnglish(textToTranslate, i18n);
       const translationSuffix = i18n._(t`("${textInEnglish}" in English)`);
@@ -444,7 +449,7 @@ const helpers = {
    * Format and translate Area Alerts district labels for display on settings or
    * selection chips
    */
-  formatTranslatedAreaLabel(area: AreaProperties, i18n: I18n, chip: boolean): string {
+  formatTranslatedAreaLabel(area: AreaProperties, i18n: I18nLike, chip: boolean): string {
     const { typeValue, areaLabel } = area;
     const noPrefixTypes = chip ? ["nta", "zipcode", "borough"] : ["nta", "borough"];
     const formattedLabel = noPrefixTypes.includes(typeValue)

@@ -22,7 +22,6 @@ import _groupBy from "lodash/groupBy";
 import React, { Fragment } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createRouteForAddressPage } from "routes";
-import { I18n } from "@lingui/core";
 import { withI18n, withI18nProps } from "@lingui/react";
 import { Button } from "@justfixnyc/component-library";
 import { SupportedLocale } from "../i18n-base";
@@ -35,6 +34,7 @@ import { ArrowIcon } from "./Icons";
 import classnames from "classnames";
 import { isLegacyPath } from "./WowzaToggle";
 import Loader from "./Loader";
+import { getI18nLocale, I18nLike } from "util/i18n-compat";
 
 const FIRST_COLUMN_WIDTH = 130;
 const MAX_TABLE_ROWS_PER_PAGE = 100;
@@ -779,9 +779,10 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
   );
 });
 
-const renderContacts = ({ row, i18n }: { row: Row<AddressRecord>; i18n: I18n }) => {
+const renderContacts = ({ row, i18n }: { row: Row<AddressRecord>; i18n: I18nLike }) => {
+  const locale = getI18nLocale(i18n);
   return (
-    <ul className={classnames("contacts-list", `lang-${i18n.language}`)}>
+    <ul className={classnames("contacts-list", `lang-${locale}`)}>
       {Object.entries(_groupBy(row.original.allcontacts, "value"))
         .sort(sortContactsByImportance)
         .map((group) => group[1][0])
@@ -819,7 +820,7 @@ export function isPartOfGroupSale(saleId: string, addrs: AddressRecord[]) {
   return addrsWithMatchingSale.length > 1;
 }
 
-function formatAbatementStartYear(year: number | null | undefined, i18n: I18n) {
+function formatAbatementStartYear(year: number | null | undefined, i18n: I18nLike) {
   const thisYear = new Date().getFullYear();
   if (!year) return null;
   return year > thisYear ? i18n._(t`Starts ${year}`) : i18n._(t`Since ${year}`);

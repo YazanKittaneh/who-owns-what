@@ -6,7 +6,7 @@ import { AmplitudeEvent, logAmplitudeEvent } from "components/Amplitude";
 
 type UsefulLinksProps = {
   addrForLinks: Pick<AddressRecord, "pin" | "bbl" | "address" | "housenumber" | "streetname">;
-  location: "overview-tab" | "timeline-tab" | "not-registered-page";
+  location: string;
   streetViewAddr?: string;
 };
 

@@ -6,6 +6,7 @@ import { Asset } from "contentful";
 import { withI18n, withI18nProps } from "@lingui/react";
 import { SupportedLocale } from "../i18n-base";
 import { WithJsonifiedDocuments } from "./jsonified-document";
+import { getI18nLocale } from "util/i18n-compat";
 
 type LocalizedPages = {
   [P in SupportedLocale]: WithJsonifiedDocuments<PageFields> | PageFields;
@@ -20,7 +21,7 @@ export type ContentfulPageProps = {
  * A page defined and localized in Contentful.
  */
 export const ContentfulPage = withI18n()((props: ContentfulPageProps & withI18nProps) => {
-  const locale = props.i18n.language as SupportedLocale;
+  const locale = getI18nLocale(props.i18n);
   const page = props.locales[locale] as PageFields;
   const result = documentToReactComponents(page.content, {
     renderNode: {

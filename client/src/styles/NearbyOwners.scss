@@ -36,17 +36,40 @@
     font-size: 0.875rem;
   }
 
-  .NearbyOwners__exportFormat {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    font-size: 0.875rem;
+  .NearbyOwners__exportMenu {
+    position: relative;
+  }
 
-    select {
-      min-width: 10rem;
-      border: 1px solid #727e96;
-      background: #fff;
-      padding: 0.4rem 0.55rem;
+  .NearbyOwners__exportOptions {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    min-width: 16rem;
+    border: 1px solid #d3d7de;
+    background: #fff;
+    box-shadow: 0 0.4rem 1.1rem rgba(0, 0, 0, 0.12);
+    z-index: 10;
+  }
+
+  .NearbyOwners__exportOption {
+    display: block;
+  }
+
+  .NearbyOwners__exportOption + .NearbyOwners__exportOption {
+    border-top: 1px solid #d3d7de;
+  }
+
+  .NearbyOwners__exportOptionButton {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 0.75rem 0.9rem;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus {
+      background: #f4f5f7;
     }
   }
 
@@ -160,6 +183,11 @@
     .NearbyOwners__controls,
     .NearbyOwners__toggleGroup {
       align-items: flex-start;
+    }
+
+    .NearbyOwners__exportOptions {
+      left: 0;
+      right: auto;
     }
 
     .NearbyOwners__radius {

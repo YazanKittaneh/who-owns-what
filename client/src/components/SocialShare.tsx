@@ -3,13 +3,14 @@ import { FacebookButton, TwitterButton, EmailButton } from "react-social";
 import { isMobile, isAndroid } from "react-device-detect";
 import { Icon, Link as JFCLLink } from "@justfixnyc/component-library";
 
-import { I18n, MessageDescriptor, i18n } from "@lingui/core";
+import { MessageDescriptor, i18n } from "@lingui/core";
 import { t } from "@lingui/macro";
 import { withI18n } from "@lingui/react";
 import { FB_APP_ID } from "./Page";
 import { getSiteOrigin } from "../routes";
 import { useLocation } from "react-router-dom";
 import { Button } from "@justfixnyc/component-library";
+import { getI18nLocale, I18nLike } from "util/i18n-compat";
 
 export type SocialShareContent = {
   tweet: MessageDescriptor;
@@ -40,7 +41,7 @@ export type SocialShareLocation =
   | "methodology";
 
 type SocialShareProps = {
-  i18n: I18n;
+  i18n: I18nLike;
   location: SocialShareLocation;
   customUrl?: string;
   customContent?: SocialShareContent;
@@ -84,7 +85,7 @@ const SocialShareWithoutI18n: React.FC<SocialShareProps> = ({
   customContent,
 }) => {
   const content = customContent || defaultSocialContent;
-  const localizedSiteOrigin = `${getSiteOrigin()}/${i18n.language}`;
+  const localizedSiteOrigin = `${getSiteOrigin()}/${getI18nLocale(i18n)}`;
   const url = customUrl || localizedSiteOrigin;
 
   return (

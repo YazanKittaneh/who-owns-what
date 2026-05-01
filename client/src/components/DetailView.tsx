@@ -6,6 +6,7 @@ import _groupBy from "lodash/groupBy";
 import { withMachineInStateProps } from "state-machine";
 import Helpers, { longDateOptions } from "util/helpers";
 import Browser from "util/browser";
+import { getI18nLocale } from "util/i18n-compat";
 import { SocialShareAddressPage } from "./SocialShare";
 import BuildingStatsTable from "./BuildingStatsTable";
 import { UsefulLinks } from "./UsefulLinks";
@@ -36,13 +37,14 @@ export const sortContactsByImportance = (contact: GroupedContact) =>
 const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelineHref }) => {
   const isMobile = Browser.isMobile();
   const { detailAddr } = state.context.portfolioData;
+  const locale = getI18nLocale(i18n);
   const addressLine =
     detailAddr.address ||
     [detailAddr.housenumber, detailAddr.streetname].filter(Boolean).join(" ");
   const locality = detailAddr.boro || detailAddr.city || "";
   const formattedRegEndDate =
     detailAddr.registrationenddate &&
-    Helpers.formatDate(detailAddr.registrationenddate, longDateOptions, i18n.language as "en" | "es");
+    Helpers.formatDate(detailAddr.registrationenddate, longDateOptions, locale);
   const groupedContacts: GroupedContact[] = detailAddr.allcontacts
     ? (Object.entries(_groupBy(detailAddr.allcontacts, "value")) as GroupedContact[]).sort(
         sortContactsByImportance
@@ -185,7 +187,7 @@ const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelin
                           {Helpers.formatDate(
                             detailAddr.lastregistrationdate,
                             longDateOptions,
-                            i18n.language as "en" | "es"
+                            locale
                           )}{" "}
                           {detailAddr.registrationenddate && formattedRegEndDate && (
                             <>

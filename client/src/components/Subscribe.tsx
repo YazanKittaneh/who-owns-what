@@ -2,18 +2,18 @@ import React from "react";
 // other imports
 
 import "styles/Subscribe.css";
-import { I18n } from "@lingui/core";
 import { withI18n } from "@lingui/react";
 import { t } from "@lingui/macro";
 import { reportError } from "error-reporting";
 import { getDataLayer } from "google-tag-manager";
 import { logAmplitudeEvent } from "./Amplitude";
 import { Button } from "@justfixnyc/component-library";
+import { getI18nLocale, I18nLike } from "util/i18n-compat";
 
 //import 'styles/Subscribe.css';
 
 type SubscribeProps = {
-  i18n: I18n;
+  i18n: I18nLike;
 };
 
 type State = {
@@ -44,7 +44,7 @@ class SubscribeWithoutI18n extends React.Component<SubscribeProps, State> {
 
     const email = this.state.email || null;
     const { i18n } = this.props;
-    const locale = i18n.language;
+    const locale = getI18nLocale(i18n);
 
     // check if email is missing, return undefined
     if (!email) {

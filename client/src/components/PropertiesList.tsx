@@ -2,7 +2,8 @@ import { withI18n, withI18nProps } from "@lingui/react";
 import React from "react";
 import { withMachineInStateProps } from "state-machine";
 import "styles/PropertiesList.css";
-import { defaultLocale, SupportedLocale } from "../i18n-base";
+import { SupportedLocale } from "../i18n-base";
+import { getI18nLocale } from "util/i18n-compat";
 import _groupBy from "lodash/groupBy";
 import { FixedLoadingLabel } from "./Loader";
 import PortfolioFilters from "./PortfolioFilters";
@@ -165,7 +166,7 @@ const PropertiesListWithoutI18n: React.FC<
 > = (props) => {
   const { i18n } = props;
   const isVisible = props.isVisible ?? true;
-  const locale = (i18n.language as SupportedLocale) || defaultLocale;
+  const locale: SupportedLocale = getI18nLocale(i18n);
   const useNewPortfolioMethod = props.state.context.useNewPortfolioMethod || false;
   const portfolioFiltersEnabled = process.env.REACT_APP_PORTFOLIO_FILTERS_ENABLED !== "0";
 

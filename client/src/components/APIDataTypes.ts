@@ -174,6 +174,15 @@ export type NearbyPropertyRecord = {
   lng?: number | null;
   distance_m?: number | null;
   same_owner?: boolean;
+  contacts?: NearbyOwnerContact[];
+};
+
+export type NearbyOwnerContact = {
+  type: string;
+  value: string;
+  confidence: number;
+  source: string;
+  is_verified?: boolean;
 };
 
 export type NearbyPropertiesResults = {
