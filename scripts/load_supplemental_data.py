@@ -11,7 +11,12 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from csv_limits import set_max_csv_field_size_limit
 from dbtool import DbContext
+from load_audit import build_run_id, ensure_load_audit_table, record_load_audit
+
+
+set_max_csv_field_size_limit()
 
 
 @dataclass(frozen=True)
@@ -192,35 +197,70 @@ def run_sql_file(conn, sql_path: Path) -> None:
             cursor.execute(sql)
 
 
-def load_dataset(conn, data_dir: Path, spec: SupplementalDatasetSpec) -> None:
+def load_dataset(conn, data_dir: Path, spec: SupplementalDatasetSpec, run_id: str) -> None:
     csv_path = data_dir / spec.csv_relpath
     if not csv_path.exists():
+        record_load_audit(
+            conn,
+            dataset_name=spec.name,
+            table_name=spec.table,
+            row_count=0,
+            source_ref=str(csv_path),
+            run_id=run_id,
+            status="failed",
+            details={"reason": "source_csv_missing"},
+        )
         raise FileNotFoundError(f"Missing CSV for {spec.name}: {csv_path}")
 
     source_headers = [source for source, _, _ in spec.columns]
     dest_headers = [dest for _, dest, _ in spec.columns]
     column_sql = ",".join(dest_headers)
 
-    with csv_path.open("r", newline="", encoding="utf-8", errors="replace") as src:
-        reader = csv.DictReader(src)
-        with tempfile.NamedTemporaryFile(mode="w+", newline="", encoding="utf-8") as filtered:
-            writer = csv.DictWriter(filtered, fieldnames=dest_headers)
-            writer.writeheader()
-            for row in reader:
-                writer.writerow(
-                    {
-                        dest: (row.get(source, "") or "").strip()
-                        for source, dest in zip(source_headers, dest_headers)
-                    }
-                )
-            filtered.seek(0)
-            with conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(f"TRUNCATE {spec.table}")
-                    cursor.copy_expert(
-                        f"COPY {spec.table} ({column_sql}) FROM STDIN WITH CSV HEADER",
-                        filtered,
+    try:
+        with csv_path.open("r", newline="", encoding="utf-8", errors="replace") as src:
+            reader = csv.DictReader(src)
+            row_count = 0
+            with tempfile.NamedTemporaryFile(mode="w+", newline="", encoding="utf-8") as filtered:
+                writer = csv.DictWriter(filtered, fieldnames=dest_headers)
+                writer.writeheader()
+                for row in reader:
+                    row_count += 1
+                    writer.writerow(
+                        {
+                            dest: (row.get(source, "") or "").strip()
+                            for source, dest in zip(source_headers, dest_headers)
+                        }
                     )
+                filtered.seek(0)
+                with conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute(f"TRUNCATE {spec.table}")
+                        cursor.copy_expert(
+                            f"COPY {spec.table} ({column_sql}) FROM STDIN WITH CSV HEADER",
+                            filtered,
+                        )
+    except Exception as error:
+        record_load_audit(
+            conn,
+            dataset_name=spec.name,
+            table_name=spec.table,
+            row_count=0,
+            source_ref=str(csv_path),
+            run_id=run_id,
+            status="failed",
+            details={"reason": "load_failed", "error": str(error)},
+        )
+        raise
+    record_load_audit(
+        conn,
+        dataset_name=spec.name,
+        table_name=spec.table,
+        row_count=row_count,
+        source_ref=str(csv_path),
+        run_id=run_id,
+        status="success",
+        details={"loader": "supplemental"},
+    )
     print(f"Loaded {spec.name} from {csv_path}")
 
 
@@ -234,6 +274,8 @@ def main() -> None:
         raise SystemExit("Please define DATABASE_URL in the environment.")
     db = DbContext.from_url(database_url)
     conn = db.connection()
+    run_id = build_run_id("supplemental")
+    ensure_load_audit_table(conn)
 
     create_files = []
     for spec in SUPPLEMENTAL_DATASETS:
@@ -246,7 +288,7 @@ def main() -> None:
             run_sql_file(conn, sql_dir / sql_name)
 
         for spec in SUPPLEMENTAL_DATASETS:
-            load_dataset(conn, data_dir, spec)
+            load_dataset(conn, data_dir, spec, run_id)
 
     for sql_name in SUMMARY_SQL_FILES:
         print(f"Running {sql_name}...")

@@ -3,6 +3,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -71,6 +72,12 @@ DATASET_CONFIGS: Dict[str, DatasetConfig] = {
         view_id="v6vf-nfxy",
         filename="chi_311.csv",
     ),
+    "chi_foreclosed_rental_properties": DatasetConfig(
+        name="chi_foreclosed_rental_properties",
+        domain="data.cityofchicago.org",
+        view_id="yhcw-iu53",
+        filename="chi_foreclosed_rental_properties.csv",
+    ),
 }
 
 
@@ -80,7 +87,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--datasets",
-        default="chi_parcels,chi_owners,chi_permits,chi_violations,chi_311",
+        default=(
+            "chi_parcels,chi_owners,chi_permits,chi_violations,chi_311,"
+            "chi_foreclosed_rental_properties"
+        ),
         help="Comma-separated dataset names to fetch.",
     )
     parser.add_argument(
@@ -131,6 +141,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Resume from an existing .tmp/.progress file if present.",
     )
+    parser.add_argument(
+        "--chi-owners-years",
+        default="latest",
+        help=(
+            "Year scope for chi_owners: 'latest' (default), 'all', "
+            "a single year (e.g. 2024), or range (e.g. 2022-2026)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -149,9 +167,24 @@ def request_with_retries(
     timeout: int,
     max_retries: int,
 ) -> requests.Response:
+    effective_headers = dict(headers)
+    attempted_without_token = False
+
     for attempt in range(1, max_retries + 1):
         try:
-            resp = session.get(url, params=params, headers=headers, timeout=timeout)
+            resp = session.get(url, params=params, headers=effective_headers, timeout=timeout)
+            if (
+                resp.status_code == 403
+                and effective_headers.get("X-App-Token")
+                and not attempted_without_token
+            ):
+                print(
+                    "Request returned 403 with app token; retrying without token.",
+                    file=sys.stderr,
+                )
+                effective_headers.pop("X-App-Token", None)
+                attempted_without_token = True
+                continue
             if resp.status_code in (429, 500, 502, 503, 504):
                 raise requests.HTTPError(
                     f"transient status={resp.status_code}", response=resp
@@ -191,6 +224,62 @@ def resolve_latest_owners_year(
     if not rows or not rows[0].get("max_year"):
         raise RuntimeError("Could not resolve latest year for chi_owners.")
     return str(rows[0]["max_year"])
+
+
+def build_owners_where_clause(
+    years_spec: str,
+    session: requests.Session,
+    headers: Dict[str, str],
+    timeout: int,
+    max_retries: int,
+) -> tuple[str, str]:
+    normalized = (years_spec or "latest").strip().lower()
+    city_where = "prop_address_city_name = 'CHICAGO'"
+
+    if normalized == "latest":
+        owners_year = resolve_latest_owners_year(
+            session=session,
+            headers=headers,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+        return (
+            f"year = '{owners_year}' AND {city_where}",
+            f"latest Chicago year={owners_year}",
+        )
+
+    if normalized == "all":
+        print(
+            "Warning: chi_owners all-years backfills can be large. Prefer bounded ranges "
+            "such as 2020-2026 first, and use --resume for interrupted fetches.",
+            file=sys.stderr,
+        )
+        return city_where, "all available Chicago years"
+
+    if re.fullmatch(r"\d{4}", normalized):
+        return f"year = '{normalized}' AND {city_where}", f"Chicago year={normalized}"
+
+    year_range = re.fullmatch(r"(\d{4})-(\d{4})", normalized)
+    if year_range:
+        start_year, end_year = year_range.groups()
+        if int(start_year) > int(end_year):
+            raise SystemExit(
+                f"Invalid --chi-owners-years range '{years_spec}': start > end."
+            )
+        if int(end_year) - int(start_year) >= 5:
+            print(
+                "Warning: large chi_owners year ranges can take significant disk and time. "
+                "If this is an initial backfill, consider smaller ranges first and use --resume.",
+                file=sys.stderr,
+            )
+        return (
+            f"year >= '{start_year}' AND year <= '{end_year}' AND {city_where}",
+            f"Chicago years={start_year}-{end_year}",
+        )
+
+    raise SystemExit(
+        "Invalid --chi-owners-years value. Use one of: latest, all, YYYY, YYYY-YYYY."
+    )
 
 
 def iter_dataset_names(csv_names: str) -> Iterable[str]:
@@ -343,7 +432,8 @@ def main() -> None:
 
     configs = {name: DATASET_CONFIGS[name] for name in selected}
     if "chi_owners" in configs:
-        owners_year = resolve_latest_owners_year(
+        owners_where, owners_desc = build_owners_where_clause(
+            years_spec=args.chi_owners_years,
             session=session,
             headers=headers,
             timeout=args.timeout,
@@ -355,10 +445,10 @@ def main() -> None:
             domain=base.domain,
             view_id=base.view_id,
             filename=base.filename,
-            where=f"year = '{owners_year}' AND prop_address_city_name = 'CHICAGO'",
+            where=owners_where,
             order_by=base.order_by,
         )
-        print(f"chi_owners: using latest Chicago year={owners_year}")
+        print(f"chi_owners: using {owners_desc}")
 
     totals: Dict[str, int] = {}
     for name in selected:
