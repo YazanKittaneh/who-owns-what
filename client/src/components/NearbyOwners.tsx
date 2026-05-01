@@ -81,6 +81,26 @@ function splitAddressAndUnit(record: NearbyPropertyRecord): { address: string; u
   };
 }
 
+function buildPropstreamExportRow(record: NearbyPropertyRecord) {
+  const { address, unit } = splitAddressAndUnit(record);
+
+  return {
+    "Owner Name": record.owner_name || "",
+    "Owner Mailing Address": record.mailing_address || "",
+    "Owner Mailing City": record.mailing_city || "",
+    "Owner Mailing State": record.mailing_state || "",
+    "Owner Mailing Zip": record.mailing_zip || "",
+    Address: address,
+    "Unit#": unit,
+    City: record.city || "",
+    State: record.state || "",
+    Zip: record.zip || "",
+    County: COOK_COUNTY,
+    FIPS: COOK_COUNTY_FIPS,
+    "APN#": record.pin,
+  };
+}
+
 function getOwnerKey(record: NearbyPropertyRecord): string {
   return record.owner_id || record.owner_name || record.pin;
 }
@@ -162,41 +182,38 @@ const NearbyOwners: React.FC<Props> = ({ pin, locale, isLegacyRoute }) => {
 
   const ownerGroups = React.useMemo(() => groupByOwner(results), [results]);
 
-  const ownerExportRows = React.useMemo(
+  const fullOwnerExportRows = React.useMemo(
     () =>
       ownerGroups.map((group) => ({
         owner_key: group.ownerKey,
         owner_id: group.owner_id || "",
         owner_name: group.owner_name || "",
-        mailing_address: formatGroupMailing(group),
+        mailing_address: group.mailing_address || "",
+        mailing_city: group.mailing_city || "",
+        mailing_state: group.mailing_state || "",
+        mailing_zip: group.mailing_zip || "",
+        mailing_full: formatGroupMailing(group),
         parcel_count: group.parcel_count,
         nearest_distance_m: group.nearest_distance_m ?? "",
         same_owner: group.same_owner,
+        contact_count: group.contacts.length,
+        contacts: formatContacts(group.contacts),
         parcel_pins: group.parcels.map((parcel) => parcel.pin).join(", "),
+        parcel_addresses: group.parcels.map((parcel) => formatAddress(parcel)).join(" | "),
       })),
     [ownerGroups]
   );
 
-  const propstreamParcelExportRows = React.useMemo(
+  const propstreamOwnerExportRows = React.useMemo(
     () =>
-      results.map((record) => {
-        const { address, unit } = splitAddressAndUnit(record);
-        return {
-          "Owner Name": record.owner_name || "",
-          "Owner Mailing Address": record.mailing_address || "",
-          "Owner Mailing City": record.mailing_city || "",
-          "Owner Mailing State": record.mailing_state || "",
-          "Owner Mailing Zip": record.mailing_zip || "",
-          Address: address,
-          "Unit#": unit,
-          City: record.city || "",
-          State: record.state || "",
-          Zip: record.zip || "",
-          County: COOK_COUNTY,
-          FIPS: COOK_COUNTY_FIPS,
-          "APN#": record.pin,
-        };
-      }),
+      ownerGroups.flatMap((group) =>
+        group.parcels.map((parcel) => buildPropstreamExportRow(parcel))
+      ),
+    [ownerGroups]
+  );
+
+  const propstreamParcelExportRows = React.useMemo(
+    () => results.map((record) => buildPropstreamExportRow(record)),
     [results]
   );
 
@@ -244,10 +261,15 @@ const NearbyOwners: React.FC<Props> = ({ pin, locale, isLegacyRoute }) => {
     [radiusM]
   );
 
-  const ownerExportFilename = React.useMemo(() => `nearby-owner-${pin}-owners-${radiusM}m`, [
-    pin,
-    radiusM,
-  ]);
+  const fullOwnerExportFilename = React.useMemo(
+    () => `nearby-owner-${pin}-owners-${radiusM}m-full`,
+    [pin, radiusM]
+  );
+
+  const propstreamOwnerExportFilename = React.useMemo(
+    () => `nearby-owner-${pin}-owners-${radiusM}m-propstream`,
+    [pin, radiusM]
+  );
 
   const propstreamParcelExportFilename = React.useMemo(
     () => `nearby-owner-${pin}-parcels-${radiusM}m-propstream`,
@@ -258,6 +280,14 @@ const NearbyOwners: React.FC<Props> = ({ pin, locale, isLegacyRoute }) => {
     () => `nearby-owner-${pin}-parcels-${radiusM}m-full`,
     [pin, radiusM]
   );
+
+  const activePropstreamExportRows =
+    viewMode === "owners" ? propstreamOwnerExportRows : propstreamParcelExportRows;
+  const activeFullExportRows = viewMode === "owners" ? fullOwnerExportRows : fullParcelExportRows;
+  const activePropstreamExportFilename =
+    viewMode === "owners" ? propstreamOwnerExportFilename : propstreamParcelExportFilename;
+  const activeFullExportFilename =
+    viewMode === "owners" ? fullOwnerExportFilename : fullParcelExportFilename;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -392,65 +422,56 @@ const NearbyOwners: React.FC<Props> = ({ pin, locale, isLegacyRoute }) => {
               </button>
             </div>
           </div>
-          {viewMode === "owners" ? (
-            <CSVDownloader
-              data={ownerExportRows}
-              filename={ownerExportFilename}
-              className="NearbyOwners__export"
-            >
-              <Button
-                labelText="Export owner groups"
-                variant="secondary"
-                size="small"
-                onClick={() => logExport("nearby-owner-groups")}
-              />
-            </CSVDownloader>
-          ) : (
-            <div className="NearbyOwners__exportMenu" ref={exportMenuRef}>
-              <Button
-                labelText="Export parcels"
-                variant="secondary"
-                size="small"
-                onClick={() => setIsExportMenuOpen((value) => !value)}
-              />
-              {isExportMenuOpen && (
-                <div className="NearbyOwners__exportOptions">
-                  <CSVDownloader
-                    data={propstreamParcelExportRows}
-                    filename={propstreamParcelExportFilename}
-                    className="NearbyOwners__exportOption"
+          <div className="NearbyOwners__exportMenu" ref={exportMenuRef}>
+            <Button
+              labelText="Export"
+              variant="secondary"
+              size="small"
+              onClick={() => setIsExportMenuOpen((value) => !value)}
+            />
+            {isExportMenuOpen && (
+              <div className="NearbyOwners__exportOptions">
+                <CSVDownloader
+                  data={activePropstreamExportRows}
+                  filename={activePropstreamExportFilename}
+                  className="NearbyOwners__exportOption"
+                >
+                  <button
+                    type="button"
+                    className="NearbyOwners__exportOptionButton"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      logExport(
+                        viewMode === "owners"
+                          ? "nearby-owners-propstream"
+                          : "nearby-parcels-propstream"
+                      );
+                    }}
                   >
-                    <button
-                      type="button"
-                      className="NearbyOwners__exportOptionButton"
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        logExport("nearby-parcels-propstream");
-                      }}
-                    >
-                      Propstream-compatible export
-                    </button>
-                  </CSVDownloader>
-                  <CSVDownloader
-                    data={fullParcelExportRows}
-                    filename={fullParcelExportFilename}
-                    className="NearbyOwners__exportOption"
+                    Propstream-compatible export
+                  </button>
+                </CSVDownloader>
+                <CSVDownloader
+                  data={activeFullExportRows}
+                  filename={activeFullExportFilename}
+                  className="NearbyOwners__exportOption"
+                >
+                  <button
+                    type="button"
+                    className="NearbyOwners__exportOptionButton"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      logExport(
+                        viewMode === "owners" ? "nearby-owners-full" : "nearby-parcels-full"
+                      );
+                    }}
                   >
-                    <button
-                      type="button"
-                      className="NearbyOwners__exportOptionButton"
-                      onClick={() => {
-                        setIsExportMenuOpen(false);
-                        logExport("nearby-parcels-full");
-                      }}
-                    >
-                      Full export with all data
-                    </button>
-                  </CSVDownloader>
-                </div>
-              )}
-            </div>
-          )}
+                    Full export with all data
+                  </button>
+                </CSVDownloader>
+              </div>
+            )}
+          </div>
           <Link
             className="NearbyOwners__savedLink"
             to={createRouteForSavedListsPage(locale, isLegacyRoute)}
