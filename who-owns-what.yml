@@ -6,6 +6,7 @@ dependencies:
   - chi_permits
   - chi_violations
   - chi_311
+  - chi_foreclosed_rental_properties
   - chi_geographies
 api_dependencies: []
 wow_pre_sql:

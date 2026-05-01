@@ -1,0 +1,62 @@
+name: Data Storage Map Guard
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  require-storage-map-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce data-storage-map update when storage paths change
+        run: |
+          python3 - <<'PY'
+          import os
+          import subprocess
+          import sys
+
+          base = os.environ.get("GITHUB_BASE_REF", "")
+          if not base:
+              print("No base ref found; skipping guard.")
+              sys.exit(0)
+
+          subprocess.run(["git", "fetch", "origin", base], check=True)
+          diff_cmd = ["git", "diff", "--name-only", f"origin/{base}...HEAD"]
+          changed = subprocess.check_output(diff_cmd, text=True).splitlines()
+          changed_set = set(changed)
+
+          watched_prefixes = (
+              "data/",
+              "backups/",
+          )
+          watched_exact = {
+              "AGENTS.md",
+              ".opencode/commands/data-memory.md",
+              "docs/DEPLOYMENT.md",
+          }
+
+          watched_changes = [
+              path for path in changed
+              if path.startswith(watched_prefixes) or path in watched_exact
+          ]
+
+          if not watched_changes:
+              print("No storage-related files changed; guard passed.")
+              sys.exit(0)
+
+          if "docs/data-storage-map.md" in changed_set:
+              print("Storage map updated; guard passed.")
+              sys.exit(0)
+
+          print("Storage-related files changed, but docs/data-storage-map.md was not updated.")
+          print("Changed storage-related files:")
+          for path in watched_changes:
+              print(f"- {path}")
+          sys.exit(1)
+          PY
