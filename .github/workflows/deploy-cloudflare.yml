@@ -45,10 +45,10 @@ jobs:
           REACT_APP_ALGOLIA_APP_ID: ${{ secrets.REACT_APP_ALGOLIA_APP_ID }}
           REACT_APP_ALGOLIA_SEARCH_KEY: ${{ secrets.REACT_APP_ALGOLIA_SEARCH_KEY }}
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: client
-          command: pages deploy build --project-name=who-owns-what
+          command: deploy
