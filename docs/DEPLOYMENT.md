@@ -82,6 +82,7 @@ CLOUDFLARE_TUNNEL_TOKEN=your-cloudflare-tunnel-token
 # API Tokens
 ALERTS_API_TOKEN=your-alerts-token
 SIGNATURE_API_TOKEN=your-signature-token
+ADMIN_API_TOKEN=your-dedicated-admin-token
 
 # Error Tracking (optional)
 ROLLBAR_ACCESS_TOKEN=your-rollbar-token
@@ -217,7 +218,7 @@ docker-compose -f docker-compose.prod.yml logs --tail=100 api
 docker ps
 
 # Health check endpoint
-curl http://localhost:8000/health/
+curl http://localhost:8000/api/health/
 ```
 
 ### Resource Usage
@@ -262,21 +263,47 @@ To rebuild the production WOW tables from the checked-in Chicago CSV snapshots:
 docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T db \
   psql -U wow -d wow -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'
 
-docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T api \
+docker compose -f docker-compose.prod.yml --profile with-cloudflare run --rm -T \
+  -v "$PWD/data:/app/data" \
+  api \
   python dbtool.py builddb --update
+
+docker compose -f docker-compose.prod.yml --profile with-cloudflare run --rm -T \
+  -v "$PWD/data:/app/data" \
+  api \
+  python scripts/load_supplemental_data.py --data-dir data/supplemental-20260329
+
+docker compose -f docker-compose.prod.yml --profile with-cloudflare run --rm -T \
+  -v "$PWD/data:/app/data" \
+  api \
+  python scripts/load_source_expansion.py --data-dir data/supplemental-20260331
 ```
 
 Notes:
 
 - `dbtool.py builddb --update` reloads the source `chi_*.csv` files and recreates the derived WOW tables.
+- Core, supplemental, and expansion loaders now all write `data_load_audit` rows.
+- The production image excludes `data/` via `.dockerignore`, so refreshes must run in a one-off container with `-v "$PWD/data:/app/data"`.
 - The current repository snapshot under `data/chi_*.csv` is only a partial Chicago dataset, not a full production-scale export.
 - To refresh the source CSVs themselves, use `scripts/fetch_chi_data.py` and verify row counts before rebuilding.
 
-### Large dataset rebuilds
+### Verify refresh audits and admin coverage
 
-For full-city CSV refreshes, do not copy the giant source files into the long-running `api` container before rebuilding. That duplicates the CSV storage in Docker's writable layer and can exhaust disk during the SQL build.
+After a refresh, confirm the audit rows and coverage endpoint:
 
-Use a one-off container with the host `data/` directory mounted into `/app/data` instead:
+```bash
+docker compose -f docker-compose.prod.yml --profile with-cloudflare exec -T db \
+  psql -U wow -d wow -c "SELECT dataset_name, status, row_count, run_id, loaded_at FROM data_load_audit ORDER BY loaded_at DESC LIMIT 20;"
+
+curl -H "Authorization: Token $ADMIN_API_TOKEN" \
+  http://127.0.0.1:8000/api/admin/data-coverage
+```
+
+`ADMIN_API_TOKEN` should be a dedicated token for admin-only endpoints. If it is unset, the app falls back to `ALERTS_API_TOKEN`, but production deploys should define a separate admin token.
+
+### Mounted one-off rebuilds
+
+The production image excludes `data/`, so all refreshes should use a one-off container with the host `data/` directory mounted into `/app/data`:
 
 ```bash
 docker compose -f docker-compose.prod.yml --profile with-cloudflare run --rm -T \
@@ -323,6 +350,49 @@ docker run --rm --entrypoint /bin/sh \
 
 ## Troubleshooting
 
+### Search suggestions return HTTP 400
+
+If address auto-suggestions fail in the UI and API logs show `Invalid HTTP_HOST header`, ensure your API hostname is present in `ALLOWED_HOSTS`.
+
+Example `.env` values:
+
+```env
+ALLOWED_HOSTS=wow-api.yazan.io,localhost,127.0.0.1
+CORS_EXTRA_ALLOWED_ORIGINS=https://wow.yazan.io
+CSRF_EXTRA_TRUSTED_ORIGINS=https://wow.yazan.io
+```
+
+Then recreate the API service so it picks up updated environment values:
+
+```bash
+docker compose -f docker-compose.prod.yml stop api
+docker compose -f docker-compose.prod.yml up -d api
+```
+
+### Timeline tab shows network/internal error
+
+If `/api/address/indicatorhistory` returns 500 after enabling IHS integration, confirm your IHS SQL query uses a valid join path for community area.
+
+Current query file:
+
+- `wow/sql/address_indicatorhistory_chi_with_ihs.sql`
+
+The working version joins community area from `chi_parcels.chicago_community_area_name` (not `chi_geographies.pin10`).
+
+After updating SQL, restart the API container:
+
+```bash
+docker compose -f docker-compose.prod.yml restart api
+```
+
+### IHS indicators missing from timeline dropdown
+
+Confirm frontend candidate dataset logic includes IHS dataset IDs for standard mode:
+
+- `client/src/components/APIClient.ts`
+
+If code is correct but UI is stale, force-refresh browser cache and redeploy frontend assets.
+
 ### Container won't start
 
 ```bash
@@ -356,10 +426,10 @@ print('Database connected!')
 
 ```bash
 # Test locally
-curl http://localhost:8000/health/
+curl http://localhost:8000/api/health/
 
 # Check if Django is running
-docker-compose -f docker-compose.prod.yml exec api python manage.py check
+docker compose -f docker-compose.prod.yml exec api python manage.py check
 ```
 
 ## Security Best Practices

@@ -51,6 +51,7 @@ DATABASE_URL=postgres://username:password@localhost:5432/dbname
 SECRET_KEY=your-secret-key-here
 ALERTS_API_TOKEN=your-alerts-token
 SIGNATURE_API_TOKEN=your-signature-token
+ADMIN_API_TOKEN=your-dedicated-admin-token
 
 # Optional
 ROLLBAR_ACCESS_TOKEN=your-rollbar-token

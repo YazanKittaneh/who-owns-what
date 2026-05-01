@@ -1,0 +1,3 @@
+pin,entity_name,contact_type,contact_value,source_system,source_record_id,confidence_score,is_primary,is_verified,verification_method,notes
+13262040080000,"Example Landlord LLC",phone,"312-555-0101",manual_verified,"broker-call-2026-04-11",95,true,true,manual,"Spoke with office and confirmed leasing line"
+13262040080000,"Example Landlord LLC",email,"leasing@examplelandlord.com",manual_verified,"broker-call-2026-04-11",95,true,true,manual,"Confirmed by leasing agent"

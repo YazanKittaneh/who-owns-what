@@ -53,6 +53,7 @@ Snapshot source: revalidated by direct query against the running `wow-api` DB co
 | `chi_permits` | 831,133 | Core permits source |
 | `chi_violations` | 2,000,589 | Core violations source |
 | `chi_311` | 13,562,312 | Core 311 source |
+| `chi_foreclosed_rental_properties` | 531 | Targeted foreclosure registration contacts |
 | `chi_geographies` | 186 | Geography lookup |
 
 ### Core derived WoW tables
@@ -118,6 +119,7 @@ Legend:
 | Permits | Chicago Socrata (`ydr8-5enu`) | `data/chi_permits.csv` | `chi_permits`, `wow_indicators`, `wow_indicatorhistory_monthly` | Yes | Y | Y | Weekly | Uses permit `pin_list` exploded against `pin10` |
 | Violations | Chicago Socrata (`22u3-xenr`) | `data/chi_violations.csv` | `chi_violations`, `wow_indicators`, `wow_indicatorhistory_monthly` | Yes | Y | Y | Weekly | Address-normalized join to parcel addresses |
 | 311 requests | Chicago Socrata (`v6vf-nfxy`) | `data/chi_311.csv` | `chi_311`, `wow_indicators`, `wow_indicatorhistory_monthly` | Yes | Y | Y | Weekly | Address-normalized join to parcel addresses |
+| Foreclosed rental property | Chicago Socrata (`yhcw-iu53`) | `data/chi_foreclosed_rental_properties.csv` | `chi_foreclosed_rental_properties` | Planned/conditional | Partial (`/api/admin/data-coverage` + contact loaders) | N | Weekly or monthly | Property-address keyed targeted contact source; includes owner and notices-agent phone/email |
 | Geographies | Local/reference CSV | `data/chi_geographies.csv` | `chi_geographies` | Yes | N | N | As needed | Minimal current runtime usage; mostly legacy/support |
 
 ### Supplemental Chicago datasets (20260329 package)
@@ -232,6 +234,7 @@ Core:
 - `data/chi_permits.csv` (~640MB)
 - `data/chi_violations.csv` (~1.0GB)
 - `data/chi_311.csv` (~5.7GB)
+- `data/chi_foreclosed_rental_properties.csv` (small targeted file)
 - `data/chi_geographies.csv` (~6.5MB)
 
 Supplemental:
