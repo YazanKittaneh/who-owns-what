@@ -1,7 +1,6 @@
 services:
   db:
     image: postgis/postgis:15-3.4
-    container_name: wow-db
     restart: unless-stopped
     environment:
       - POSTGRES_USER=wow
@@ -22,7 +21,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    container_name: wow-api
     restart: unless-stopped
     expose:
       - "8000"
@@ -64,7 +62,6 @@ services:
       args:
         REACT_APP_API_BASE_URL: ${FRONTEND_API_BASE_URL:-https://wow-api.yazan.io}
         REACT_APP_ROLLBAR_ACCESS_TOKEN: ${FRONTEND_ROLLBAR_ACCESS_TOKEN:-}
-    container_name: wow-frontend
     restart: unless-stopped
     expose:
       - "80"
@@ -82,7 +79,6 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: wow-cloudflared
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
@@ -100,7 +96,6 @@ services:
   # Nginx Reverse Proxy (optional but recommended)
   nginx:
     image: nginx:alpine
-    container_name: wow-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -121,7 +116,6 @@ services:
   # Certbot for SSL (optional)
   certbot:
     image: certbot/certbot
-    container_name: wow-certbot
     volumes:
       - certbot-data:/etc/letsencrypt
       - certbot-www:/var/www/certbot

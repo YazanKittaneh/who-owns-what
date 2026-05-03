@@ -1,13 +1,13 @@
-# Backend Deployment Guide
+# Deployment Guide
 
-This guide explains how to deploy the Who Owns What Django backend to a Linux container using Docker and GitHub Actions CI/CD.
+This guide explains how to run Who Owns What with separate `dev` and `prod` environments on the same Linux host using Docker Compose, Cloudflare Tunnels, and GitHub Actions CI/CD.
 
 ## Architecture Overview
 
 ```
 ┌─────────────────┐         ┌──────────────────┐
 │  Cloudflare     │────────▶│  Your Linux VM   │
-│  (Frontend)     │   API   │  (Django API)    │
+│  Tunnels        │         │  Docker Stacks   │
 └─────────────────┘         └──────────────────┘
                                      │
                                      ▼
@@ -16,9 +16,17 @@ This guide explains how to deploy the Who Owns What Django backend to a Linux co
                             └──────────────────┘
 ```
 
-- **Frontend**: Static React app hosted on Cloudflare Pages (already working)
-- **Backend**: Django API running in Docker container on your VM
-- **Database**: PostgreSQL (can be on same VM or managed service)
+- **Frontend**: Static React app served by the `frontend` service behind a Cloudflare Tunnel
+- **Backend**: Django API served by the `api` service behind the same environment's tunnel
+- **Database**: PostgreSQL in the `db` service, separated by Compose project name and env file
+- **Environments**: `develop -> dev`, `main/master -> prod`
+
+## Environment Layout
+
+| Environment | Branch | Frontend | API | Compose Project | Runner Env File |
+|-------------|--------|----------|-----|-----------------|-----------------|
+| dev | `develop` | `https://dev-wow.yazan.io` | `https://dev-wow-api.yazan.io` | `who-owns-what-dev` | `/home/actions/who-owns-what-dev.env` |
+| prod | `main`, `master` | `https://wow.yazan.io` | `https://wow-api.yazan.io` | `who-owns-what-prod` | `/home/actions/who-owns-what-prod.env` |
 
 ## Prerequisites
 
@@ -57,10 +65,11 @@ chmod +x scripts/setup-server.sh
 
 ### 2. Configure Environment Variables
 
-Edit the `.env` file created on your server:
+Create one env file per deployed environment on the runner:
 
 ```bash
-nano ~/who-owns-what/.env
+nano /home/actions/who-owns-what-dev.env
+nano /home/actions/who-owns-what-prod.env
 ```
 
 Required variables:
@@ -77,7 +86,7 @@ CORS_EXTRA_ALLOWED_ORIGINS=https://wow.yazan.io
 CSRF_EXTRA_TRUSTED_ORIGINS=https://wow.yazan.io
 
 # Cloudflare Tunnel
-CLOUDFLARE_TUNNEL_TOKEN=your-cloudflare-tunnel-token
+CLOUDFLARE_TUNNEL_TOKEN=your-environment-specific-cloudflare-tunnel-token
 
 # API Tokens
 ALERTS_API_TOKEN=your-alerts-token
@@ -86,6 +95,24 @@ ADMIN_API_TOKEN=your-dedicated-admin-token
 
 # Error Tracking (optional)
 ROLLBAR_ACCESS_TOKEN=your-rollbar-token
+```
+
+For dev, use:
+
+```env
+FRONTEND_API_BASE_URL=https://dev-wow-api.yazan.io
+ALLOWED_HOSTS=dev-wow-api.yazan.io,localhost,127.0.0.1
+CORS_EXTRA_ALLOWED_ORIGINS=https://dev-wow.yazan.io
+CSRF_EXTRA_TRUSTED_ORIGINS=https://dev-wow.yazan.io
+```
+
+For prod, use:
+
+```env
+FRONTEND_API_BASE_URL=https://wow-api.yazan.io
+ALLOWED_HOSTS=wow-api.yazan.io,localhost,127.0.0.1
+CORS_EXTRA_ALLOWED_ORIGINS=https://wow.yazan.io
+CSRF_EXTRA_TRUSTED_ORIGINS=https://wow.yazan.io
 ```
 
 ### 3. Configure GitHub Actions Secrets
@@ -108,22 +135,25 @@ Optional secrets:
 
 ### 4. Configure DNS / Cloudflare
 
-The current production setup uses Cloudflare-hosted domains:
+The current setup uses Cloudflare Tunnel hostnames for both environments:
 
 ```
-Frontend: https://wow.yazan.io
-API:      https://wow-api.yazan.io
+Dev frontend:  https://dev-wow.yazan.io
+Dev API:       https://dev-wow-api.yazan.io
+Prod frontend: https://wow.yazan.io
+Prod API:      https://wow-api.yazan.io
 ```
 
-The API is published through a named Cloudflare Tunnel, so `wow-api.yazan.io` should point to the tunnel CNAME rather than directly to the VM IP.
+Each environment should have its own tunnel token and DNS records pointing at that tunnel's `cfargotunnel.com` hostname rather than directly to the VM IP.
 
 ### 5. Deploy
 
-Push to the main branch and GitHub Actions will:
+Push to `develop`, `main`, or `master` and GitHub Actions will:
 
-1. Build the Docker image
-2. Push to GitHub Container Registry
-3. Deploy to your VM via SSH
+1. Run `.github/workflows/ci.yml`
+2. Deploy `develop` to `dev` via `.github/workflows/deploy-dev.yml`
+3. Deploy `main`/`master` to `prod` via `.github/workflows/deploy-prod.yml`
+4. Optionally publish the separate Cloudflare Worker bundle via `.github/workflows/deploy-cloudflare.yml` when run manually
 
 ```bash
 git add .
@@ -193,10 +223,14 @@ CLOUDFLARE_TUNNEL_TOKEN=your-cloudflare-tunnel-token
 docker compose -f docker-compose.prod.yml --profile with-cloudflare up -d
 ```
 
-3. In Cloudflare DNS, point `wow-api.yazan.io` at your tunnel hostname:
+3. In Cloudflare DNS, point each environment's frontend and API hostnames at the matching tunnel hostname:
 
 ```text
-wow-api.yazan.io -> <tunnel-id>.cfargotunnel.com
+dev-wow.yazan.io     -> <dev-tunnel-id>.cfargotunnel.com
+dev-wow-api.yazan.io -> <dev-tunnel-id>.cfargotunnel.com
+
+wow.yazan.io         -> <prod-tunnel-id>.cfargotunnel.com
+wow-api.yazan.io     -> <prod-tunnel-id>.cfargotunnel.com
 ```
 
 ## Monitoring & Logs
@@ -236,6 +270,13 @@ Just push to main:
 ```bash
 git push origin main
 ```
+
+Important:
+
+- `develop` deploys the `dev` tunnel-backed stack.
+- `main` and `master` deploy the `prod` tunnel-backed stack.
+- The Worker deploy publishes `who-owns-what.yazan-4a5.workers.dev`, which is a separate path.
+- `docker-compose.prod.yml` no longer hardcodes `container_name`, so multiple Compose projects can run side by side on the same host.
 
 ### Manual Update
 

@@ -1,211 +1,128 @@
-# Cloudflare Pages Deployment Guide
+# Cloudflare Tunnel Deployment Guide
 
-This guide explains how to deploy the Who Owns What frontend to **Cloudflare Pages** while running the backend on your own server.
+This project's real `dev` and `prod` environments are served through Cloudflare Tunnels, not Cloudflare Pages.
 
-## Architecture
+## Current Model
 
-```
-┌─────────────────────┐         ┌──────────────────────┐
-│   Cloudflare Pages  │ ◄─────► │   Your Server        │
-│   (React Frontend)  │  CORS   │   (Django Backend)   │
-│   wow.yazan.io      │         │   wow-api.yazan.io   │
-└─────────────────────┘         └──────────────────────┘
-```
+- `dev-wow.yazan.io` and `dev-wow-api.yazan.io` should point at the dev tunnel
+- `wow.yazan.io` and `wow-api.yazan.io` should point at the prod tunnel
+- each environment runs on the same host but in a separate Docker Compose project
+- the Cloudflare Worker deploy is a separate artifact and not the source of truth for either live environment
 
-## Prerequisites
+## Environment Matrix
 
-1. **Cloudflare Account** with Pages access
-2. **Your own server** with:
-   - Public IP address
-   - Python 3.11+ installed
-   - PostgreSQL database
-   - A Cloudflare Tunnel or another HTTPS entrypoint for the API
+| Environment | Frontend | API | Tunnel Token Source | Compose Project |
+|-------------|----------|-----|---------------------|-----------------|
+| dev | `https://dev-wow.yazan.io` | `https://dev-wow-api.yazan.io` | `/home/actions/who-owns-what-dev.env` | `who-owns-what-dev` |
+| prod | `https://wow.yazan.io` | `https://wow-api.yazan.io` | `/home/actions/who-owns-what-prod.env` | `who-owns-what-prod` |
 
-## Step 1: Configure Your Backend Server
+## DNS
 
-### 1.1 Update CORS Settings
+Each environment needs two DNS records:
 
-The backend is already configured in `project/settings.py` with Cloudflare Pages domains:
+```text
+dev-wow.yazan.io      -> <dev-tunnel-id>.cfargotunnel.com
+dev-wow-api.yazan.io  -> <dev-tunnel-id>.cfargotunnel.com
 
-```python
-CORS_ALLOWED_ORIGINS = [
-    # ... existing origins ...
-    "https://who-owns-what.pages.dev",
-    "https://*.who-owns-what.pages.dev",
-    # Add your custom domain here if you have one:
-    # "https://your-domain.com",
-]
+wow.yazan.io          -> <prod-tunnel-id>.cfargotunnel.com
+wow-api.yazan.io      -> <prod-tunnel-id>.cfargotunnel.com
 ```
 
-**Important:** Add your server's IP/domain to the list if you want to test locally.
+Current observed state on this machine:
 
-### 1.2 Set Environment Variables on Your Server
+- prod tunnel is already live for `wow.yazan.io` and `wow-api.yazan.io`
+- `/home/actions/who-owns-what-dev.env` contains a real token for tunnel `0fd4d613-4b5d-4d01-96e6-0c86543f4098`
+- that tunnel is currently named `s3_yazan_io`
+- its current remote ingress still targets:
+  - `s3.yazan.io`
+  - `s3web.yazan.io`
+  - `s3admin.yazan.io`
+- `dev-wow.yazan.io` and `dev-wow-api.yazan.io` do not exist in DNS yet
+- the Cloudflare API token available on this machine is read-only for tunnel/DNS changes
 
-Create a `.env` file on your server:
+## Required Env Vars
+
+Each runner env file must include at least:
+
+```env
+DATABASE_URL=...
+SECRET_KEY=...
+CLOUDFLARE_TUNNEL_TOKEN=...
+FRONTEND_API_BASE_URL=...
+ALLOWED_HOSTS=...
+CORS_EXTRA_ALLOWED_ORIGINS=...
+CSRF_EXTRA_TRUSTED_ORIGINS=...
+ALERTS_API_TOKEN=...
+SIGNATURE_API_TOKEN=...
+ADMIN_API_TOKEN=...
+ROLLBAR_ACCESS_TOKEN=...
+FRONTEND_ROLLBAR_ACCESS_TOKEN=...
+```
+
+Recommended domain-specific values:
+
+```env
+# dev
+FRONTEND_API_BASE_URL=https://dev-wow-api.yazan.io
+ALLOWED_HOSTS=dev-wow-api.yazan.io,localhost,127.0.0.1
+CORS_EXTRA_ALLOWED_ORIGINS=https://dev-wow.yazan.io
+CSRF_EXTRA_TRUSTED_ORIGINS=https://dev-wow.yazan.io
+
+# prod
+FRONTEND_API_BASE_URL=https://wow-api.yazan.io
+ALLOWED_HOSTS=wow-api.yazan.io,localhost,127.0.0.1
+CORS_EXTRA_ALLOWED_ORIGINS=https://wow.yazan.io
+CSRF_EXTRA_TRUSTED_ORIGINS=https://wow.yazan.io
+```
+
+## Deploy Workflows
+
+- `.github/workflows/deploy-dev.yml`
+  - triggers on push to `develop`
+  - deploys the dev stack
+- `.github/workflows/deploy-prod.yml`
+  - triggers on push to `main` and `master`
+  - deploys the prod stack
+- `.github/workflows/deploy-cloudflare.yml`
+  - manual only
+  - publishes the separate Worker build
+
+## How A Deploy Works
+
+1. GitHub Actions checks out the repo on the self-hosted runner.
+2. The workflow copies the environment-specific runner env file into `.env`.
+3. Docker Compose rebuilds `api`, `frontend`, and `cloudflared` for that environment.
+4. The workflow verifies local API health inside the deployed container.
+5. The workflow compares the rebuilt frontend asset hashes to the public HTML shell for that environment.
+6. The deploy only succeeds if the public environment serves the rebuilt assets.
+
+## Verification Commands
+
+Check frontend asset hashes:
 
 ```bash
-# Database
-DATABASE_URL=postgres://username:password@localhost:5432/dbname
+curl -s -A "Mozilla/5.0" https://dev-wow.yazan.io | python3 -c 'import re,sys; html=sys.stdin.read();
+for pat in [r"/static/css/main\.[a-f0-9]+\.chunk\.css", r"/static/js/main\.[a-f0-9]+\.chunk\.js"]:
+ m=re.search(pat, html); print(m.group(0) if m else "MISSING")'
 
-# Security
-SECRET_KEY=your-secret-key-here
-ALERTS_API_TOKEN=your-alerts-token
-SIGNATURE_API_TOKEN=your-signature-token
-ADMIN_API_TOKEN=your-dedicated-admin-token
-
-# Optional
-ROLLBAR_ACCESS_TOKEN=your-rollbar-token
+curl -s -A "Mozilla/5.0" https://wow.yazan.io | python3 -c 'import re,sys; html=sys.stdin.read();
+for pat in [r"/static/css/main\.[a-f0-9]+\.chunk\.css", r"/static/js/main\.[a-f0-9]+\.chunk\.js"]:
+ m=re.search(pat, html); print(m.group(0) if m else "MISSING")'
 ```
 
-### 1.3 Run the Backend
+Check API health:
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run with gunicorn (production)
-gunicorn project.wsgi:application -b 0.0.0.0:8000 --workers 4
-
-# Or use a process manager like systemd or supervisor
+curl -fsSL https://dev-wow-api.yazan.io/api/health/
+curl -fsSL https://wow-api.yazan.io/api/health/
 ```
 
-## Step 2: Deploy Frontend to Cloudflare Pages
+## Important Warning
 
-### Option A: Using Wrangler CLI
+If someone wants to know whether `dev` or `prod` updated, do not use the Worker deploy as evidence.
 
-```bash
-cd client
+The only valid proof is:
 
-# Install dependencies
-yarn install
-
-# Set your backend API URL
-export REACT_APP_API_BASE_URL=https://wow-api.yazan.io
-
-# Build the frontend
-yarn build
-
-# Deploy to Cloudflare Pages
-npx wrangler pages deploy build --project-name=who-owns-what
-```
-
-### Option B: Using Git Integration (Recommended)
-
-1. Push your code to GitHub
-2. In Cloudflare Dashboard → Pages → "Create a project"
-3. Connect your GitHub repository
-4. Configure build settings:
-   - **Build command:** `yarn build`
-   - **Build output directory:** `build`
-   - **Root directory:** `client`
-5. Add environment variables in Cloudflare Dashboard:
-   - `REACT_APP_API_BASE_URL` = `https://wow-api.yazan.io`
-
-## Step 3: Configure Environment Variables
-
-### Required Environment Variables for Frontend
-
-Set these in Cloudflare Pages dashboard (Settings → Environment variables):
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `REACT_APP_API_BASE_URL` | Your backend server URL | `https://wow-api.yazan.io` |
-| `REACT_APP_STREETVIEW_API_KEY` | Google StreetView API key | `AIza...` |
-| `NODE_VERSION` | Node.js version | `18` |
-
-### Optional Variables
-
-| Variable | Description |
-|----------|-------------|
-| `REACT_APP_ROLLBAR_ACCESS_TOKEN` | Error tracking |
-| `REACT_APP_ALGOLIA_APP_ID` | Search functionality |
-| `REACT_APP_MAPBOX_ACCESS_TOKEN` | Maps |
-
-## Step 4: Update CORS on Backend
-
-After your Cloudflare Pages site is deployed, use either the Pages URL or the custom domain:
-`https://who-owns-what.pages.dev` or `https://wow.yazan.io`
-
-Add this to your backend's `CORS_ALLOWED_ORIGINS` in `project/settings.py`:
-
-```python
-CORS_ALLOWED_ORIGINS = [
-    # ... existing origins ...
-    "https://abc123.who-owns-what.pages.dev",  # Your actual Pages URL
-]
-```
-
-Then restart your backend server.
-
-## Step 5: Verify Deployment
-
-1. Visit your Cloudflare Pages URL
-2. Open browser console (F12)
-3. Try searching for an address
-4. Check Network tab - API calls should go to `https://wow-api.yazan.io`
-5. Check for CORS errors - if present, verify CORS_ALLOWED_ORIGINS
-
-## Troubleshooting
-
-### CORS Errors
-
-If you see errors like:
-```
-Access to XMLHttpRequest at 'https://wow-api.yazan.io/api/...' from origin 'https://wow.yazan.io' has been blocked by CORS policy
-```
-
-**Solution:**
-1. Add your exact Pages URL to `CORS_ALLOWED_ORIGINS`
-2. Restart backend server
-3. Clear browser cache
-
-### API Not Responding
-
-Check:
-1. Server is running: `curl https://wow-api.yazan.io/api/health/`
-2. Cloudflare Tunnel is healthy
-3. Backend logs for errors
-
-### Build Failures
-
-Common issues:
-- Node version mismatch: Set `NODE_VERSION=18` in Cloudflare
-- Missing API URL: Ensure `REACT_APP_API_BASE_URL` is set
-- Yarn lockfile issues: Delete `node_modules` and `yarn.lock`, reinstall
-
-## Security Considerations
-
-1. **HTTPS:** Consider using HTTPS on your backend (via nginx/traefik + Let's Encrypt)
-2. **Firewall:** Only open necessary ports
-3. **Secrets:** Never commit `.env` files
-4. **CORS:** Be specific with allowed origins, avoid `*` in production
-
-## Production Checklist
-
-- [ ] Backend server secured (firewall, updates)
-- [ ] PostgreSQL properly configured
-- [ ] CORS origins updated with actual Pages URL
-- [ ] Environment variables set in Cloudflare
-- [ ] Domain configured (optional, via Cloudflare)
-- [ ] SSL/TLS enabled on backend (optional but recommended)
-- [ ] Monitoring/logging set up
-
-## Useful Commands
-
-```bash
-# Check backend is running
-curl https://wow-api.yazan.io/api/health/
-
-# Test CORS
-curl -H "Origin: https://wow.yazan.io" \
-     -H "Access-Control-Request-Method: GET" \
-     -H "Access-Control-Request-Headers: X-Requested-With" \
-     -X OPTIONS \
-     https://wow-api.yazan.io/api/
-
-# View Cloudflare Pages logs
-npx wrangler pages deployment tail
-
-# Check backend logs
-journalctl -u your-backend-service -f
-```
+1. the correct tunnel-backed public domain responds
+2. the correct asset hashes are live
+3. the correct public API health URL responds

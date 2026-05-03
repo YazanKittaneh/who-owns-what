@@ -1,0 +1,147 @@
+name: Deploy Prod
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'client/**'
+      - 'wow/**'
+      - 'project/**'
+      - 'jfauthprovider/**'
+      - 'tests/**'
+      - 'requirements*.txt'
+      - 'Dockerfile.prod'
+      - 'client/Dockerfile.prod'
+      - 'docker-compose.prod.yml'
+      - '.github/workflows/deploy-prod.yml'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux, x64, production]
+    environment: production
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy prod stack
+        env:
+          COMPOSE_PROJECT_NAME: who-owns-what-prod
+          ENV_FILE_PATH: /home/actions/who-owns-what-prod.env
+          PUBLIC_FRONTEND_URL: https://wow.yazan.io
+          PUBLIC_API_HEALTH_URL: https://wow-api.yazan.io/api/health/
+        run: |
+          set -euo pipefail
+
+          compose=(docker compose --project-name "$COMPOSE_PROJECT_NAME" --env-file .env -f docker-compose.prod.yml --profile with-cloudflare)
+
+          if [ ! -f "$ENV_FILE_PATH" ]; then
+            echo "❌ Missing $ENV_FILE_PATH on runner"
+            exit 1
+          fi
+
+          cp "$ENV_FILE_PATH" .env
+
+          echo "=== Deploying prod stack ==="
+          "${compose[@]}" up -d --build api frontend cloudflared
+
+          api_container_id=$("${compose[@]}" ps -q api)
+          frontend_container_id=$("${compose[@]}" ps -q frontend)
+
+          if [ -z "$api_container_id" ] || [ -z "$frontend_container_id" ]; then
+            echo "❌ Could not determine prod container ids after deploy"
+            "${compose[@]}" ps
+            exit 1
+          fi
+
+          docker image prune -f
+
+          echo "Waiting for local API health check..."
+          for attempt in {1..18}; do
+            if docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
+              echo "✅ Local API health check passed"
+              break
+            fi
+            echo "Local API health not ready yet (attempt ${attempt}/18)."
+            sleep 10
+          done
+
+          if ! docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
+            echo "❌ Local API health check failed"
+            "${compose[@]}" logs --tail=100 api
+            exit 1
+          fi
+
+          local_html=$(mktemp)
+          public_html=$(mktemp)
+          trap 'rm -f "$local_html" "$public_html"' EXIT
+
+          extract_assets() {
+            python3 -c 'import pathlib, re, sys; html = pathlib.Path(sys.argv[1]).read_text(errors="ignore"); patterns = [r"/static/js/main\.[a-f0-9]+\.chunk\.js", r"/static/css/main\.[a-f0-9]+\.chunk\.css"]; [print((re.search(pattern, html).group(0) if re.search(pattern, html) else "")) for pattern in patterns]' "$1"
+          }
+
+          echo "Waiting for local frontend shell..."
+          for attempt in {1..18}; do
+            if docker exec "$frontend_container_id" wget -qO- http://127.0.0.1/ > "$local_html"; then
+              mapfile -t local_assets < <(extract_assets "$local_html")
+              local_js=${local_assets[0]:-}
+              local_css=${local_assets[1]:-}
+              if [ -n "$local_js" ] && [ -n "$local_css" ]; then
+                echo "Local frontend assets: $local_js | $local_css"
+                break
+              fi
+            fi
+            echo "Local frontend shell not ready yet (attempt ${attempt}/18)."
+            sleep 5
+          done
+
+          if [ -z "${local_js:-}" ] || [ -z "${local_css:-}" ]; then
+            echo "❌ Could not determine local frontend asset hashes"
+            "${compose[@]}" logs --tail=100 frontend
+            exit 1
+          fi
+
+          echo "Waiting for public API health on $PUBLIC_API_HEALTH_URL ..."
+          for attempt in {1..18}; do
+            if curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
+              echo "✅ Public API health check passed"
+              break
+            fi
+            echo "Public API not ready yet (attempt ${attempt}/18)."
+            sleep 10
+          done
+
+          if ! curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
+            echo "❌ Public API health check failed"
+            exit 1
+          fi
+
+          echo "Waiting for $PUBLIC_FRONTEND_URL to serve the rebuilt frontend assets..."
+          for attempt in {1..24}; do
+            if curl -fsSL -A "Mozilla/5.0" "$PUBLIC_FRONTEND_URL/" > "$public_html"; then
+              mapfile -t public_assets < <(extract_assets "$public_html")
+              public_js=${public_assets[0]:-}
+              public_css=${public_assets[1]:-}
+              if [ "$public_js" = "$local_js" ] && [ "$public_css" = "$local_css" ]; then
+                echo "✅ Prod frontend is serving the rebuilt assets"
+                echo "Public assets: $public_js | $public_css"
+                exit 0
+              fi
+              echo "Public assets do not match yet: ${public_js:-missing} | ${public_css:-missing}"
+            else
+              echo "Public frontend request failed (attempt ${attempt}/24)."
+            fi
+            sleep 10
+          done
+
+          echo "❌ Prod frontend never served the rebuilt assets"
+          echo "Expected local assets: $local_js | $local_css"
+          echo "Last public assets: ${public_js:-missing} | ${public_css:-missing}"
+          "${compose[@]}" logs --tail=100 frontend cloudflared
+          exit 1
