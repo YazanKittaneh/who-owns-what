@@ -1,5 +1,7 @@
 name: Deploy Dev
 
+# Pushes to develop with deploy-relevant changes auto-deploy the dev tunnel-backed stack.
+
 on:
   push:
     branches:
