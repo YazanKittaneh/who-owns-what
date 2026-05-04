@@ -51,7 +51,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run backend tests
-        run: pytest
+        run: pytest tests
         env:
           SECRET_KEY: ci-secret-key
           ALERTS_API_TOKEN: ci-alerts-token
