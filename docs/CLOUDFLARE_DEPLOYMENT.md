@@ -31,14 +31,17 @@ wow-api.yazan.io      -> <prod-tunnel-id>.cfargotunnel.com
 Current observed state on this machine:
 
 - prod tunnel is already live for `wow.yazan.io` and `wow-api.yazan.io`
-- `/home/actions/who-owns-what-dev.env` contains a real token for tunnel `0fd4d613-4b5d-4d01-96e6-0c86543f4098`
-- that tunnel is currently named `s3_yazan_io`
-- its current remote ingress still targets:
-  - `s3.yazan.io`
-  - `s3web.yazan.io`
-  - `s3admin.yazan.io`
-- `dev-wow.yazan.io` and `dev-wow-api.yazan.io` do not exist in DNS yet
-- the Cloudflare API token available on this machine is read-only for tunnel/DNS changes
+- a dedicated dev tunnel now exists:
+  - tunnel ID: `e3fc65bd-5145-4210-98ad-b2429a70f7fb`
+  - tunnel name: `wow_dev_112`
+- the dev tunnel remote ingress is configured for:
+  - `dev-wow-api.yazan.io -> http://api:8000`
+  - `dev-wow.yazan.io -> http://frontend:80`
+- the local `who-owns-what-dev-cloudflared-1` container is connected and healthy
+- public DNS now exists for both hostnames and points at the dev tunnel
+- `https://dev-wow.yazan.io` responds normally through the tunnel
+- `https://dev-wow-api.yazan.io` resolves correctly in public DNS and responds through the correct Cloudflare edge IP
+- note: this machine briefly held a stale resolver answer for `dev-wow-api.yazan.io`; external DNS-over-HTTPS and forced-edge checks confirmed the public record is correct
 
 ## Required Env Vars
 

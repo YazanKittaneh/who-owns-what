@@ -171,11 +171,20 @@ GitHub Actions cannot create all of this by itself. The following must exist out
 
 Current status:
 
-- `/home/actions/who-owns-what-dev.env` now contains a real tunnel token
-- that token belongs to tunnel `0fd4d613-4b5d-4d01-96e6-0c86543f4098` (`s3_yazan_io`)
-- that tunnel is still remotely configured for `s3.yazan.io`, `s3web.yazan.io`, and `s3admin.yazan.io`
-- `dev-wow.yazan.io` and `dev-wow-api.yazan.io` DNS records do not exist yet
-- the available Cloudflare API token on this machine can read tunnel/DNS state but cannot modify it
+- `/home/actions/who-owns-what-dev.env` now contains a dedicated dev tunnel token
+- dedicated dev tunnel:
+  - ID: `e3fc65bd-5145-4210-98ad-b2429a70f7fb`
+  - name: `wow_dev_112`
+- remote ingress is configured for:
+  - `dev-wow-api.yazan.io -> http://api:8000`
+  - `dev-wow.yazan.io -> http://frontend:80`
+- the local dev cloudflared service is running and the tunnel is healthy
+- public DNS now exists:
+  - `dev-wow.yazan.io -> e3fc65bd-5145-4210-98ad-b2429a70f7fb.cfargotunnel.com`
+  - `dev-wow-api.yazan.io -> e3fc65bd-5145-4210-98ad-b2429a70f7fb.cfargotunnel.com`
+- public frontend responds normally at `https://dev-wow.yazan.io`
+- public API responds through the correct Cloudflare edge IP and tunnel
+- note: this machine's default resolver briefly kept a stale answer for `dev-wow-api.yazan.io`; authoritative/public DNS is correct
 
 ## Important Warning
 
