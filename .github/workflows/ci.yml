@@ -17,6 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    services:
+      postgres:
+        image: postgis/postgis:15-3.4
+        env:
+          POSTGRES_USER: wow
+          POSTGRES_PASSWORD: wow
+          POSTGRES_DB: wow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wow -d wow"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout repository
@@ -43,8 +57,8 @@ jobs:
           ALERTS_API_TOKEN: ci-alerts-token
           SIGNATURE_API_TOKEN: ci-signature-token
           ADMIN_API_TOKEN: ci-admin-token
-          DATABASE_URL: sqlite:///tmp/wow-ci.sqlite3
-          TEST_DATABASE_URL: sqlite:///tmp/wow-ci-test.sqlite3
+          DATABASE_URL: postgres://wow:wow@127.0.0.1:5432/wow
+          TEST_DATABASE_URL: postgres://wow:wow@127.0.0.1:5432/wow_test
 
   frontend:
     runs-on: ubuntu-latest
