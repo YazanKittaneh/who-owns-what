@@ -38,6 +38,13 @@ jobs:
 
       - name: Run backend tests
         run: pytest
+        env:
+          SECRET_KEY: ci-secret-key
+          ALERTS_API_TOKEN: ci-alerts-token
+          SIGNATURE_API_TOKEN: ci-signature-token
+          ADMIN_API_TOKEN: ci-admin-token
+          DATABASE_URL: sqlite:///tmp/wow-ci.sqlite3
+          TEST_DATABASE_URL: sqlite:///tmp/wow-ci-test.sqlite3
 
   frontend:
     runs-on: ubuntu-latest
