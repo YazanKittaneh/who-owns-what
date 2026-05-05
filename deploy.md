@@ -97,8 +97,8 @@ flowchart TD
 
 - `.github/workflows/ci.yml`
   - PR and branch CI
-  - backend: `pytest`
-  - frontend: `yarn prettier:check` and `yarn build`
+  - backend: `pytest tests --ignore=tests/test_sql.py`
+  - frontend: `yarn build`
 - `.github/workflows/deploy-dev.yml`
   - auto deploy on `develop`
   - deploys `api`, `frontend`, and `cloudflared`
@@ -109,10 +109,27 @@ flowchart TD
   - deploys `api`, `frontend`, and `cloudflared`
   - verifies local API health
   - verifies public `wow.yazan.io` asset hashes match rebuilt frontend assets
+- `.github/workflows/integration-sql.yml`
+  - manual and nightly SQL integration workflow
+  - runs `pytest tests/test_sql.py`
+  - uses a PostGIS service plus the test fixture's empty supplemental source/bootstrap tables
 - `.github/workflows/deploy-cloudflare.yml`
   - manual only
   - deploys the separate Worker bundle
   - does not update the tunnel-backed live sites
+
+## CI Strategy
+
+- Fast branch CI is intentionally separate from heavy SQL integration coverage.
+- `tests/test_sql.py` is excluded from `.github/workflows/ci.yml` so normal branch pushes stay fast and reliable.
+- SQL integration coverage lives in `.github/workflows/integration-sql.yml` and should be run explicitly when changing SQL/data-loading behavior.
+- It also runs nightly to catch drift in SQL/bootstrap assumptions without slowing every branch push.
+
+## Merge Strategy
+
+- For future workflow/infrastructure changes, prefer feature branches plus PRs.
+- Use squash merge for infra/workflow PRs so `develop` and `master` do not accumulate long fixup chains.
+- Avoid force-pushing `develop` or `master` just to rewrite already-shared history.
 
 ## Real Deploy Commands
 
