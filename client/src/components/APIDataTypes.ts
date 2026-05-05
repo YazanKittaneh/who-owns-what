@@ -208,6 +208,66 @@ export type OwnerProfileResults = {
   result: AddressRecord[];
 };
 
+export type OwnerAreaSearchSeed = {
+  pin: string;
+  address?: string | null;
+  owner_id?: string | null;
+  owner_name?: string | null;
+  mailing_address?: string | null;
+  mailing_city?: string | null;
+  mailing_state?: string | null;
+  mailing_zip?: string | null;
+  land_class?: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+export type OwnerAreaSearchParcel = {
+  pin: string;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  distance_m?: number | null;
+  land_class?: string | null;
+  building_type?: string | null;
+  building_type_label?: string | null;
+  same_owner?: boolean;
+};
+
+export type OwnerAreaSearchBuildingTypeCount = {
+  building_type: string;
+  building_type_label: string;
+  parcel_count: number | null;
+};
+
+export type OwnerAreaSearchOwner = {
+  owner_key: string;
+  owner_id?: string | null;
+  owner_name?: string | null;
+  mailing_address?: string | null;
+  mailing_city?: string | null;
+  mailing_state?: string | null;
+  mailing_zip?: string | null;
+  parcel_count: number | null;
+  nearest_distance_m?: number | null;
+  same_owner: boolean;
+  building_type_counts: OwnerAreaSearchBuildingTypeCount[];
+  parcels: OwnerAreaSearchParcel[];
+};
+
+export type OwnerAreaSearchResults = {
+  seed: OwnerAreaSearchSeed | null;
+  filters: {
+    pin: string;
+    radius_m: number;
+    building_types: string[];
+    min_parcels: number;
+    max_parcels?: number | null;
+    limit: number;
+  };
+  result: OwnerAreaSearchOwner[];
+};
+
 export type IndicatorsHistoryRecord = {
   month: string;
   permits_total?: number;

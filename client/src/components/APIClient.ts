@@ -5,6 +5,7 @@ import {
   OverviewMapResults,
   NearbyPropertiesResults,
   OwnerProfileResults,
+  OwnerAreaSearchResults,
 } from "./APIDataTypes";
 import { SearchAddress } from "./AddressSearch";
 import { NetworkError, HTTPError } from "error-reporting";
@@ -145,6 +146,32 @@ function getCurrentOwnerProfile(ownerType: "id" | "name", ownerKey: string): Pro
     ownerType === "id" ? { owner_id: ownerKey } : { owner_name: ownerKey }
   );
   return getApiJson(`/api/owner/current?${params.toString()}`);
+}
+
+function searchOwnersByArea(args: {
+  pin: string;
+  radiusM?: number;
+  buildingTypes?: string[];
+  minParcels?: number;
+  maxParcels?: number | null;
+  limit?: number;
+}): Promise<OwnerAreaSearchResults> {
+  const params = new URLSearchParams({
+    pin: args.pin,
+    radius_m: String(args.radiusM ?? 600),
+    min_parcels: String(args.minParcels ?? 1),
+    limit: String(args.limit ?? 100),
+  });
+
+  if (args.maxParcels != null) {
+    params.set("max_parcels", String(args.maxParcels));
+  }
+
+  if (args.buildingTypes && args.buildingTypes.length > 0) {
+    params.set("building_types", args.buildingTypes.join(","));
+  }
+
+  return getApiJson(`/api/owner/search-by-area?${params.toString()}`);
 }
 
 const indicatorColumns: Record<IndicatorsDatasetId, string[]> = {
@@ -344,6 +371,7 @@ const Client = {
   getOverviewMapProperties,
   getNearbyProperties,
   getCurrentOwnerProfile,
+  searchOwnersByArea,
   getIndicatorHistory,
   // Contact data
   searchEntities,

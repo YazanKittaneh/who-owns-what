@@ -28,6 +28,8 @@ export interface AddressSearchProps {
   onFormSubmit: (searchAddress: SearchAddress, error: any) => void;
   labelText: string | JSX.Element;
   labelClass: string;
+  showSubmitButton?: boolean;
+  submitButtonText?: string | JSX.Element;
 }
 
 type State = {
@@ -97,36 +99,49 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
     }
   }
 
+  clearPendingSearch() {
+    if (this.pendingSearch) {
+      window.clearTimeout(this.pendingSearch);
+      this.pendingSearch = undefined;
+    }
+    if (this.activeSearch) {
+      this.activeSearch.abort();
+      this.activeSearch = undefined;
+    }
+  }
+
+  async loadSearchResults(query: string): Promise<SearchAddress[]> {
+    this.activeSearch = new AbortController();
+    try {
+      const results = await fetchSearchResults(query, this.activeSearch.signal);
+      if (this.isUnmounted) {
+        return [];
+      }
+      const limitedResults = results.slice(0, SEARCH_RESULTS_LIMIT);
+      this.setState({
+        isLoading: false,
+        results: limitedResults,
+      });
+      return limitedResults;
+    } finally {
+      this.activeSearch = undefined;
+    }
+  }
+
   handleInputValueChange(value: string) {
     const normalizedValue = value.trim();
     if (!normalizedValue) {
-      if (this.activeSearch) {
-        this.activeSearch.abort();
-        this.activeSearch = undefined;
-      }
+      this.clearPendingSearch();
       this.setState({ isLoading: false, results: [] });
       return;
     }
 
-    if (this.pendingSearch) {
-      window.clearTimeout(this.pendingSearch);
-    }
-    if (this.activeSearch) {
-      this.activeSearch.abort();
-    }
+    this.clearPendingSearch();
 
     this.setState({ isLoading: true });
     this.pendingSearch = window.setTimeout(async () => {
-      this.activeSearch = new AbortController();
       try {
-        const results = await fetchSearchResults(normalizedValue, this.activeSearch.signal);
-        if (this.isUnmounted) {
-          return;
-        }
-        this.setState({
-          isLoading: false,
-          results: results.slice(0, SEARCH_RESULTS_LIMIT),
-        });
+        await this.loadSearchResults(normalizedValue);
       } catch (e) {
         if (e instanceof DOMException && e.name === "AbortError") {
           return;
@@ -136,8 +151,6 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
         }
         this.setState({ isLoading: false, results: [] });
         this.props.onFormSubmit(makeEmptySearchAddress(), e);
-      } finally {
-        this.activeSearch = undefined;
       }
     }, SEARCH_DEBOUNCE_MS);
   }
@@ -186,6 +199,50 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
     }
   }
 
+  async handleExplicitSubmit(
+    ds: ControllerStateAndHelpers<SearchAddress>,
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    const inputValue = (ds.inputValue || "").trim();
+    if (!inputValue) {
+      return;
+    }
+
+    if (ds.selectedItem && searchAddressToString(ds.selectedItem) === inputValue) {
+      this.props.onFormSubmit(ds.selectedItem, null);
+      return;
+    }
+
+    let results = this.state.results;
+    if (!results.length) {
+      this.clearPendingSearch();
+      this.setState({ isLoading: true });
+      try {
+        results = await this.loadSearchResults(inputValue);
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") {
+          return;
+        }
+        if (!this.isUnmounted) {
+          this.setState({ isLoading: false, results: [] });
+        }
+        this.props.onFormSubmit(makeEmptySearchAddress(), e);
+        return;
+      }
+    }
+
+    if (!results.length) {
+      this.props.onFormSubmit(makeEmptySearchAddress(), new Error("No matching address found."));
+      return;
+    }
+
+    const index = ds.highlightedIndex === null ? 0 : ds.highlightedIndex;
+    const boundedIndex = Math.max(0, Math.min(index, results.length - 1));
+    ds.selectItem(results[boundedIndex]);
+  }
+
   render() {
     return (
       <GeoDownshift
@@ -224,42 +281,52 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
 
           return (
             <div className="AddressSearch">
-              <div className="form-group col-xs-12">
-                <div className="geosuggest">
-                  <div className="geosuggest__input-wrapper">
-                    <label className={this.props.labelClass} {...downshift.getLabelProps()}>
-                      {this.props.labelText}
-                    </label>
-                    <input
-                      autoFocus
-                      placeholder="Enter a Chicago address"
-                      className="geosuggest__input form-input"
-                      {...downshift.getInputProps(inputOptions)}
-                    />
-                  </div>
-                  <div className="geosuggest__suggests-wrapper">
-                    <ul className={suggestsClasses.join(" ")} {...downshift.getMenuProps()}>
-                      {this.state.results.map((item, index) => {
-                        const classes = ["geosuggest__item"];
-                        if (downshift.highlightedIndex === index) {
-                          classes.push("geosuggest__item--active");
-                        }
-                        const label = searchAddressToString(item);
-                        const props = downshift.getItemProps({
-                          key: `${item.pin}-${label}`,
-                          index,
-                          item,
-                        });
-                        return (
-                          <li className={classes.join(" ")} {...props}>
-                            <span>{label}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
+              <form
+                className="AddressSearch__form"
+                onSubmit={(event) => this.handleExplicitSubmit(downshift, event)}
+              >
+                <div className="form-group col-xs-12 AddressSearch__inputGroup">
+                  <div className="geosuggest">
+                    <div className="geosuggest__input-wrapper">
+                      <label className={this.props.labelClass} {...downshift.getLabelProps()}>
+                        {this.props.labelText}
+                      </label>
+                      <input
+                        autoFocus
+                        placeholder="Enter a Chicago address"
+                        className="geosuggest__input form-input"
+                        {...downshift.getInputProps(inputOptions)}
+                      />
+                    </div>
+                    <div className="geosuggest__suggests-wrapper">
+                      <ul className={suggestsClasses.join(" ")} {...downshift.getMenuProps()}>
+                        {this.state.results.map((item, index) => {
+                          const classes = ["geosuggest__item"];
+                          if (downshift.highlightedIndex === index) {
+                            classes.push("geosuggest__item--active");
+                          }
+                          const label = searchAddressToString(item);
+                          const props = downshift.getItemProps({
+                            key: `${item.pin}-${label}`,
+                            index,
+                            item,
+                          });
+                          return (
+                            <li className={classes.join(" ")} {...props}>
+                              <span>{label}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
                   </div>
                 </div>
-              </div>
+                {this.props.showSubmitButton && (
+                  <button type="submit" className="btn btn-primary AddressSearch__submitButton">
+                    {this.props.submitButtonText || "Search"}
+                  </button>
+                )}
+              </form>
             </div>
           );
         }}

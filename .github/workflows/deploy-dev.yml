@@ -17,6 +17,7 @@ on:
       - 'Dockerfile.prod'
       - 'client/Dockerfile.prod'
       - 'docker-compose.prod.yml'
+      - '.dockerignore'
       - '.github/workflows/deploy-dev.yml'
       - '.github/workflows/ci.yml'
   workflow_dispatch:
@@ -31,6 +32,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
 
       - name: Deploy dev stack
         env:
@@ -42,6 +45,11 @@ jobs:
           set -euo pipefail
 
           compose=(docker compose --project-name "$COMPOSE_PROJECT_NAME" --env-file .env -f docker-compose.prod.yml --profile with-cloudflare)
+
+          frontend_only=false
+          backend_only=false
+          deploy_api=false
+          deploy_frontend=false
 
           if [ ! -f "$ENV_FILE_PATH" ]; then
             echo "❌ Missing $ENV_FILE_PATH on runner"
@@ -56,8 +64,63 @@ jobs:
             exit 1
           fi
 
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            deploy_api=true
+            deploy_frontend=true
+          else
+            before_sha="${{ github.event.before }}"
+            if [ -z "$before_sha" ] || [ "$before_sha" = "0000000000000000000000000000000000000000" ]; then
+              changed_files=$(git diff --name-only HEAD^ HEAD)
+            else
+              changed_files=$(git diff --name-only "$before_sha" "$GITHUB_SHA")
+            fi
+
+            echo "=== Changed files ==="
+            printf '%s\n' "$changed_files"
+
+            while IFS= read -r file; do
+              [ -n "$file" ] || continue
+              case "$file" in
+                client/*|client/Dockerfile.prod)
+                  deploy_frontend=true
+                  ;;
+                wow/*|project/*|jfauthprovider/*|tests/*|requirements*.txt|Dockerfile.prod)
+                  deploy_api=true
+                  ;;
+                docker-compose.prod.yml|.github/workflows/deploy-dev.yml|.github/workflows/ci.yml|.dockerignore)
+                  deploy_api=true
+                  deploy_frontend=true
+                  ;;
+              esac
+            done <<< "$changed_files"
+          fi
+
+          if [ "$deploy_api" = false ] && [ "$deploy_frontend" = false ]; then
+            echo "No deployable dev-stack files changed. Exiting."
+            exit 0
+          fi
+
+          if [ "$deploy_frontend" = true ] && [ "$deploy_api" = false ]; then
+            frontend_only=true
+          fi
+
+          if [ "$deploy_api" = true ] && [ "$deploy_frontend" = false ]; then
+            backend_only=true
+          fi
+
           echo "=== Deploying dev stack ==="
-          "${compose[@]}" up -d --build api frontend cloudflared
+          if [ "$frontend_only" = true ]; then
+            echo "Deploy mode: frontend only"
+            "${compose[@]}" build frontend
+            "${compose[@]}" up -d --no-deps frontend
+          elif [ "$backend_only" = true ]; then
+            echo "Deploy mode: api only"
+            "${compose[@]}" build api
+            "${compose[@]}" up -d --no-deps api
+          else
+            echo "Deploy mode: full stack"
+            "${compose[@]}" up -d --build api frontend cloudflared
+          fi
 
           api_container_id=$("${compose[@]}" ps -q api)
           frontend_container_id=$("${compose[@]}" ps -q frontend)
@@ -70,20 +133,22 @@ jobs:
 
           docker image prune -f
 
-          echo "Waiting for local API health check..."
-          for attempt in {1..18}; do
-            if docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
-              echo "✅ Local API health check passed"
-              break
-            fi
-            echo "Local API health not ready yet (attempt ${attempt}/18)."
-            sleep 10
-          done
+          if [ "$deploy_api" = true ] || [ "$deploy_frontend" = true ]; then
+            echo "Waiting for local API health check..."
+            for attempt in {1..18}; do
+              if docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
+                echo "✅ Local API health check passed"
+                break
+              fi
+              echo "Local API health not ready yet (attempt ${attempt}/18)."
+              sleep 10
+            done
 
-          if ! docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
-            echo "❌ Local API health check failed"
-            "${compose[@]}" logs --tail=100 api
-            exit 1
+            if ! docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
+              echo "❌ Local API health check failed"
+              "${compose[@]}" logs --tail=100 api
+              exit 1
+            fi
           fi
 
           local_html=$(mktemp)
@@ -94,62 +159,70 @@ jobs:
             python3 -c 'import pathlib, re, sys; html = pathlib.Path(sys.argv[1]).read_text(errors="ignore"); patterns = [r"/static/js/main\.[a-f0-9]+\.chunk\.js", r"/static/css/main\.[a-f0-9]+\.chunk\.css"]; [print((re.search(pattern, html).group(0) if re.search(pattern, html) else "")) for pattern in patterns]' "$1"
           }
 
-          echo "Waiting for local frontend shell..."
-          for attempt in {1..18}; do
-            if docker exec "$frontend_container_id" wget -qO- http://127.0.0.1/ > "$local_html"; then
-              mapfile -t local_assets < <(extract_assets "$local_html")
-              local_js=${local_assets[0]:-}
-              local_css=${local_assets[1]:-}
-              if [ -n "$local_js" ] && [ -n "$local_css" ]; then
-                echo "Local frontend assets: $local_js | $local_css"
+          if [ "$deploy_frontend" = true ]; then
+            echo "Waiting for local frontend shell..."
+            for attempt in {1..18}; do
+              if docker exec "$frontend_container_id" wget -qO- http://127.0.0.1/ > "$local_html"; then
+                mapfile -t local_assets < <(extract_assets "$local_html")
+                local_js=${local_assets[0]:-}
+                local_css=${local_assets[1]:-}
+                if [ -n "$local_js" ] && [ -n "$local_css" ]; then
+                  echo "Local frontend assets: $local_js | $local_css"
+                  break
+                fi
+              fi
+              echo "Local frontend shell not ready yet (attempt ${attempt}/18)."
+              sleep 5
+            done
+
+            if [ -z "${local_js:-}" ] || [ -z "${local_css:-}" ]; then
+              echo "❌ Could not determine local frontend asset hashes"
+              "${compose[@]}" logs --tail=100 frontend
+              exit 1
+            fi
+          fi
+
+          if [ "$deploy_api" = true ] || [ "$deploy_frontend" = true ]; then
+            echo "Waiting for public API health on $PUBLIC_API_HEALTH_URL ..."
+            for attempt in {1..18}; do
+              if curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
+                echo "✅ Public API health check passed"
                 break
               fi
-            fi
-            echo "Local frontend shell not ready yet (attempt ${attempt}/18)."
-            sleep 5
-          done
+              echo "Public API not ready yet (attempt ${attempt}/18)."
+              sleep 10
+            done
 
-          if [ -z "${local_js:-}" ] || [ -z "${local_css:-}" ]; then
-            echo "❌ Could not determine local frontend asset hashes"
-            "${compose[@]}" logs --tail=100 frontend
-            exit 1
+            if ! curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
+              echo "❌ Public API health check failed"
+              exit 1
+            fi
           fi
 
-          echo "Waiting for public API health on $PUBLIC_API_HEALTH_URL ..."
-          for attempt in {1..18}; do
-            if curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
-              echo "✅ Public API health check passed"
-              break
-            fi
-            echo "Public API not ready yet (attempt ${attempt}/18)."
-            sleep 10
-          done
-
-          if ! curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
-            echo "❌ Public API health check failed"
-            exit 1
-          fi
-
-          echo "Waiting for $PUBLIC_FRONTEND_URL to serve the rebuilt frontend assets..."
-          for attempt in {1..24}; do
-            if curl -fsSL -A "Mozilla/5.0" "$PUBLIC_FRONTEND_URL/" > "$public_html"; then
-              mapfile -t public_assets < <(extract_assets "$public_html")
-              public_js=${public_assets[0]:-}
-              public_css=${public_assets[1]:-}
-              if [ "$public_js" = "$local_js" ] && [ "$public_css" = "$local_css" ]; then
-                echo "✅ Dev frontend is serving the rebuilt assets"
-                echo "Public assets: $public_js | $public_css"
-                exit 0
+          if [ "$deploy_frontend" = true ]; then
+            echo "Waiting for $PUBLIC_FRONTEND_URL to serve the rebuilt frontend assets..."
+            for attempt in {1..24}; do
+              if curl -fsSL -A "Mozilla/5.0" "$PUBLIC_FRONTEND_URL/" > "$public_html"; then
+                mapfile -t public_assets < <(extract_assets "$public_html")
+                public_js=${public_assets[0]:-}
+                public_css=${public_assets[1]:-}
+                if [ "$public_js" = "$local_js" ] && [ "$public_css" = "$local_css" ]; then
+                  echo "✅ Dev frontend is serving the rebuilt assets"
+                  echo "Public assets: $public_js | $public_css"
+                  exit 0
+                fi
+                echo "Public assets do not match yet: ${public_js:-missing} | ${public_css:-missing}"
+              else
+                echo "Public frontend request failed (attempt ${attempt}/24)."
               fi
-              echo "Public assets do not match yet: ${public_js:-missing} | ${public_css:-missing}"
-            else
-              echo "Public frontend request failed (attempt ${attempt}/24)."
-            fi
-            sleep 10
-          done
+              sleep 10
+            done
 
-          echo "❌ Dev frontend never served the rebuilt assets"
-          echo "Expected local assets: $local_js | $local_css"
-          echo "Last public assets: ${public_js:-missing} | ${public_css:-missing}"
-          "${compose[@]}" logs --tail=100 frontend cloudflared
-          exit 1
+            echo "❌ Dev frontend never served the rebuilt assets"
+            echo "Expected local assets: $local_js | $local_css"
+            echo "Last public assets: ${public_js:-missing} | ${public_css:-missing}"
+            "${compose[@]}" logs --tail=100 frontend cloudflared
+            exit 1
+          fi
+
+          echo "✅ Dev API deploy completed"

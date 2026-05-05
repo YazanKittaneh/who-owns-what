@@ -13,6 +13,7 @@ urlpatterns = [
     path("address/overview-map", views.address_overview_map, name="address_overview_map"),
     path("address/nearby", views.address_nearby, name="address_nearby"),
     path("owner/current", views.owner_current, name="owner_current"),
+    path("owner/search-by-area", views.owner_search_by_area, name="owner_search_by_area"),
     path("address/aggregate", views.address_aggregate, name="address_aggregate"),
     path("address/buildinginfo", views.address_buildinginfo, name="address_buildinginfo"),
     path(

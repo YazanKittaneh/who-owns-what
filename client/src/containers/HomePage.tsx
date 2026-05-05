@@ -9,11 +9,12 @@ import Page from "../components/Page";
 import {
   createAddressPageRoutes,
   createRouteForAddressPage,
+  createRouteForFindOwnersPage,
   removeIndicatorSuffix,
 } from "../routes";
 import { withMachineProps } from "state-machine";
 import { parseLocaleFromPath } from "i18n";
-import { useHistory, useLocation } from "react-router-dom";
+import { Link, useHistory, useLocation } from "react-router-dom";
 import { logAmplitudeEvent } from "components/Amplitude";
 import APIClient from "components/APIClient";
 import OverviewMap, { OverviewBounds } from "components/OverviewMap";
@@ -136,6 +137,11 @@ const HomePage: React.FC<HomePageProps> = () => {
                   Pan and zoom to load parcels, click any parcel to inspect it, and highlight its
                   portfolio directly on the map.
                 </Trans>
+              </p>
+              <p className="HomePage__secondaryAction">
+                <Link to={createRouteForFindOwnersPage(locale, false)}>
+                  <Trans>Need a prospecting workflow? Find nearby owners by building type.</Trans>
+                </Link>
               </p>
             </div>
             <AddressSearch
