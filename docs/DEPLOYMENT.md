@@ -153,7 +153,8 @@ Push to `develop`, `main`, or `master` and GitHub Actions will:
 1. Run `.github/workflows/ci.yml`
 2. Deploy `develop` to `dev` via `.github/workflows/deploy-dev.yml`
 3. Deploy `main`/`master` to `prod` via `.github/workflows/deploy-prod.yml`
-4. Optionally publish the separate Cloudflare Worker bundle via `.github/workflows/deploy-cloudflare.yml` when run manually
+4. Run `.github/workflows/integration-sql.yml` manually when SQL/data-model changes need deeper verification; it also runs nightly
+5. Optionally publish the separate Cloudflare Worker bundle via `.github/workflows/deploy-cloudflare.yml` when run manually
 
 ```bash
 git add .
@@ -275,8 +276,15 @@ Important:
 
 - `develop` deploys the `dev` tunnel-backed stack.
 - `main` and `master` deploy the `prod` tunnel-backed stack.
+- Fast branch CI intentionally excludes `tests/test_sql.py`; the SQL suite lives in `.github/workflows/integration-sql.yml`.
 - The Worker deploy publishes `who-owns-what.yazan-4a5.workers.dev`, which is a separate path.
 - `docker-compose.prod.yml` no longer hardcodes `container_name`, so multiple Compose projects can run side by side on the same host.
+
+## Recommended Merge Strategy
+
+- Use feature branches and PRs for workflow/infrastructure changes.
+- Prefer squash merge so `develop` and `master` keep a cleaner history.
+- Avoid force-pushing shared branches for cosmetic history cleanup.
 
 ### Manual Update
 

@@ -20,6 +20,8 @@ wow_post_sql:
   # table is populated via /portfoliograph python functions.
   - create_indicators_table.sql
   - create_indicatorhistory_table.sql
+  - create_tax_sale_summary.sql
+  - create_recorder_summary.sql
   - search_function_pin.sql
   - agg_function.sql
 extra_nycdb_test_data:

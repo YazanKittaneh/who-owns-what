@@ -1,6 +1,7 @@
 name: Deploy Dev
 
-# Pushes to develop with deploy-relevant changes auto-deploy the dev tunnel-backed stack.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 on:
   push:

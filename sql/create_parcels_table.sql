@@ -43,8 +43,8 @@ parcels_with_owner AS (
 )
 SELECT
     p.pin,
-    substring(p.prop_address_full from '^(\\d+[A-Za-z]?)') AS housenumber,
-    nullif(regexp_replace(p.prop_address_full, '^\\s*\\d+[A-Za-z]?\\s+', ''), '') AS streetname,
+    substring(p.prop_address_full from '^([0-9]+[A-Za-z]?)') AS housenumber,
+    nullif(regexp_replace(p.prop_address_full, '^\s*[0-9]+[A-Za-z]?\s+', ''), '') AS streetname,
     p.prop_address_full AS address,
     p.prop_address_city_name AS city,
     p.prop_address_state AS state,

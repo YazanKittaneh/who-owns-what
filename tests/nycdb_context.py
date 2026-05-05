@@ -3,6 +3,63 @@ from pathlib import Path
 import csv
 import tempfile
 
+EMPTY_TAX_SALE_SUMMARY_SQL = """
+CREATE TABLE IF NOT EXISTS wow_tax_sale_summary (
+    pin text PRIMARY KEY,
+    annual_tax_sale_count bigint,
+    scavenger_tax_sale_count bigint,
+    tax_sale_event_count bigint,
+    latest_tax_sale_year integer,
+    latest_tax_sale_buyer_name text,
+    latest_tax_sale_sold_at_sale boolean,
+    total_tax_sale_amount_paid numeric
+);
+"""
+
+EMPTY_RECORDER_SUMMARY_SQL = """
+CREATE TABLE IF NOT EXISTS wow_recorder_summary (
+    pin text PRIMARY KEY,
+    recorder_doc_count bigint,
+    mortgage_doc_count bigint,
+    quitclaim_doc_count bigint,
+    foreclosure_doc_count bigint,
+    latest_recorder_doc_date date,
+    latest_mortgage_date date,
+    latest_mortgage_amount numeric,
+    latest_quitclaim_date date,
+    latest_quitclaim_amount numeric
+);
+"""
+
+EMPTY_TAX_SALE_SOURCE_TABLES_SQL = """
+CREATE TABLE IF NOT EXISTS chi_tax_sale_annual (
+    pin text,
+    tax_sale_year text,
+    sold_at_sale text,
+    buyer_name text,
+    total_amount_paid numeric
+);
+
+CREATE TABLE IF NOT EXISTS chi_tax_sale_scavenger (
+    pin text,
+    tax_sale_year text,
+    sold_at_sale text,
+    buyer_name text,
+    total_amount_paid numeric
+);
+"""
+
+EMPTY_RECORDER_SOURCE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS chi_recorder_documents (
+    pin text,
+    document_type text,
+    recorded_date text,
+    execution_date text,
+    consideration_amount numeric,
+    document_number text
+);
+"""
+
 import dbtool
 from .generate_factory_from_csv import unmunge_colname
 
@@ -55,7 +112,25 @@ class ChiDbContext:
         Load all the Chicago datasets required for Who Owns What,
         and then run all our custom SQL.
         """
+        self.ensure_supplemental_source_tables()
         self.builder.build(force_refresh=True)
+        self.ensure_summary_tables()
+
+    def ensure_supplemental_source_tables(self) -> None:
+        """Create empty supplemental source tables so summary SQL can run in isolated tests."""
+
+        with TEST_DB.connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(EMPTY_TAX_SALE_SOURCE_TABLES_SQL)
+                cursor.execute(EMPTY_RECORDER_SOURCE_TABLE_SQL)
+
+    def ensure_summary_tables(self) -> None:
+        """Create empty summary tables required by runtime SQL when tests omit those source feeds."""
+
+        with TEST_DB.connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(EMPTY_TAX_SALE_SUMMARY_SQL)
+                cursor.execute(EMPTY_RECORDER_SUMMARY_SQL)
 
 
 def nycdb_ctx(get_cursor):
