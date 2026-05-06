@@ -23,6 +23,8 @@ urlpatterns = [
     ),
     path("address/export", views.address_export, name="address_export"),
     # Contact data endpoints
+    path("find-owners/v2/viewport", views.find_owners_v2_viewport, name="find_owners_v2_viewport"),
+    path("find-owners/v2/search", views.find_owners_v2_search, name="find_owners_v2_search"),
     path("entity/search", views.entity_search, name="entity_search"),
     path("entity/contacts", views.entity_contacts, name="entity_contacts"),
     path("parcel/entities", views.parcel_entities, name="parcel_entities"),

@@ -21,6 +21,8 @@ from .forms import (
     CurrentOwnerForm,
     EntitySearchForm,
     OwnerSearchByAreaForm,
+    FindOwnersV2ViewportForm,
+    FindOwnersV2PolygonSearchForm,
 )
 
 
@@ -498,6 +500,70 @@ def owner_search_by_area(request):
             "filters": {
                 "pin": args["pin"],
                 "radius_m": args["radius_m"],
+                "building_types": args.get("building_types") or [],
+                "min_parcels": args["min_parcels"],
+                "max_parcels": args.get("max_parcels"),
+                "limit": args["limit"],
+            },
+            "result": cleaned_rows,
+        }
+    )
+
+
+@api
+def find_owners_v2_viewport(request):
+    args = get_validated_form_data(FindOwnersV2ViewportForm, request.GET)
+    try:
+        result = exec_db_query(SQL_DIR / "find_owners_v2_viewport.sql", args)
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning(
+            "Using empty Find Owners V2 viewport because WOW parcel tables are missing."
+        )
+        result = []
+
+    rows = list(result)
+    total_count = int_or_none(rows[0].get("total_count")) if rows else 0
+    limit = args.get("limit") or 800
+    cleaned_rows = []
+    for row in rows:
+        cleaned_row = clean_map_addr_dict(row)
+        cleaned_row["geojson"] = row.get("geojson")
+        cleaned_rows.append(cleaned_row)
+
+    return JsonResponse(
+        {
+            "result": cleaned_rows,
+            "total_count": total_count,
+            "truncated": total_count > limit,
+        }
+    )
+
+
+@api
+def find_owners_v2_search(request):
+    args = get_validated_form_data(FindOwnersV2PolygonSearchForm, request.GET)
+    query_args = {
+        **args,
+        "apply_building_type_filter": bool(args.get("building_types")),
+    }
+
+    try:
+        result_rows = list(exec_db_query(SQL_DIR / "find_owners_v2_polygon_search.sql", query_args))
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning("Using empty Find Owners V2 polygon search because WOW parcel tables are missing.")
+        result_rows = []
+
+    cleaned_rows = list(map(clean_owner_search_result_dict, result_rows))
+    return JsonResponse(
+        {
+            "filters": {
+                "geojson": args["geojson"],
                 "building_types": args.get("building_types") or [],
                 "min_parcels": args["min_parcels"],
                 "max_parcels": args.get("max_parcels"),
