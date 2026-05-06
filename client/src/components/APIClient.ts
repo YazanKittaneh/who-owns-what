@@ -6,6 +6,8 @@ import {
   NearbyPropertiesResults,
   OwnerProfileResults,
   OwnerAreaSearchResults,
+  FindOwnersV2ViewportResults,
+  FindOwnersV2SearchResults,
 } from "./APIDataTypes";
 import { SearchAddress } from "./AddressSearch";
 import { NetworkError, HTTPError } from "error-reporting";
@@ -172,6 +174,53 @@ function searchOwnersByArea(args: {
   }
 
   return getApiJson(`/api/owner/search-by-area?${params.toString()}`);
+}
+
+function findOwnersV2Viewport(bounds: {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+  zoom?: number;
+  limit?: number;
+}): Promise<FindOwnersV2ViewportResults> {
+  const params = new URLSearchParams({
+    north: String(bounds.north),
+    south: String(bounds.south),
+    east: String(bounds.east),
+    west: String(bounds.west),
+  });
+  if (bounds.zoom) {
+    params.set("zoom", String(bounds.zoom));
+  }
+  if (bounds.limit) {
+    params.set("limit", String(bounds.limit));
+  }
+  return getApiJson(`/api/find-owners/v2/viewport?${params.toString()}`);
+}
+
+function findOwnersV2Search(args: {
+  geojson: string;
+  buildingTypes?: string[];
+  minParcels?: number;
+  maxParcels?: number | null;
+  limit?: number;
+}): Promise<FindOwnersV2SearchResults> {
+  const params = new URLSearchParams({
+    geojson: args.geojson,
+    min_parcels: String(args.minParcels ?? 1),
+    limit: String(args.limit ?? 100),
+  });
+
+  if (args.maxParcels != null) {
+    params.set("max_parcels", String(args.maxParcels));
+  }
+
+  if (args.buildingTypes && args.buildingTypes.length > 0) {
+    params.set("building_types", args.buildingTypes.join(","));
+  }
+
+  return getApiJson(`/api/find-owners/v2/search?${params.toString()}`);
 }
 
 const indicatorColumns: Record<IndicatorsDatasetId, string[]> = {
@@ -372,6 +421,8 @@ const Client = {
   getNearbyProperties,
   getCurrentOwnerProfile,
   searchOwnersByArea,
+  findOwnersV2Viewport,
+  findOwnersV2Search,
   getIndicatorHistory,
   // Contact data
   searchEntities,

@@ -136,6 +136,7 @@ export const createCoreRoutePaths = (prefix?: string) => {
     addressPage: createAddressPageRoutes(`${pathPrefix}/pin/:pin(\\d{14})`),
     ownerPage: `${pathPrefix}/owner/:ownerType(id|name)/:ownerKey`,
     findOwners: `${pathPrefix}/find-owners`,
+    findOwnersV2: `${pathPrefix}/find-owners-v2`,
     savedLists: `${pathPrefix}/saved-lists`,
     account: createAccountRoutePaths(`${pathPrefix}/account`),
     about: `${pathPrefix}/about`,

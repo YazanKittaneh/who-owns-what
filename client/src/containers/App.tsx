@@ -29,6 +29,7 @@ import AddressPage from "./AddressPage";
 import PropertyPage from "./PropertyPage";
 import OwnerPage from "./OwnerPage";
 import FindOwnersPage from "./FindOwnersPage";
+import FindOwnersV2Page from "./FindOwnersV2Page";
 import AboutPage from "./AboutPage";
 import HowToUsePage from "./HowToUsePage";
 import MethodologyPage from "./Methodology";
@@ -146,6 +147,12 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
       <Route path={paths.legacy.ownerPage} component={OwnerPage} exact />
       <Route path={paths.findOwners} component={FindOwnersPage} exact />
       <Route path={paths.legacy.findOwners} component={FindOwnersPage} exact />
+      {process.env.REACT_APP_ENABLE_FIND_OWNERS_V2 === "1" && (
+        <>
+          <Route path={paths.findOwnersV2} component={FindOwnersV2Page} exact />
+          <Route path={paths.legacy.findOwnersV2} component={FindOwnersV2Page} exact />
+        </>
+      )}
       <Route path={paths.savedLists} component={SavedListsPage} exact />
       <Route path={paths.legacy.savedLists} component={SavedListsPage} exact />
       <Route

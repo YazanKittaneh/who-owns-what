@@ -294,3 +294,57 @@ export type IndicatorsHistoryResults = {
   schema?: "nyc" | "standard";
   result: IndicatorsHistoryRecord[];
 };
+
+export type FindOwnersV2ViewportProperty = {
+  pin: string;
+  address?: string | null;
+  housenumber?: string | null;
+  streetname?: string | null;
+  owner_id?: string | null;
+  owner_name?: string | null;
+  land_class?: string | null;
+  lat: number | null;
+  lng: number | null;
+  geojson?: any;
+};
+
+export type FindOwnersV2ViewportResults = {
+  result: FindOwnersV2ViewportProperty[];
+  total_count: number;
+  truncated: boolean;
+};
+
+export type FindOwnersV2SearchParcel = {
+  pin: string;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  land_class?: string | null;
+  building_type?: string | null;
+  building_type_label?: string | null;
+};
+
+export type FindOwnersV2SearchOwner = {
+  owner_key: string;
+  owner_id?: string | null;
+  owner_name?: string | null;
+  mailing_address?: string | null;
+  mailing_city?: string | null;
+  mailing_state?: string | null;
+  mailing_zip?: string | null;
+  parcel_count: number | null;
+  nearest_distance_m?: number | null;
+  building_type_counts: OwnerAreaSearchBuildingTypeCount[];
+  parcels: FindOwnersV2SearchParcel[];
+};
+
+export type FindOwnersV2SearchResults = {
+  filters: {
+    geojson: string;
+    building_types: string[];
+    min_parcels: number;
+    max_parcels?: number | null;
+    limit: number;
+  };
+  result: FindOwnersV2SearchOwner[];
+};
