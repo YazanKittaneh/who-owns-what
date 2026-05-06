@@ -20,7 +20,12 @@ class TestAddressSearchSql:
             cur.execute((SQL_DIR / "address_search.sql").read_text(), {"q": query})
             return cur.fetchall()
 
-    def load_search_data(self, nycdb_ctx, include_state_address=True):
+    def search_fallback(self, db, query):
+        with db.cursor() as cur:
+            cur.execute((SQL_DIR / "address_search_fallback.sql").read_text(), {"q": query})
+            return cur.fetchall()
+
+    def load_search_data(self, nycdb_ctx, include_state_address=True, build_wow_parcels=True):
         parcels = [
             ChiParcels(
                 pin=WABASH_2460_PIN,
@@ -126,7 +131,8 @@ class TestAddressSearchSql:
         nycdb_ctx.write_csv("chi_owners.csv", owners)
         nycdb_ctx.builder.ensure_dataset("chi_parcels", force_refresh=True)
         nycdb_ctx.builder.ensure_dataset("chi_owners", force_refresh=True)
-        nycdb_ctx.builder.run_sql_file(ROOT_SQL_DIR / "create_parcels_table.sql")
+        if build_wow_parcels:
+            nycdb_ctx.builder.run_sql_file(ROOT_SQL_DIR / "create_parcels_table.sql")
 
     def test_search_matches_street_substrings(self, db, nycdb_ctx):
         self.load_search_data(nycdb_ctx)
@@ -160,6 +166,17 @@ class TestAddressSearchSql:
             "2462 N WABASH AVE",
             "2464 N WABASH AVE",
             "3000 S WABASH AVE",
+        ]
+
+    def test_fallback_search_works_without_wow_parcels(self, db, nycdb_ctx):
+        self.load_search_data(nycdb_ctx, build_wow_parcels=False)
+
+        results = self.search_fallback(db, "2462 n")
+
+        assert [row["address"] for row in results[:3]] == [
+            "2462 N WABASH AVE",
+            "2460 N WABASH AVE",
+            "2464 N WABASH AVE",
         ]
 
         results = self.search(db, "north wabash")

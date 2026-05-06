@@ -6,6 +6,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: end;
 }
 
 @media screen and (max-width: 480px) {
@@ -24,13 +25,29 @@
   margin-top: 32px;
 }
 
+.AddressSearch .AddressSearch__inputGroup {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.AddressSearch .AddressSearch__submitButton {
+  margin-top: 1.5rem;
+  white-space: nowrap;
+}
+
 .AddressSearch {
   .geosuggest {
+    position: relative;
     margin-bottom: 15px;
     // max-width: 600px;
     // margin: 0 auto;
 
     .geosuggest__suggests-wrapper {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 20;
       background-color: #fff;
 
       .geosuggest__suggests {
@@ -42,6 +59,7 @@
 
       ul {
         margin: 0;
+        padding-left: 0;
 
         .geosuggest__item {
           margin-top: 0;
