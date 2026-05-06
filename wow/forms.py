@@ -129,7 +129,7 @@ OWNER_SEARCH_BUILDING_TYPE_CHOICES = [
 
 
 class OwnerSearchByAreaForm(PinForm):
-    radius_m = forms.IntegerField(required=False, min_value=25, max_value=5000, initial=600)
+    radius_m = forms.IntegerField(required=False, min_value=5, max_value=5000, initial=600)
     building_types = CommaSeparatedField(required=False, empty_value=[])
     min_parcels = forms.IntegerField(required=False, min_value=1, max_value=500, initial=1)
     max_parcels = forms.IntegerField(required=False, min_value=1, max_value=500)

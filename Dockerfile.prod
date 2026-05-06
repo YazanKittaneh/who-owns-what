@@ -26,12 +26,11 @@ WORKDIR ${APP_HOME}
 COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Create non-root user before copying app files so we can use COPY --chown
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
-# Create non-root user for security
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser \
-    && chown -R appuser:appgroup ${APP_HOME}
+# Copy application code
+COPY --chown=appuser:appgroup . .
 
 # Switch to non-root user
 USER appuser

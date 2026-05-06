@@ -87,6 +87,7 @@ jobs:
         working-directory: client
         run: yarn build
         env:
+          BUILD_GIT_SHA: ${{ github.sha }}
           NODE_OPTIONS: --openssl-legacy-provider
           TSC_COMPILE_ON_ERROR: 'true'
           REACT_APP_API_BASE_URL: https://wow-api.yazan.io

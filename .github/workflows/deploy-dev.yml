@@ -2,6 +2,7 @@ name: Deploy Dev
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  COMPOSE_BAKE: 'true'
 
 on:
   push:
@@ -17,52 +18,40 @@ on:
       - 'Dockerfile.prod'
       - 'client/Dockerfile.prod'
       - 'docker-compose.prod.yml'
+      - 'scripts/bootstrap_dev_db_from_latest_dump.sh'
       - '.dockerignore'
       - '.github/workflows/deploy-dev.yml'
       - '.github/workflows/ci.yml'
   workflow_dispatch:
 
 jobs:
-  deploy:
-    runs-on: [self-hosted, linux, x64, production]
-    environment: development
+  determine-changes:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-
+    outputs:
+      deploy_api: ${{ steps.detect.outputs.deploy_api }}
+      deploy_frontend: ${{ steps.detect.outputs.deploy_frontend }}
+      frontend_only: ${{ steps.detect.outputs.frontend_only }}
+      backend_only: ${{ steps.detect.outputs.backend_only }}
+      api_image: ${{ steps.meta.outputs.api_image }}
+      api_image_latest: ${{ steps.meta.outputs.api_image_latest }}
+      frontend_image: ${{ steps.meta.outputs.frontend_image }}
+      frontend_image_latest: ${{ steps.meta.outputs.frontend_image_latest }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
-      - name: Deploy dev stack
-        env:
-          COMPOSE_PROJECT_NAME: who-owns-what-dev
-          ENV_FILE_PATH: /home/actions/who-owns-what-dev.env
-          PUBLIC_FRONTEND_URL: https://dev-wow.yazan.io
-          PUBLIC_API_HEALTH_URL: https://dev-wow-api.yazan.io/api/health/
+      - name: Determine changed services
+        id: detect
+        shell: bash
         run: |
           set -euo pipefail
 
-          compose=(docker compose --project-name "$COMPOSE_PROJECT_NAME" --env-file .env -f docker-compose.prod.yml --profile with-cloudflare)
-
-          frontend_only=false
-          backend_only=false
           deploy_api=false
           deploy_frontend=false
-
-          if [ ! -f "$ENV_FILE_PATH" ]; then
-            echo "❌ Missing $ENV_FILE_PATH on runner"
-            exit 1
-          fi
-
-          cp "$ENV_FILE_PATH" .env
-
-          if grep -q '^CLOUDFLARE_TUNNEL_TOKEN=REPLACE_WITH_DEV_TUNNEL_TOKEN$' .env; then
-            echo "❌ Dev tunnel token placeholder is still set in $ENV_FILE_PATH"
-            echo "Create the dev Cloudflare tunnel, replace the token, then rerun this workflow."
-            exit 1
-          fi
 
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             deploy_api=true
@@ -87,7 +76,7 @@ jobs:
                 wow/*|project/*|jfauthprovider/*|tests/*|requirements*.txt|Dockerfile.prod)
                   deploy_api=true
                   ;;
-                docker-compose.prod.yml|.github/workflows/deploy-dev.yml|.github/workflows/ci.yml|.dockerignore)
+                docker-compose.prod.yml|scripts/bootstrap_dev_db_from_latest_dump.sh|.github/workflows/deploy-dev.yml|.github/workflows/ci.yml|.dockerignore)
                   deploy_api=true
                   deploy_frontend=true
                   ;;
@@ -95,31 +84,149 @@ jobs:
             done <<< "$changed_files"
           fi
 
-          if [ "$deploy_api" = false ] && [ "$deploy_frontend" = false ]; then
-            echo "No deployable dev-stack files changed. Exiting."
-            exit 0
-          fi
-
+          frontend_only=false
+          backend_only=false
           if [ "$deploy_frontend" = true ] && [ "$deploy_api" = false ]; then
             frontend_only=true
           fi
-
           if [ "$deploy_api" = true ] && [ "$deploy_frontend" = false ]; then
             backend_only=true
           fi
 
+          echo "deploy_api=$deploy_api" >> "$GITHUB_OUTPUT"
+          echo "deploy_frontend=$deploy_frontend" >> "$GITHUB_OUTPUT"
+          echo "frontend_only=$frontend_only" >> "$GITHUB_OUTPUT"
+          echo "backend_only=$backend_only" >> "$GITHUB_OUTPUT"
+
+      - name: Compute image tags
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner=$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
+          echo "api_image=ghcr.io/$owner/who-owns-what-api:dev-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "api_image_latest=ghcr.io/$owner/who-owns-what-api:dev-latest" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=ghcr.io/$owner/who-owns-what-frontend:dev-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image_latest=ghcr.io/$owner/who-owns-what-frontend:dev-latest" >> "$GITHUB_OUTPUT"
+
+  build-images:
+    needs: determine-changes
+    if: needs.determine-changes.outputs.deploy_api == 'true' || needs.determine-changes.outputs.deploy_frontend == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push API image
+        if: needs.determine-changes.outputs.deploy_api == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.prod
+          push: true
+          tags: |
+            ${{ needs.determine-changes.outputs.api_image }}
+            ${{ needs.determine-changes.outputs.api_image_latest }}
+          cache-from: type=gha,scope=wow-dev-api
+          cache-to: type=gha,mode=max,scope=wow-dev-api
+
+      - name: Build and push frontend image
+        if: needs.determine-changes.outputs.deploy_frontend == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./client/Dockerfile.prod
+          push: true
+          build-args: |
+            REACT_APP_API_BASE_URL=https://dev-wow-api.yazan.io
+            REACT_APP_ROLLBAR_ACCESS_TOKEN=
+            BUILD_GIT_SHA=${{ github.sha }}
+          tags: |
+            ${{ needs.determine-changes.outputs.frontend_image }}
+            ${{ needs.determine-changes.outputs.frontend_image_latest }}
+          cache-from: type=gha,scope=wow-dev-frontend
+          cache-to: type=gha,mode=max,scope=wow-dev-frontend
+
+  deploy:
+    needs: [determine-changes, build-images]
+    if: needs.determine-changes.outputs.deploy_api == 'true' || needs.determine-changes.outputs.deploy_frontend == 'true'
+    runs-on: [self-hosted, linux, x64, production]
+    environment: development
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Deploy dev stack
+        env:
+          COMPOSE_PROJECT_NAME: who-owns-what-dev
+          ENV_FILE_PATH: /home/actions/who-owns-what-dev.env
+          PUBLIC_FRONTEND_URL: https://dev-wow.yazan.io
+          PUBLIC_API_HEALTH_URL: https://dev-wow-api.yazan.io/api/health/
+          API_IMAGE: ${{ needs.determine-changes.outputs.api_image }}
+          FRONTEND_IMAGE: ${{ needs.determine-changes.outputs.frontend_image }}
+          BUILD_GIT_SHA: ${{ github.sha }}
+          DEPLOY_API: ${{ needs.determine-changes.outputs.deploy_api }}
+          DEPLOY_FRONTEND: ${{ needs.determine-changes.outputs.deploy_frontend }}
+          FRONTEND_ONLY: ${{ needs.determine-changes.outputs.frontend_only }}
+          BACKEND_ONLY: ${{ needs.determine-changes.outputs.backend_only }}
+        run: |
+          set -euo pipefail
+
+          compose=(docker compose --project-name "$COMPOSE_PROJECT_NAME" --env-file .env -f docker-compose.prod.yml --profile with-cloudflare)
+
+          if [ ! -f "$ENV_FILE_PATH" ]; then
+            echo "❌ Missing $ENV_FILE_PATH on runner"
+            exit 1
+          fi
+
+          cp "$ENV_FILE_PATH" .env
+
+          if grep -q '^CLOUDFLARE_TUNNEL_TOKEN=REPLACE_WITH_DEV_TUNNEL_TOKEN$' .env; then
+            echo "❌ Dev tunnel token placeholder is still set in $ENV_FILE_PATH"
+            echo "Create the dev Cloudflare tunnel, replace the token, then rerun this workflow."
+            exit 1
+          fi
+
+          COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" ENV_FILE_PATH="$ENV_FILE_PATH" COMPOSE_FILE_PATH="$PWD/docker-compose.prod.yml" ./scripts/bootstrap_dev_db_from_latest_dump.sh
+
           echo "=== Deploying dev stack ==="
-          if [ "$frontend_only" = true ]; then
+          if [ "$FRONTEND_ONLY" = "true" ]; then
             echo "Deploy mode: frontend only"
-            "${compose[@]}" build frontend
-            "${compose[@]}" up -d --no-deps frontend
-          elif [ "$backend_only" = true ]; then
+            "${compose[@]}" pull frontend
+            "${compose[@]}" up -d --no-deps --no-build frontend
+          elif [ "$BACKEND_ONLY" = "true" ]; then
             echo "Deploy mode: api only"
-            "${compose[@]}" build api
-            "${compose[@]}" up -d --no-deps api
+            "${compose[@]}" pull api
+            "${compose[@]}" up -d --no-deps --no-build api
           else
             echo "Deploy mode: full stack"
-            "${compose[@]}" up -d --build api frontend cloudflared
+            "${compose[@]}" pull api frontend
+            "${compose[@]}" up -d --no-build api frontend cloudflared
           fi
 
           api_container_id=$("${compose[@]}" ps -q api)
@@ -133,22 +240,20 @@ jobs:
 
           docker image prune -f
 
-          if [ "$deploy_api" = true ] || [ "$deploy_frontend" = true ]; then
-            echo "Waiting for local API health check..."
-            for attempt in {1..18}; do
-              if docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
-                echo "✅ Local API health check passed"
-                break
-              fi
-              echo "Local API health not ready yet (attempt ${attempt}/18)."
-              sleep 10
-            done
-
-            if ! docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
-              echo "❌ Local API health check failed"
-              "${compose[@]}" logs --tail=100 api
-              exit 1
+          echo "Waiting for local API health check..."
+          for attempt in {1..18}; do
+            if docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
+              echo "✅ Local API health check passed"
+              break
             fi
+            echo "Local API health not ready yet (attempt ${attempt}/18)."
+            sleep 10
+          done
+
+          if ! docker exec "$api_container_id" curl -fsS http://127.0.0.1:8000/api/health/ > /dev/null; then
+            echo "❌ Local API health check failed"
+            "${compose[@]}" logs --tail=100 api
+            exit 1
           fi
 
           local_html=$(mktemp)
@@ -159,7 +264,7 @@ jobs:
             python3 -c 'import pathlib, re, sys; html = pathlib.Path(sys.argv[1]).read_text(errors="ignore"); patterns = [r"/static/js/main\.[a-f0-9]+\.chunk\.js", r"/static/css/main\.[a-f0-9]+\.chunk\.css"]; [print((re.search(pattern, html).group(0) if re.search(pattern, html) else "")) for pattern in patterns]' "$1"
           }
 
-          if [ "$deploy_frontend" = true ]; then
+          if [ "$DEPLOY_FRONTEND" = "true" ]; then
             echo "Waiting for local frontend shell..."
             for attempt in {1..18}; do
               if docker exec "$frontend_container_id" wget -qO- http://127.0.0.1/ > "$local_html"; then
@@ -182,24 +287,22 @@ jobs:
             fi
           fi
 
-          if [ "$deploy_api" = true ] || [ "$deploy_frontend" = true ]; then
-            echo "Waiting for public API health on $PUBLIC_API_HEALTH_URL ..."
-            for attempt in {1..18}; do
-              if curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
-                echo "✅ Public API health check passed"
-                break
-              fi
-              echo "Public API not ready yet (attempt ${attempt}/18)."
-              sleep 10
-            done
-
-            if ! curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
-              echo "❌ Public API health check failed"
-              exit 1
+          echo "Waiting for public API health on $PUBLIC_API_HEALTH_URL ..."
+          for attempt in {1..18}; do
+            if curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
+              echo "✅ Public API health check passed"
+              break
             fi
+            echo "Public API not ready yet (attempt ${attempt}/18)."
+            sleep 10
+          done
+
+          if ! curl -fsSL "$PUBLIC_API_HEALTH_URL" > /dev/null; then
+            echo "❌ Public API health check failed"
+            exit 1
           fi
 
-          if [ "$deploy_frontend" = true ]; then
+          if [ "$DEPLOY_FRONTEND" = "true" ]; then
             echo "Waiting for $PUBLIC_FRONTEND_URL to serve the rebuilt frontend assets..."
             for attempt in {1..24}; do
               if curl -fsSL -A "Mozilla/5.0" "$PUBLIC_FRONTEND_URL/" > "$public_html"; then
@@ -225,4 +328,4 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Dev API deploy completed"
+          echo "✅ Dev deploy completed"

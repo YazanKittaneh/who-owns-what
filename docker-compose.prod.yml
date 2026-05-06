@@ -18,6 +18,7 @@ services:
 
   # Django Backend API
   api:
+    image: ${API_IMAGE:-who-owns-what-api:local}
     build:
       context: .
       dockerfile: Dockerfile.prod
@@ -56,12 +57,14 @@ services:
           memory: 512M
 
   frontend:
+    image: ${FRONTEND_IMAGE:-who-owns-what-frontend:local}
     build:
       context: .
       dockerfile: client/Dockerfile.prod
       args:
         REACT_APP_API_BASE_URL: ${FRONTEND_API_BASE_URL:-https://wow-api.yazan.io}
         REACT_APP_ROLLBAR_ACCESS_TOKEN: ${FRONTEND_ROLLBAR_ACCESS_TOKEN:-}
+        BUILD_GIT_SHA: ${BUILD_GIT_SHA:-unknown}
     restart: unless-stopped
     expose:
       - "80"

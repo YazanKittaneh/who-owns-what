@@ -4,9 +4,11 @@ WORKDIR /app
 
 ARG REACT_APP_API_BASE_URL=https://wow-api.yazan.io
 ARG REACT_APP_ROLLBAR_ACCESS_TOKEN=
+ARG BUILD_GIT_SHA=unknown
 
 ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
 ENV REACT_APP_ROLLBAR_ACCESS_TOKEN=$REACT_APP_ROLLBAR_ACCESS_TOKEN
+ENV BUILD_GIT_SHA=$BUILD_GIT_SHA
 ENV NODE_OPTIONS=--openssl-legacy-provider
 
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*

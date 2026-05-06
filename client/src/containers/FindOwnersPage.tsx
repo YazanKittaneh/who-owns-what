@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useHistory, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Trans } from "@lingui/macro";
 import { CSVDownloader } from "react-papaparse";
 import { Button } from "@justfixnyc/component-library";
@@ -7,8 +7,14 @@ import { Button } from "@justfixnyc/component-library";
 import Page from "components/Page";
 import AddressSearch, { SearchAddress } from "components/AddressSearch";
 import APIClient from "components/APIClient";
-import { OwnerAreaSearchOwner, OwnerAreaSearchResults } from "components/APIDataTypes";
+import {
+  AddressRecord,
+  OwnerAreaSearchOwner,
+  OwnerAreaSearchParcel,
+  OwnerAreaSearchResults,
+} from "components/APIDataTypes";
 import OwnerSearchMap from "components/OwnerSearchMap";
+import ParcelPreviewModal from "components/ParcelPreviewModal";
 import LegalFooter from "components/LegalFooter";
 import {
   createRouteForAddressPage,
@@ -55,7 +61,8 @@ const PORTFOLIO_SIZE_OPTIONS: PortfolioSizeOption[] = [
   { value: "50_plus", label: "50+ parcels", min: 50, max: null },
 ];
 
-const RADIUS_OPTIONS = [300, 600, 1000, 2000];
+const MIN_RADIUS_M = 5;
+const MAX_RADIUS_M = 2000;
 const RESULT_LIMIT = 100;
 
 function formatAddress(address?: string | null, pin?: string) {
@@ -68,9 +75,14 @@ function formatMailing(owner: OwnerAreaSearchOwner) {
     .join(owner.mailing_address ? ", " : " ");
 }
 
+function formatRadiusLabel(radiusM: number) {
+  if (radiusM < 1000) return `${radiusM}m`;
+  const kmValue = radiusM / 1000;
+  return `${Number.isInteger(kmValue) ? kmValue : kmValue.toFixed(1)}km`;
+}
+
 const FindOwnersPage: React.FC = () => {
   const location = useLocation();
-  const history = useHistory();
   const locale = parseLocaleFromPath(location.pathname) || undefined;
   const legacy = isLegacyPath(location.pathname);
 
@@ -83,6 +95,10 @@ const FindOwnersPage: React.FC = () => {
   const [data, setData] = React.useState<OwnerAreaSearchResults | null>(null);
   const [isLoading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [selectedParcel, setSelectedParcel] = React.useState<OwnerAreaSearchParcel | null>(null);
+  const [selectedOwner, setSelectedOwner] = React.useState<OwnerAreaSearchOwner | null>(null);
+  const [selectedParcelDetail, setSelectedParcelDetail] = React.useState<AddressRecord | null>(null);
+  const [isParcelDetailLoading, setParcelDetailLoading] = React.useState(false);
   const [, setSavedVersion] = React.useState(0);
 
   const selectedPortfolioSize =
@@ -144,6 +160,52 @@ const FindOwnersPage: React.FC = () => {
     setBuildingTypes((current) =>
       current.includes(value) ? current.filter((entry) => entry !== value) : current.concat(value)
     );
+  }, []);
+
+  React.useEffect(() => {
+    if (!selectedParcel?.pin) {
+      setSelectedParcelDetail(null);
+      setParcelDetailLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setParcelDetailLoading(true);
+
+    APIClient.searchForAddress({
+      pin: selectedParcel.pin,
+      housenumber: "",
+      streetname: "",
+      city: "",
+      state: "",
+      zip: "",
+    })
+      .then((result) => {
+        if (!cancelled) {
+          setSelectedParcelDetail(result.addrs[0] || null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSelectedParcelDetail(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setParcelDetailLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedParcel?.pin]);
+
+  const handleCloseParcelModal = React.useCallback(() => {
+    setSelectedParcel(null);
+    setSelectedOwner(null);
+    setSelectedParcelDetail(null);
+    setParcelDetailLoading(false);
   }, []);
 
   const ownerExportRows = React.useMemo(
@@ -231,24 +293,30 @@ const FindOwnersPage: React.FC = () => {
             />
           </div>
 
-          <div className="FindOwnersPage__filterGrid">
-            <div className="FindOwnersPage__filterGroup">
-              <span className="FindOwnersPage__filterLabel">
-                <Trans>Radius</Trans>
-              </span>
-              <div className="FindOwnersPage__chipRow">
-                {RADIUS_OPTIONS.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className={option === radiusM ? "active" : ""}
-                    onClick={() => setRadiusM(option)}
-                  >
-                    {option >= 1000 ? `${option / 1000}km` : `${option}m`}
-                  </button>
-                ))}
+            <div className="FindOwnersPage__filterGrid">
+              <div className="FindOwnersPage__filterGroup">
+                <label className="FindOwnersPage__filterLabel" htmlFor="radius-slider">
+                  <Trans>Radius</Trans>
+                </label>
+                <div className="FindOwnersPage__sliderBlock">
+                  <div className="FindOwnersPage__sliderValue">{formatRadiusLabel(radiusM)}</div>
+                  <input
+                    id="radius-slider"
+                    className="FindOwnersPage__slider"
+                    type="range"
+                    min={MIN_RADIUS_M}
+                    max={MAX_RADIUS_M}
+                    step={5}
+                    value={radiusM}
+                    onChange={(event) => setRadiusM(Number(event.target.value))}
+                  />
+                  <div className="FindOwnersPage__sliderScale">
+                    <span>5m</span>
+                    <span>600m</span>
+                    <span>2km</span>
+                  </div>
+                </div>
               </div>
-            </div>
 
             <div className="FindOwnersPage__filterGroup">
               <label className="FindOwnersPage__filterLabel" htmlFor="portfolio-size-select">
@@ -332,9 +400,10 @@ const FindOwnersPage: React.FC = () => {
                   seed={data.seed}
                   owners={data.result}
                   radiusM={radiusM}
-                  onParcelClick={(pin) =>
-                    history.push(createRouteForAddressPage({ pin, locale }, legacy))
-                  }
+                  onParcelClick={(owner, parcel) => {
+                    setSelectedOwner(owner);
+                    setSelectedParcel(parcel);
+                  }}
                 />
               </div>
 
@@ -421,6 +490,18 @@ const FindOwnersPage: React.FC = () => {
             </p>
           </section>
         )}
+
+        <ParcelPreviewModal
+          showModal={Boolean(selectedParcel && selectedOwner)}
+          parcel={selectedParcel}
+          owner={selectedOwner}
+          detailAddr={selectedParcelDetail}
+          isLoading={isParcelDetailLoading}
+          propertyHref={
+            selectedParcel ? createRouteForAddressPage({ pin: selectedParcel.pin, locale }, legacy) : "#"
+          }
+          onClose={handleCloseParcelModal}
+        />
 
         <LegalFooter />
       </div>

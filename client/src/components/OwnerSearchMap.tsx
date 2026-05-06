@@ -7,13 +7,13 @@ import { Map as LeafletMap, TileLayer, CircleMarker, Popup, Circle } from "react
 // @ts-ignore leaflet runtime is available via dependency.
 import L from "leaflet";
 
-import { OwnerAreaSearchOwner, OwnerAreaSearchSeed } from "./APIDataTypes";
+import { OwnerAreaSearchOwner, OwnerAreaSearchParcel, OwnerAreaSearchSeed } from "./APIDataTypes";
 
 type Props = {
   seed: OwnerAreaSearchSeed;
   owners: OwnerAreaSearchOwner[];
   radiusM: number;
-  onParcelClick: (pin: string) => void;
+  onParcelClick: (owner: OwnerAreaSearchOwner, parcel: OwnerAreaSearchParcel) => void;
 };
 
 const CENTER_COLOR = "#00b4ff";
@@ -26,9 +26,9 @@ const OwnerSearchMap: React.FC<Props> = ({ seed, owners, radiusM, onParcelClick 
   const parcels = React.useMemo(
     () =>
       owners.flatMap((owner) =>
-        owner.parcels.filter(
-          (parcel) => typeof parcel.lat === "number" && typeof parcel.lng === "number"
-        )
+        owner.parcels
+          .filter((parcel) => typeof parcel.lat === "number" && typeof parcel.lng === "number")
+          .map((parcel) => ({ owner, parcel }))
       ),
     [owners]
   );
@@ -42,7 +42,7 @@ const OwnerSearchMap: React.FC<Props> = ({ seed, owners, radiusM, onParcelClick 
     map.invalidateSize();
 
     const points = [[seed.lat, seed.lng] as [number, number]].concat(
-      parcels.map((parcel) => [parcel.lat as number, parcel.lng as number] as [number, number])
+      parcels.map(({ parcel }) => [parcel.lat as number, parcel.lng as number] as [number, number])
     );
 
     if (points.length === 1) {
@@ -88,7 +88,7 @@ const OwnerSearchMap: React.FC<Props> = ({ seed, owners, radiusM, onParcelClick 
             </div>
           </Popup>
         </CircleMarker>
-        {parcels.map((parcel) => {
+        {parcels.map(({ owner, parcel }) => {
           const color = parcel.same_owner ? SAME_OWNER_COLOR : OWNER_COLOR;
           return (
             <CircleMarker
@@ -99,7 +99,7 @@ const OwnerSearchMap: React.FC<Props> = ({ seed, owners, radiusM, onParcelClick 
               fillColor={color}
               fillOpacity={0.85}
               weight={1}
-              onClick={() => onParcelClick(parcel.pin)}
+              onClick={() => onParcelClick(owner, parcel)}
             >
               <Popup>
                 <div>

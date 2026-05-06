@@ -1,6 +1,6 @@
 # Data Storage Map
 
-Last updated: 2026-04-12
+Last updated: 2026-05-05
 
 ## Purpose
 
@@ -20,6 +20,7 @@ and what to clean up after refresh runs.
 - Backup root: `/backup-pool/dump/wow-backups`
 - DB dumps now live on pool storage.
 - Weekly staging archive lives on pool storage.
+- Fresh dev DB volumes bootstrap from the newest `wow-*.dump` in this backup root.
 
 ## Directory Trees
 
@@ -68,6 +69,7 @@ and what to clean up after refresh runs.
 3. Move stale staging artifacts to pool storage.
 4. Delete stale `.tmp` and `.progress` files after interrupted fetches.
 5. Keep generated outreach exports under `data/exports/nearby-owner-outreach/` so they are easy to prune or move to pooled storage later.
+6. Keep at least one recent `wow-*.dump` at the backup-root top level so fresh dev DB volumes can auto-restore.
 
 ## Update Checklist (Required)
 

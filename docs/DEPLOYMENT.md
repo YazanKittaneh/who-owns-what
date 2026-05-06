@@ -21,6 +21,25 @@ This guide explains how to run Who Owns What with separate `dev` and `prod` envi
 - **Database**: PostgreSQL in the `db` service, separated by Compose project name and env file
 - **Environments**: `develop -> dev`, `main/master -> prod`
 
+### Image build and deploy flow
+
+Normal dev and prod deploys now use a two-stage flow:
+
+1. GitHub Actions builds the `api` and/or `frontend` image on `ubuntu-latest`
+2. The workflow pushes those images to GitHub Container Registry (`ghcr.io`)
+3. The self-hosted runner pulls the exact image tags for the current commit
+4. Docker Compose restarts only the affected services on-host
+
+This replaces the older "build directly on the server" path for standard app deploys and cuts deploy time, disk churn, and cache growth on the self-hosted runner.
+
+Current deploy optimizations:
+
+- BuildKit Bake enabled in deploy workflows
+- remote Docker layer cache via `docker/build-push-action` + `type=gha`
+- selective deploys: frontend-only changes avoid api restarts; api-only changes avoid frontend restarts
+- explicit `BUILD_GIT_SHA` passed into frontend image builds
+- dev DB bootstrap runs before deploy so a fresh dev volume can recover automatically from the latest pooled dump
+
 ## Environment Layout
 
 | Environment | Branch | Frontend | API | Compose Project | Runner Env File |
@@ -397,6 +416,26 @@ docker run --rm --entrypoint /bin/sh \
   -c "mc alias set local http://supabase-minio:9000 \"$MINIO_ROOT_USER\" \"$MINIO_ROOT_PASSWORD\" >/dev/null && mc mb --ignore-existing local/wow-backups >/dev/null && mc cp /work/backups/<dump-file> local/wow-backups/who-owns-what/<timestamp>/db/<dump-file>"
 ```
 
+### Bootstrap a fresh dev database from the latest dump
+
+If the dev Postgres volume is recreated and comes up without `wow_parcels`, restore it from the newest pooled dump:
+
+```bash
+make bootstrap-dev-db
+```
+
+This uses `scripts/bootstrap_dev_db_from_latest_dump.sh` and restores from the newest matching file under:
+
+- `/backup-pool/dump/wow-backups/wow-*.dump`
+
+To force a specific dump instead of the newest one:
+
+```bash
+WOW_DB_BOOTSTRAP_DUMP=/backup-pool/dump/wow-backups/wow-20260329T033249Z.dump make bootstrap-dev-db
+```
+
+The dev deploy workflow now runs this bootstrap step automatically before deploying `api` or `frontend`. On a healthy dev volume it is a fast no-op.
+
 ## Troubleshooting
 
 ### Search suggestions return HTTP 400
@@ -462,6 +501,21 @@ cursor = connections['wow'].cursor()
 cursor.execute('SELECT 1')
 print('Database connected!')
 "
+```
+
+### Dev autocomplete or nearby-owner search returns 500 after a DB reset
+
+If `/api/address/search` or `/api/owner/search-by-area` fails in dev after the dev DB volume is recreated, confirm the WoW parcel tables still exist:
+
+```bash
+docker compose --project-name who-owns-what-dev --env-file /home/actions/who-owns-what-dev.env -f docker-compose.prod.yml exec db \
+  psql -U wow -d wow -c "\dt wow_*"
+```
+
+If `wow_parcels` is missing, rerun:
+
+```bash
+make bootstrap-dev-db
 ```
 
 ### GitHub Actions deployment fails
