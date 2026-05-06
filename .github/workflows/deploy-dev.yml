@@ -157,8 +157,22 @@ jobs:
           tags: |
             ${{ needs.determine-changes.outputs.frontend_image }}
             ${{ needs.determine-changes.outputs.frontend_image_latest }}
-          cache-from: type=gha,scope=wow-dev-frontend
-          cache-to: type=gha,mode=max,scope=wow-dev-frontend
+          cache-from: type=gha,scope=wow-dev-frontend-v2
+          cache-to: type=gha,mode=max,scope=wow-dev-frontend-v2
+
+      - name: Verify pushed frontend image contents
+        if: needs.determine-changes.outputs.deploy_frontend == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "${{ needs.determine-changes.outputs.frontend_image }}"
+          docker run --rm "${{ needs.determine-changes.outputs.frontend_image }}" sh -c '
+            test -f /usr/share/nginx/html/index.html
+            test -d /usr/share/nginx/html/static/js
+            test -d /usr/share/nginx/html/static/css
+            grep -Eq "/static/js/main\.[a-f0-9]+\.chunk\.js" /usr/share/nginx/html/index.html
+            grep -Eq "/static/css/main\.[a-f0-9]+\.chunk\.css" /usr/share/nginx/html/index.html
+          '
 
   deploy:
     needs: [determine-changes, build-images]
