@@ -161,7 +161,7 @@ jobs:
 
           if [ "$deploy_frontend" = true ]; then
             echo "Waiting for local frontend shell..."
-            for attempt in {1..36}; do
+            for attempt in {1..72}; do
               if docker exec "$frontend_container_id" wget -qO- http://127.0.0.1/ > "$local_html"; then
                 mapfile -t local_assets < <(extract_assets "$local_html")
                 local_js=${local_assets[0]:-}
@@ -171,7 +171,7 @@ jobs:
                   break
                 fi
               fi
-              echo "Local frontend shell not ready yet (attempt ${attempt}/36)."
+              echo "Local frontend shell not ready yet (attempt ${attempt}/72)."
               sleep 5
             done
 
@@ -201,7 +201,7 @@ jobs:
 
           if [ "$deploy_frontend" = true ]; then
             echo "Waiting for $PUBLIC_FRONTEND_URL to serve the rebuilt frontend assets..."
-            for attempt in {1..48}; do
+            for attempt in {1..72}; do
               if curl -fsSL -A "Mozilla/5.0" "$PUBLIC_FRONTEND_URL/" > "$public_html"; then
                 mapfile -t public_assets < <(extract_assets "$public_html")
                 public_js=${public_assets[0]:-}
@@ -213,7 +213,7 @@ jobs:
                 fi
                 echo "Public assets do not match yet: ${public_js:-missing} | ${public_css:-missing}"
               else
-                echo "Public frontend request failed (attempt ${attempt}/48)."
+                echo "Public frontend request failed (attempt ${attempt}/72)."
               fi
               sleep 10
             done
