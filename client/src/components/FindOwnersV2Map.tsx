@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl/dist/maplibre-gl-csp";
+import mapboxgl from "mapbox-gl";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import "maplibre-gl/dist/maplibre-gl.css";
+import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
 import APIClient from "./APIClient";
@@ -45,7 +45,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
   onPinSelect,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapRef = useRef<any>(null);
   const drawRef = useRef<any>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [parcels, setParcels] = useState<FindOwnersV2ViewportProperty[]>([]);
@@ -79,9 +79,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       return;
     }
 
-    maplibregl.setWorkerUrl("/maplibre-gl-csp-worker.js");
-
-    const map = new maplibregl.Map({
+    const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: CARTO_DARK_STYLE,
       center: [-87.63, 41.88],
@@ -89,8 +87,8 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       attributionControl: false,
     });
 
-    map.addControl(new maplibregl.AttributionControl({ compact: true }));
-    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }));
+    map.addControl(new mapboxgl.NavigationControl(), "top-right");
 
     const draw = new MapboxDraw({
       displayControlsDefault: false,
