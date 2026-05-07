@@ -91,6 +91,21 @@ export const createRouteForSavedListsPage = (locale?: string, isLegacyRoute?: bo
   return route;
 };
 
+export const createRouteForFindOwnersPage = (locale?: string, isLegacyRoute?: boolean) => {
+  let route = "/find-owners";
+
+  const allowChangingPortfolioMethod =
+    process.env.REACT_APP_ENABLE_NEW_WOWZA_PORTFOLIO_MAPPING === "1";
+
+  if (isLegacyRoute && allowChangingPortfolioMethod) route = "/legacy" + route;
+
+  if (locale) {
+    route = `/${locale}${route}`;
+  }
+
+  return route;
+};
+
 export const removeIndicatorSuffix = (pathname: string) =>
   pathname.replace(/(\/timeline)(\/[^/]+)?$/, "$1");
 
@@ -120,6 +135,8 @@ export const createCoreRoutePaths = (prefix?: string) => {
     home: `${pathPrefix}/`,
     addressPage: createAddressPageRoutes(`${pathPrefix}/pin/:pin(\\d{14})`),
     ownerPage: `${pathPrefix}/owner/:ownerType(id|name)/:ownerKey`,
+    findOwners: `${pathPrefix}/find-owners`,
+    findOwnersV2: `${pathPrefix}/find-owners-v2`,
     savedLists: `${pathPrefix}/saved-lists`,
     account: createAccountRoutePaths(`${pathPrefix}/account`),
     about: `${pathPrefix}/about`,

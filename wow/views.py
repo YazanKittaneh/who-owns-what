@@ -20,6 +20,9 @@ from .forms import (
     NearbyPropertiesForm,
     CurrentOwnerForm,
     EntitySearchForm,
+    OwnerSearchByAreaForm,
+    FindOwnersV2ViewportForm,
+    FindOwnersV2PolygonSearchForm,
 )
 
 
@@ -78,6 +81,45 @@ def clean_nearby_addr_dict(addr):
         **clean_map_addr_dict(addr),
         "distance_m": int_or_none(addr.get("distance_m")),
         "same_owner": bool(addr.get("same_owner")),
+    }
+
+
+def clean_owner_search_seed_dict(addr):
+    return {
+        **clean_map_addr_dict(addr),
+        "land_class": str_or_none(addr.get("land_class")),
+    }
+
+
+def clean_owner_search_result_dict(row):
+    cleaned_parcels = []
+    for parcel in row.get("parcels") or []:
+        cleaned_parcels.append(
+            {
+                **parcel,
+                "lat": float_or_none(parcel.get("lat")),
+                "lng": float_or_none(parcel.get("lng")),
+                "distance_m": int_or_none(parcel.get("distance_m")),
+                "same_owner": bool(parcel.get("same_owner")),
+            }
+        )
+
+    cleaned_building_type_counts = []
+    for building_type_count in row.get("building_type_counts") or []:
+        cleaned_building_type_counts.append(
+            {
+                **building_type_count,
+                "parcel_count": int_or_none(building_type_count.get("parcel_count")),
+            }
+        )
+
+    return {
+        **row,
+        "parcel_count": int_or_none(row.get("parcel_count")),
+        "nearest_distance_m": int_or_none(row.get("nearest_distance_m")),
+        "same_owner": bool(row.get("same_owner")),
+        "building_type_counts": cleaned_building_type_counts,
+        "parcels": cleaned_parcels,
     }
 
 
@@ -424,6 +466,110 @@ def owner_current(request):
                 **(mailing or {}),
             },
             "result": addrs,
+        }
+    )
+
+
+@api
+def owner_search_by_area(request):
+    args = get_validated_form_data(OwnerSearchByAreaForm, request.GET)
+    query_args = {
+        **args,
+        "apply_building_type_filter": bool(args.get("building_types")),
+    }
+
+    try:
+        seed_rows = list(exec_db_query(SQL_DIR / "owner_search_seed.sql", {"pin": args["pin"]}))
+        if not seed_rows:
+            return JsonResponse({"error": "No mapped parcel found for this PIN."}, status=404)
+
+        result_rows = list(exec_db_query(SQL_DIR / "owner_search_by_area.sql", query_args))
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning("Using empty owner area search because WOW parcel tables are missing.")
+        seed_rows = []
+        result_rows = []
+
+    seed = clean_owner_search_seed_dict(seed_rows[0]) if seed_rows else None
+    cleaned_rows = list(map(clean_owner_search_result_dict, result_rows))
+    return JsonResponse(
+        {
+            "seed": seed,
+            "filters": {
+                "pin": args["pin"],
+                "radius_m": args["radius_m"],
+                "building_types": args.get("building_types") or [],
+                "min_parcels": args["min_parcels"],
+                "max_parcels": args.get("max_parcels"),
+                "limit": args["limit"],
+            },
+            "result": cleaned_rows,
+        }
+    )
+
+
+@api
+def find_owners_v2_viewport(request):
+    args = get_validated_form_data(FindOwnersV2ViewportForm, request.GET)
+    try:
+        result = exec_db_query(SQL_DIR / "find_owners_v2_viewport.sql", args)
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning(
+            "Using empty Find Owners V2 viewport because WOW parcel tables are missing."
+        )
+        result = []
+
+    rows = list(result)
+    total_count = int_or_none(rows[0].get("total_count")) if rows else 0
+    limit = args.get("limit") or 800
+    cleaned_rows = []
+    for row in rows:
+        cleaned_row = clean_map_addr_dict(row)
+        cleaned_row["geojson"] = row.get("geojson")
+        cleaned_rows.append(cleaned_row)
+
+    return JsonResponse(
+        {
+            "result": cleaned_rows,
+            "total_count": total_count,
+            "truncated": total_count > limit,
+        }
+    )
+
+
+@api
+def find_owners_v2_search(request):
+    args = get_validated_form_data(FindOwnersV2PolygonSearchForm, request.GET)
+    query_args = {
+        **args,
+        "apply_building_type_filter": bool(args.get("building_types")),
+    }
+
+    try:
+        result_rows = list(exec_db_query(SQL_DIR / "find_owners_v2_polygon_search.sql", query_args))
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning("Using empty Find Owners V2 polygon search because WOW parcel tables are missing.")
+        result_rows = []
+
+    cleaned_rows = list(map(clean_owner_search_result_dict, result_rows))
+    return JsonResponse(
+        {
+            "filters": {
+                "geojson": args["geojson"],
+                "building_types": args.get("building_types") or [],
+                "min_parcels": args["min_parcels"],
+                "max_parcels": args.get("max_parcels"),
+                "limit": args["limit"],
+            },
+            "result": cleaned_rows,
         }
     )
 

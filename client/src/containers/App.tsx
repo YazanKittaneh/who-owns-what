@@ -28,6 +28,8 @@ import HomePage from "./HomePage";
 import AddressPage from "./AddressPage";
 import PropertyPage from "./PropertyPage";
 import OwnerPage from "./OwnerPage";
+import FindOwnersPage from "./FindOwnersPage";
+import FindOwnersV2Page from "./FindOwnersV2Page";
 import AboutPage from "./AboutPage";
 import HowToUsePage from "./HowToUsePage";
 import MethodologyPage from "./Methodology";
@@ -143,6 +145,10 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
       />
       <Route path={paths.ownerPage} component={OwnerPage} exact />
       <Route path={paths.legacy.ownerPage} component={OwnerPage} exact />
+      <Route path={paths.findOwners} component={FindOwnersPage} exact />
+      <Route path={paths.legacy.findOwners} component={FindOwnersPage} exact />
+      <Route path={paths.findOwnersV2} component={FindOwnersV2Page} exact />
+      <Route path={paths.legacy.findOwnersV2} component={FindOwnersV2Page} exact />
       <Route path={paths.savedLists} component={SavedListsPage} exact />
       <Route path={paths.legacy.savedLists} component={SavedListsPage} exact />
       <Route
@@ -251,18 +257,21 @@ const getAccountNavLinks = (fromPath: string, isSignedIn?: boolean) => {
 };
 
 const getMainNavLinks = (isLegacyPath?: boolean) => {
-  const { about, howToUse, legacy, savedLists } = createWhoOwnsWhatRoutePaths();
+  const { about, howToUse, legacy, findOwners, savedLists } = createWhoOwnsWhatRoutePaths();
   return [
     <SearchLink key={1} />,
     <LocaleNavLink to={isLegacyPath ? legacy.about : about} key={2}>
       <Trans>About</Trans>
+    </LocaleNavLink>,
+    <LocaleNavLink to={isLegacyPath ? legacy.findOwners : findOwners} key={3}>
+      <Trans>Find owners</Trans>
     </LocaleNavLink>,
     <LocaleNavLink to={isLegacyPath ? legacy.savedLists : savedLists} key={4}>
       <Trans>Saved lists</Trans>
     </LocaleNavLink>,
     <LocaleNavLink
       to={isLegacyPath ? legacy.howToUse : howToUse}
-      key={3}
+      key={5}
       onClick={() => {
         logAmplitudeEvent("navbarHowToUse");
         window.gtag("event", "navbar-how-to-use");
@@ -270,10 +279,10 @@ const getMainNavLinks = (isLegacyPath?: boolean) => {
     >
       <Trans>How to use</Trans>
     </LocaleNavLink>,
-    <a href="https://yazan.io" key={4} target="_blank" rel="noopener noreferrer">
+    <a href="https://yazan.io" key={6} target="_blank" rel="noopener noreferrer">
       <Trans>Yazan.io</Trans>
     </a>,
-    <a href="https://github.com/yazankittaneh" key={5} target="_blank" rel="noopener noreferrer">
+    <a href="https://github.com/yazankittaneh" key={7} target="_blank" rel="noopener noreferrer">
       <Trans>GitHub</Trans>
     </a>,
   ];

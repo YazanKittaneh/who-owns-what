@@ -13,6 +13,7 @@ urlpatterns = [
     path("address/overview-map", views.address_overview_map, name="address_overview_map"),
     path("address/nearby", views.address_nearby, name="address_nearby"),
     path("owner/current", views.owner_current, name="owner_current"),
+    path("owner/search-by-area", views.owner_search_by_area, name="owner_search_by_area"),
     path("address/aggregate", views.address_aggregate, name="address_aggregate"),
     path("address/buildinginfo", views.address_buildinginfo, name="address_buildinginfo"),
     path(
@@ -22,6 +23,8 @@ urlpatterns = [
     ),
     path("address/export", views.address_export, name="address_export"),
     # Contact data endpoints
+    path("find-owners/v2/viewport", views.find_owners_v2_viewport, name="find_owners_v2_viewport"),
+    path("find-owners/v2/search", views.find_owners_v2_search, name="find_owners_v2_search"),
     path("entity/search", views.entity_search, name="entity_search"),
     path("entity/contacts", views.entity_contacts, name="entity_contacts"),
     path("parcel/entities", views.parcel_entities, name="parcel_entities"),

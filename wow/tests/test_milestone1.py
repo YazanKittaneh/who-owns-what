@@ -377,3 +377,82 @@ def test_address_indicatorhistory_smoke_prefers_pin_path(rf, monkeypatch):
     assert response.status_code == 200
     assert json.loads(response.content)["schema"] == "standard"
     assert calls[0] == "address_indicatorhistory_chi_with_ihs.sql"
+
+
+def test_find_owners_v2_viewport_returns_geojson_features(rf, monkeypatch):
+    monkeypatch.setattr(
+        views,
+        "exec_db_query",
+        lambda _sql_path, params: [
+            {
+                "pin": "13262030280000",
+                "address": "3134 N KIMBALL AVE",
+                "owner_name": "SO 3134 N KIMBALL LLC",
+                "lat": "41.9381",
+                "lng": "-87.7135",
+                "geojson": {"type": "Point", "coordinates": [-87.7135, 41.9381]},
+                "total_count": 1,
+            }
+        ],
+    )
+
+    response = views.find_owners_v2_viewport(
+        rf.get(
+            "/api/find-owners/v2/viewport",
+            {"north": 41.9, "south": 41.8, "east": -87.6, "west": -87.7, "zoom": 15},
+        )
+    )
+
+    assert response.status_code == 200
+    payload = json.loads(response.content)
+    assert payload["total_count"] == 1
+    assert payload["truncated"] is False
+    assert payload["result"][0]["geojson"]["type"] == "Point"
+    assert payload["result"][0]["lat"] == 41.9381
+
+
+def test_find_owners_v2_search_returns_grouped_owners(rf, monkeypatch):
+    monkeypatch.setattr(
+        views,
+        "exec_db_query",
+        lambda _sql_path, params: [
+            {
+                "owner_key": "OWNER1",
+                "owner_id": "row-1",
+                "owner_name": "SEED OWNER LLC",
+                "mailing_address": "1 OWNER WAY",
+                "mailing_city": "CHICAGO",
+                "mailing_state": "IL",
+                "mailing_zip": "60601",
+                "parcel_count": 2,
+                "nearest_distance_m": 10,
+                "building_type_counts": [
+                    {"building_type": "single_family", "building_type_label": "Single-family", "parcel_count": 1},
+                    {"building_type": "two_flat", "building_type_label": "Two-flat", "parcel_count": 1},
+                ],
+                "parcels": [
+                    {"pin": "10000000000001", "address": "100 N STATE ST", "lat": 41.88, "lng": -87.63},
+                    {"pin": "10000000000002", "address": "102 N STATE ST", "lat": 41.8805, "lng": -87.63},
+                ],
+            }
+        ],
+    )
+
+    response = views.find_owners_v2_search(
+        rf.get(
+            "/api/find-owners/v2/search",
+            {
+                "geojson": '{"type":"Polygon","coordinates":[[[-87.64,41.87],[-87.62,41.87],[-87.62,41.89],[-87.64,41.89],[-87.64,41.87]]]}',
+                "min_parcels": 1,
+                "limit": 10,
+            },
+        )
+    )
+
+    assert response.status_code == 200
+    payload = json.loads(response.content)
+    assert payload["filters"]["geojson"] == '{"type":"Polygon","coordinates":[[[-87.64,41.87],[-87.62,41.87],[-87.62,41.89],[-87.64,41.89],[-87.64,41.87]]]}'
+    assert len(payload["result"]) == 1
+    assert payload["result"][0]["owner_name"] == "SEED OWNER LLC"
+    assert payload["result"][0]["parcel_count"] == 2
+    assert len(payload["result"][0]["parcels"]) == 2

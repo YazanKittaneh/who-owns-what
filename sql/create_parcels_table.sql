@@ -60,6 +60,7 @@ SELECT
     p.mail_address_zipcode_1 AS mailing_zip,
     NULLIF(p.lat, '')::numeric AS lat,
     NULLIF(p.lon, '')::numeric AS lng,
+    ST_SetSRID(ST_MakePoint(NULLIF(p.lon, '')::numeric, NULLIF(p.lat, '')::numeric), 4326)::geometry(Point, 4326) AS geom,
     p.ward_num AS ward,
     p.chicago_community_area_name AS community_area,
     p.census_tract_geoid AS census_tract,
@@ -82,3 +83,5 @@ CREATE INDEX IF NOT EXISTS wow_parcels_fulladdr_lower_prefix_idx
     ON wow_parcels (
         (coalesce(lower(housenumber), '') || ' ' || coalesce(lower(streetname), '')) text_pattern_ops
     );
+
+CREATE INDEX IF NOT EXISTS wow_parcels_geom_idx ON wow_parcels USING GIST (geom);
