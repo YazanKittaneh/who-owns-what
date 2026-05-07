@@ -35,6 +35,9 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
+    // Use CSP-compatible worker (no blob URL)
+    maplibregl.setWorkerUrl("/maplibre-gl-csp-worker.js");
+
     const newMap = new maplibregl.Map({
       container: mapContainer.current,
       style: CARTO_DARK_STYLE,
