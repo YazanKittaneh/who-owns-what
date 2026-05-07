@@ -1,6 +1,6 @@
 -- Find Owners V2: Viewport query
 -- Returns parcel centroids within a bounding box as GeoJSON features
--- Used for map rendering without dumping the entire dataset
+-- Uses lat/lng directly to avoid dependency on geom column
 
 WITH viewport_parcels AS (
     SELECT
@@ -13,13 +13,14 @@ WITH viewport_parcels AS (
         p.land_class,
         p.lat,
         p.lng,
-        p.geom,
+        ST_SetSRID(ST_MakePoint(p.lng::numeric, p.lat::numeric), 4326) AS geom,
         row_number() OVER (
             ORDER BY coalesce(p.units_res, 0) DESC, p.address ASC, p.pin ASC
         ) AS row_num,
         count(*) OVER ()::integer AS total_count
     FROM wow_parcels AS p
-    WHERE p.geom IS NOT NULL
+    WHERE p.lat IS NOT NULL
+      AND p.lng IS NOT NULL
       AND p.lat BETWEEN %(south)s AND %(north)s
       AND p.lng BETWEEN %(west)s AND %(east)s
 )

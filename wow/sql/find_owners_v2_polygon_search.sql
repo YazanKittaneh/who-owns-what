@@ -1,6 +1,6 @@
 -- Find Owners V2: Polygon search query
 -- Returns owners grouped by parcels inside a polygon (drawn by user)
--- Uses PostGIS ST_Within for spatial containment
+-- Uses lat/lng directly to compute geometry on the fly
 
 WITH polygon AS (
     SELECT ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326) AS geom
@@ -19,7 +19,7 @@ candidate_parcels AS (
         p.land_class,
         p.lat,
         p.lng,
-        p.geom,
+        ST_SetSRID(ST_MakePoint(p.lng::numeric, p.lat::numeric), 4326) AS geom,
         CASE
             WHEN p.land_class IN ('201', '202', '203', '204', '205', '206', '207', '208', '210', '211') THEN 'single_family'
             WHEN p.land_class = '212' THEN 'two_flat'
@@ -42,8 +42,9 @@ candidate_parcels AS (
         END AS building_type_label
     FROM wow_parcels AS p
     CROSS JOIN polygon AS poly
-    WHERE p.geom IS NOT NULL
-      AND ST_Within(p.geom, poly.geom)
+    WHERE p.lat IS NOT NULL
+      AND p.lng IS NOT NULL
+      AND ST_Within(ST_SetSRID(ST_MakePoint(p.lng::numeric, p.lat::numeric), 4326), poly.geom)
 ),
 filtered_parcels AS (
     SELECT *
