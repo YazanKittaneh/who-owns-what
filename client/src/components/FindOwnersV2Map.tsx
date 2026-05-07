@@ -14,6 +14,8 @@ const PARCELS_SOURCE_ID = "find-owners-v2-parcels";
 const PARCELS_LAYER_ID = "find-owners-v2-parcels-layer";
 const DRAW_COLOR = "#3bb2d0";
 const DRAW_ACTIVE_COLOR = "#fbb03b";
+const PARCEL_MARKER_COLOR = "#ff6b6b";
+const SELECTED_PARCEL_MARKER_COLOR = "#00b4ff";
 
 const DRAW_STYLES = [
   {
@@ -151,6 +153,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const drawRef = useRef<any>(null);
+  const markerRefs = useRef<any[]>([]);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [parcels, setParcels] = useState<FindOwnersV2ViewportProperty[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -345,33 +348,46 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       return;
     }
 
-    const map = mapRef.current;
+    markerRefs.current.forEach((marker) => marker.remove());
+    markerRefs.current = [];
 
-    const handleClick = (event: any) => {
-      if (!event.features || event.features.length === 0 || !onPinSelect) {
-        return;
-      }
-      onPinSelect(event.features[0].properties.pin);
-    };
+    parcels
+      .filter((parcel) => parcel.lat != null && parcel.lng != null)
+      .forEach((parcel) => {
+        const markerElement = document.createElement("button");
+        const isSelected = parcel.pin === selectedPin;
 
-    const handleMouseEnter = () => {
-      map.getCanvas().style.cursor = "pointer";
-    };
+        markerElement.type = "button";
+        markerElement.setAttribute("aria-label", parcel.address || parcel.pin);
+        markerElement.style.width = isSelected ? "16px" : "12px";
+        markerElement.style.height = isSelected ? "16px" : "12px";
+        markerElement.style.borderRadius = "9999px";
+        markerElement.style.border = isSelected ? "3px solid #ffffff" : "2px solid #ffffff";
+        markerElement.style.background = isSelected
+          ? SELECTED_PARCEL_MARKER_COLOR
+          : PARCEL_MARKER_COLOR;
+        markerElement.style.boxShadow = "0 0 0 1px rgba(0, 0, 0, 0.15)";
+        markerElement.style.cursor = "pointer";
+        markerElement.style.padding = "0";
 
-    const handleMouseLeave = () => {
-      map.getCanvas().style.cursor = "";
-    };
+        markerElement.onclick = () => {
+          if (onPinSelect) {
+            onPinSelect(parcel.pin);
+          }
+        };
 
-    map.on("click", PARCELS_LAYER_ID, handleClick);
-    map.on("mouseenter", PARCELS_LAYER_ID, handleMouseEnter);
-    map.on("mouseleave", PARCELS_LAYER_ID, handleMouseLeave);
+        const marker = new mapboxgl.Marker({ element: markerElement, anchor: "center" })
+          .setLngLat([parcel.lng as number, parcel.lat as number])
+          .addTo(mapRef.current);
+
+        markerRefs.current.push(marker);
+      });
 
     return () => {
-      map.off("click", PARCELS_LAYER_ID, handleClick);
-      map.off("mouseenter", PARCELS_LAYER_ID, handleMouseEnter);
-      map.off("mouseleave", PARCELS_LAYER_ID, handleMouseLeave);
+      markerRefs.current.forEach((marker) => marker.remove());
+      markerRefs.current = [];
     };
-  }, [isMapReady, onPinSelect]);
+  }, [isMapReady, onPinSelect, parcels, selectedPin]);
 
   useEffect(() => {
     if (!mapRef.current || !selectedPin) {
