@@ -158,6 +158,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
   const [parcels, setParcels] = useState<FindOwnersV2ViewportProperty[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasPolygon, setHasPolygon] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
 
   const buildParcelFeatureCollection = useCallback((): FeatureCollection => {
@@ -180,6 +181,33 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
         })),
     };
   }, [parcels]);
+
+  const clearPolygon = useCallback(() => {
+    if (!drawRef.current) {
+      return;
+    }
+
+    drawRef.current.deleteAll();
+    setIsDrawing(false);
+    setHasPolygon(false);
+    if (onPolygonDeleted) {
+      onPolygonDeleted();
+    }
+  }, [onPolygonDeleted]);
+
+  const startDrawing = useCallback(() => {
+    if (!drawRef.current) {
+      return;
+    }
+
+    drawRef.current.deleteAll();
+    drawRef.current.changeMode("draw_polygon");
+    setHasPolygon(false);
+    setIsDrawing(true);
+    if (onPolygonDeleted) {
+      onPolygonDeleted();
+    }
+  }, [onPolygonDeleted]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) {
@@ -214,6 +242,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
         return;
       }
       setHasPolygon(true);
+      setIsDrawing(false);
       if (onPolygonDrawn) {
         onPolygonDrawn(JSON.stringify(feature.geometry));
       }
@@ -221,9 +250,14 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
 
     const handlePolygonDelete = () => {
       setHasPolygon(false);
+      setIsDrawing(false);
       if (onPolygonDeleted) {
         onPolygonDeleted();
       }
+    };
+
+    const handleModeChange = (event: any) => {
+      setIsDrawing(event.mode === "draw_polygon");
     };
 
     const handleLoad = () => {
@@ -256,6 +290,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     map.on("draw.create", handlePolygonChange);
     map.on("draw.update", handlePolygonChange);
     map.on("draw.delete", handlePolygonDelete);
+    map.on("draw.modechange", handleModeChange);
 
     mapRef.current = map;
     drawRef.current = draw;
@@ -269,6 +304,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       map.off("draw.create", handlePolygonChange);
       map.off("draw.update", handlePolygonChange);
       map.off("draw.delete", handlePolygonDelete);
+      map.off("draw.modechange", handleModeChange);
       map.remove();
       mapRef.current = null;
       drawRef.current = null;
@@ -351,6 +387,13 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     markerRefs.current.forEach((marker) => marker.remove());
     markerRefs.current = [];
 
+    if (isDrawing) {
+      return () => {
+        markerRefs.current.forEach((marker) => marker.remove());
+        markerRefs.current = [];
+      };
+    }
+
     parcels
       .filter((parcel) => parcel.lat != null && parcel.lng != null)
       .forEach((parcel) => {
@@ -387,7 +430,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       markerRefs.current.forEach((marker) => marker.remove());
       markerRefs.current = [];
     };
-  }, [isMapReady, onPinSelect, parcels, selectedPin]);
+  }, [isDrawing, isMapReady, onPinSelect, parcels, selectedPin]);
 
   useEffect(() => {
     if (!mapRef.current || !selectedPin) {
@@ -424,6 +467,69 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
           Loading parcels...
         </div>
       ) : null}
+      <div
+        style={{
+          position: "absolute",
+          top: 10,
+          left: 10,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          zIndex: 1000,
+          maxWidth: 220,
+        }}
+      >
+        <button
+          type="button"
+          onClick={startDrawing}
+          style={{
+            background: isDrawing ? DRAW_ACTIVE_COLOR : "#ffffff",
+            color: isDrawing ? "#111111" : "#111111",
+            border: "1px solid rgba(0,0,0,0.15)",
+            borderRadius: 6,
+            padding: "10px 12px",
+            fontSize: 14,
+            fontWeight: 600,
+            textAlign: "left",
+            cursor: "pointer",
+          }}
+        >
+          {hasPolygon ? "Redraw area" : isDrawing ? "Drawing area..." : "Draw area"}
+        </button>
+        {(hasPolygon || isDrawing) && (
+          <button
+            type="button"
+            onClick={clearPolygon}
+            style={{
+              background: "rgba(17,17,17,0.85)",
+              color: "#ffffff",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 6,
+              padding: "10px 12px",
+              fontSize: 14,
+              fontWeight: 600,
+              textAlign: "left",
+              cursor: "pointer",
+            }}
+          >
+            Clear area
+          </button>
+        )}
+        <div
+          style={{
+            background: "rgba(17,17,17,0.8)",
+            color: "#ffffff",
+            borderRadius: 6,
+            padding: "10px 12px",
+            fontSize: 12,
+            lineHeight: 1.4,
+          }}
+        >
+          {isDrawing
+            ? "Tap the map to add corners. Tap the first point again to finish the shape."
+            : "Tap Draw area, then tap the map to outline your search area."}
+        </div>
+      </div>
       {!hasPolygon && parcels.length > 0 ? (
         <div
           style={{
