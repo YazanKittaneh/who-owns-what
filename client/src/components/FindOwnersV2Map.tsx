@@ -12,6 +12,110 @@ const MIN_ZOOM_FOR_PARCELS = 11;
 const DEBOUNCE_MS = 300;
 const PARCELS_SOURCE_ID = "find-owners-v2-parcels";
 const PARCELS_LAYER_ID = "find-owners-v2-parcels-layer";
+const DRAW_COLOR = "#3bb2d0";
+const DRAW_ACTIVE_COLOR = "#fbb03b";
+
+const DRAW_STYLES = [
+  {
+    id: "gl-draw-polygon-fill-inactive",
+    type: "fill",
+    filter: ["all", ["==", "active", "false"], ["==", "$type", "Polygon"], ["==", "mode", "simple_select"]],
+    paint: {
+      "fill-color": DRAW_COLOR,
+      "fill-opacity": 0.1,
+    },
+  },
+  {
+    id: "gl-draw-polygon-fill-active",
+    type: "fill",
+    filter: ["all", ["==", "active", "true"], ["==", "$type", "Polygon"]],
+    paint: {
+      "fill-color": DRAW_ACTIVE_COLOR,
+      "fill-opacity": 0.1,
+    },
+  },
+  {
+    id: "gl-draw-polygon-stroke-inactive",
+    type: "line",
+    filter: [
+      "all",
+      ["==", "active", "false"],
+      ["any", ["==", "$type", "Polygon"], ["==", "$type", "LineString"]],
+    ],
+    layout: {
+      "line-cap": "round",
+      "line-join": "round",
+    },
+    paint: {
+      "line-color": DRAW_COLOR,
+      "line-width": 2,
+      "line-dasharray": [2, 0],
+    },
+  },
+  {
+    id: "gl-draw-polygon-stroke-active",
+    type: "line",
+    filter: [
+      "all",
+      ["==", "active", "true"],
+      ["any", ["==", "$type", "Polygon"], ["==", "$type", "LineString"]],
+    ],
+    layout: {
+      "line-cap": "round",
+      "line-join": "round",
+    },
+    paint: {
+      "line-color": DRAW_ACTIVE_COLOR,
+      "line-width": 2,
+      "line-dasharray": [0.2, 2],
+    },
+  },
+  {
+    id: "gl-draw-point-inactive",
+    type: "circle",
+    filter: ["all", ["==", "meta", "feature"], ["==", "$type", "Point"], ["==", "active", "false"]],
+    paint: {
+      "circle-radius": 5,
+      "circle-color": DRAW_COLOR,
+    },
+  },
+  {
+    id: "gl-draw-point-active",
+    type: "circle",
+    filter: ["all", ["==", "meta", "feature"], ["==", "$type", "Point"], ["==", "active", "true"]],
+    paint: {
+      "circle-radius": 7,
+      "circle-color": DRAW_ACTIVE_COLOR,
+    },
+  },
+  {
+    id: "gl-draw-vertex-halo-active",
+    type: "circle",
+    filter: ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"]],
+    paint: {
+      "circle-radius": 7,
+      "circle-color": "#ffffff",
+    },
+  },
+  {
+    id: "gl-draw-vertex-active",
+    type: "circle",
+    filter: ["all", ["==", "meta", "vertex"], ["==", "$type", "Point"]],
+    paint: {
+      "circle-radius": 5,
+      "circle-color": DRAW_ACTIVE_COLOR,
+    },
+  },
+  {
+    id: "gl-draw-midpoint",
+    type: "circle",
+    filter: ["all", ["==", "meta", "midpoint"], ["==", "$type", "Point"]],
+    paint: {
+      "circle-radius": 3,
+      "circle-color": DRAW_ACTIVE_COLOR,
+    },
+  },
+];
 
 export interface FindOwnersV2MapProps {
   onPolygonDrawn?: (geojson: string) => void;
@@ -96,6 +200,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
         polygon: true,
         trash: true,
       },
+      styles: DRAW_STYLES as any,
     });
 
     map.addControl(draw, "top-left");
