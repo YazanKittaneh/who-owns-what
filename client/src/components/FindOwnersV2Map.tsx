@@ -1,14 +1,17 @@
-import React, { useRef, useEffect, useState, useCallback } from "react";
-import maplibregl from "maplibre-gl";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import maplibregl from "maplibre-gl/dist/maplibre-gl-csp";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+
 import APIClient from "./APIClient";
 import { FindOwnersV2ViewportProperty } from "./APIDataTypes";
 
 const CARTO_DARK_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 const MIN_ZOOM_FOR_PARCELS = 11;
 const DEBOUNCE_MS = 300;
+const PARCELS_SOURCE_ID = "find-owners-v2-parcels";
+const PARCELS_LAYER_ID = "find-owners-v2-parcels-layer";
 
 export interface FindOwnersV2MapProps {
   onPolygonDrawn?: (geojson: string) => void;
@@ -17,90 +20,162 @@ export interface FindOwnersV2MapProps {
   onPinSelect?: (pin: string | null) => void;
 }
 
+type FeatureCollection = {
+  type: "FeatureCollection";
+  features: Array<{
+    type: "Feature";
+    geometry: any;
+    properties: {
+      pin: string;
+      address?: string | null;
+      owner_name?: string | null;
+    };
+  }>;
+};
+
+const emptyFeatureCollection = (): FeatureCollection => ({
+  type: "FeatureCollection",
+  features: [],
+});
+
 const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
   onPolygonDrawn,
   onPolygonDeleted,
   selectedPin,
   onPinSelect,
 }) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const draw = useRef<any>(null);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const drawRef = useRef<any>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [parcels, setParcels] = useState<FindOwnersV2ViewportProperty[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasPolygon, setHasPolygon] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
 
-  // Initialize map
+  const buildParcelFeatureCollection = useCallback((): FeatureCollection => {
+    return {
+      type: "FeatureCollection",
+      features: parcels
+        .filter((parcel) => parcel.lat != null && parcel.lng != null)
+        .map((parcel) => ({
+          type: "Feature",
+          geometry:
+            parcel.geojson || {
+              type: "Point",
+              coordinates: [parcel.lng, parcel.lat],
+            },
+          properties: {
+            pin: parcel.pin,
+            address: parcel.address,
+            owner_name: parcel.owner_name,
+          },
+        })),
+    };
+  }, [parcels]);
+
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (!mapContainerRef.current || mapRef.current) {
+      return;
+    }
 
-    // Use CSP-compatible worker (no blob URL)
     maplibregl.setWorkerUrl("/maplibre-gl-csp-worker.js");
 
-    const newMap = new maplibregl.Map({
-      container: mapContainer.current,
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
       style: CARTO_DARK_STYLE,
       center: [-87.63, 41.88],
       zoom: 11,
       attributionControl: false,
     });
 
-    newMap.addControl(new maplibregl.AttributionControl({ compact: true }));
-    newMap.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.addControl(new maplibregl.AttributionControl({ compact: true }));
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-    // Add draw control
-    const newDraw = new MapboxDraw({
+    const draw = new MapboxDraw({
       displayControlsDefault: false,
       controls: {
         polygon: true,
         trash: true,
       },
     });
-    newMap.addControl(newDraw, "top-left");
-    draw.current = newDraw;
 
-    // Handle draw events
-    newMap.on("draw.create", (e: any) => {
-      if (e.features.length > 0) {
-        const geojson = JSON.stringify(e.features[0].geometry);
-        setHasPolygon(true);
-        if (onPolygonDrawn) {
-          onPolygonDrawn(geojson);
-        }
+    map.addControl(draw, "top-left");
+
+    const handlePolygonChange = (event: any) => {
+      const feature = event.features && event.features[0];
+      if (!feature) {
+        return;
       }
-    });
+      setHasPolygon(true);
+      if (onPolygonDrawn) {
+        onPolygonDrawn(JSON.stringify(feature.geometry));
+      }
+    };
 
-    newMap.on("draw.delete", () => {
+    const handlePolygonDelete = () => {
       setHasPolygon(false);
       if (onPolygonDeleted) {
         onPolygonDeleted();
       }
-    });
+    };
 
-    newMap.on("draw.update", (e: any) => {
-      if (e.features.length > 0) {
-        const geojson = JSON.stringify(e.features[0].geometry);
-        if (onPolygonDrawn) {
-          onPolygonDrawn(geojson);
-        }
+    const handleLoad = () => {
+      if (!map.getSource(PARCELS_SOURCE_ID)) {
+        map.addSource(PARCELS_SOURCE_ID, {
+          type: "geojson",
+          data: emptyFeatureCollection() as any,
+        });
       }
-    });
 
-    map.current = newMap;
+      if (!map.getLayer(PARCELS_LAYER_ID)) {
+        map.addLayer({
+          id: PARCELS_LAYER_ID,
+          type: "circle",
+          source: PARCELS_SOURCE_ID,
+          paint: {
+            "circle-radius": 6,
+            "circle-color": "#ff6b6b",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+            "circle-opacity": 0.8,
+          },
+        });
+      }
+
+      setIsMapReady(true);
+    };
+
+    map.on("load", handleLoad);
+    map.on("draw.create", handlePolygonChange);
+    map.on("draw.update", handlePolygonChange);
+    map.on("draw.delete", handlePolygonDelete);
+
+    mapRef.current = map;
+    drawRef.current = draw;
 
     return () => {
-      newMap.remove();
-      map.current = null;
+      setIsMapReady(false);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      map.off("load", handleLoad);
+      map.off("draw.create", handlePolygonChange);
+      map.off("draw.update", handlePolygonChange);
+      map.off("draw.delete", handlePolygonDelete);
+      map.remove();
+      mapRef.current = null;
+      drawRef.current = null;
     };
-  }, [onPolygonDrawn, onPolygonDeleted]);
+  }, [onPolygonDeleted, onPolygonDrawn]);
 
-  // Fetch parcels on viewport change
   const fetchParcels = useCallback(async () => {
-    if (!map.current || hasPolygon) return;
+    if (!mapRef.current || !isMapReady || hasPolygon) {
+      return;
+    }
 
-    const bounds = map.current.getBounds();
-    const zoom = map.current.getZoom();
+    const bounds = mapRef.current.getBounds();
+    const zoom = mapRef.current.getZoom();
 
     if (zoom < MIN_ZOOM_FOR_PARCELS) {
       setParcels([]);
@@ -116,136 +191,104 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
         west: bounds.getWest(),
         zoom: Math.round(zoom),
       });
-      setParcels(results.result);
-    } catch (err) {
-      console.error("Failed to fetch viewport parcels:", err);
+      setParcels(results.result || []);
+    } catch (error) {
+      console.error("Failed to fetch viewport parcels:", error);
+      setParcels([]);
     } finally {
       setIsLoading(false);
     }
-  }, [hasPolygon]);
+  }, [hasPolygon, isMapReady]);
 
-  // Debounced viewport fetch
   useEffect(() => {
-    if (!map.current) return;
+    if (!mapRef.current || !isMapReady) {
+      return;
+    }
 
     const handleMoveEnd = () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
-      debounceTimer.current = setTimeout(() => {
+      debounceTimerRef.current = setTimeout(() => {
         fetchParcels();
       }, DEBOUNCE_MS);
     };
 
-    map.current.on("moveend", handleMoveEnd);
-
-    // Initial fetch
+    const map = mapRef.current;
+    map.on("moveend", handleMoveEnd);
     handleMoveEnd();
 
     return () => {
-      if (map.current) {
-        map.current.off("moveend", handleMoveEnd);
-      }
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
+      map.off("moveend", handleMoveEnd);
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [fetchParcels]);
+  }, [fetchParcels, isMapReady]);
 
-  // Update parcel markers
   useEffect(() => {
-    if (!map.current) return;
-
-    const sourceId = "parcels-source";
-    const layerId = "parcels-layer";
-
-    // Remove existing layer and source
-    if (map.current.getLayer(layerId)) {
-      map.current.removeLayer(layerId);
-    }
-    if (map.current.getSource(sourceId)) {
-      map.current.removeSource(sourceId);
+    if (!mapRef.current || !isMapReady) {
+      return;
     }
 
-    if (parcels.length === 0) return;
+    const source = mapRef.current.getSource(PARCELS_SOURCE_ID) as any;
+    if (source && typeof source.setData === "function") {
+      source.setData(buildParcelFeatureCollection() as any);
+    }
+  }, [buildParcelFeatureCollection, isMapReady]);
 
-    const geojson = {
-      type: "FeatureCollection",
-      features: parcels.map((p) => ({
-        type: "Feature",
-        geometry: p.geojson || {
-          type: "Point",
-          coordinates: [p.lng, p.lat],
-        },
-        properties: {
-          pin: p.pin,
-          address: p.address,
-          owner_name: p.owner_name,
-        },
-      })),
-    };
+  useEffect(() => {
+    if (!mapRef.current || !isMapReady) {
+      return;
+    }
 
-    map.current.addSource(sourceId, {
-      type: "geojson",
-      data: geojson as any,
-    });
+    const map = mapRef.current;
 
-    map.current.addLayer({
-      id: layerId,
-      type: "circle",
-      source: sourceId,
-      paint: {
-        "circle-radius": 6,
-        "circle-color": "#ff6b6b",
-        "circle-stroke-width": 2,
-        "circle-stroke-color": "#ffffff",
-        "circle-opacity": 0.8,
-      },
-    });
-
-    // Click handler for parcels
-    const handleClick = (e: any) => {
-      if (e.features.length > 0) {
-        const pin = e.features[0].properties.pin;
-        if (onPinSelect) {
-          onPinSelect(pin);
-        }
+    const handleClick = (event: any) => {
+      if (!event.features || event.features.length === 0 || !onPinSelect) {
+        return;
       }
+      onPinSelect(event.features[0].properties.pin);
     };
 
-    map.current.on("click", layerId, handleClick);
-    map.current.on("mouseenter", layerId, () => {
-      map.current!.getCanvas().style.cursor = "pointer";
-    });
-    map.current.on("mouseleave", layerId, () => {
-      map.current!.getCanvas().style.cursor = "";
-    });
+    const handleMouseEnter = () => {
+      map.getCanvas().style.cursor = "pointer";
+    };
+
+    const handleMouseLeave = () => {
+      map.getCanvas().style.cursor = "";
+    };
+
+    map.on("click", PARCELS_LAYER_ID, handleClick);
+    map.on("mouseenter", PARCELS_LAYER_ID, handleMouseEnter);
+    map.on("mouseleave", PARCELS_LAYER_ID, handleMouseLeave);
 
     return () => {
-      if (map.current) {
-        map.current.off("click", layerId, handleClick);
-      }
+      map.off("click", PARCELS_LAYER_ID, handleClick);
+      map.off("mouseenter", PARCELS_LAYER_ID, handleMouseEnter);
+      map.off("mouseleave", PARCELS_LAYER_ID, handleMouseLeave);
     };
-  }, [parcels, onPinSelect]);
+  }, [isMapReady, onPinSelect]);
 
-  // Highlight selected pin
   useEffect(() => {
-    if (!map.current || !selectedPin) return;
+    if (!mapRef.current || !selectedPin) {
+      return;
+    }
 
-    const parcel = parcels.find((p) => p.pin === selectedPin);
-    if (parcel && parcel.lat && parcel.lng) {
-      map.current.flyTo({
-        center: [parcel.lng, parcel.lat],
+    const selectedParcel = parcels.find((parcel) => parcel.pin === selectedPin);
+    if (selectedParcel && selectedParcel.lat != null && selectedParcel.lng != null) {
+      mapRef.current.flyTo({
+        center: [selectedParcel.lng, selectedParcel.lat],
         zoom: 16,
         essential: true,
       });
     }
-  }, [selectedPin, parcels]);
+  }, [parcels, selectedPin]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
-      {isLoading && (
+      <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />
+      {isLoading ? (
         <div
           style={{
             position: "absolute",
@@ -261,8 +304,8 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
         >
           Loading parcels...
         </div>
-      )}
-      {!hasPolygon && parcels.length > 0 && (
+      ) : null}
+      {!hasPolygon && parcels.length > 0 ? (
         <div
           style={{
             position: "absolute",
@@ -278,7 +321,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
         >
           {parcels.length} parcels shown
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

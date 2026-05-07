@@ -1,11 +1,9 @@
 import React, { useState, useCallback } from "react";
-import { Link, useHistory, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Trans } from "@lingui/macro";
 import { CSVDownloader } from "react-papaparse";
-import { Button } from "@justfixnyc/component-library";
 
 import Page from "components/Page";
-import AddressSearch, { SearchAddress } from "components/AddressSearch";
 import APIClient from "components/APIClient";
 import { FindOwnersV2SearchOwner, FindOwnersV2SearchResults } from "components/APIDataTypes";
 import FindOwnersV2Map from "components/FindOwnersV2Map";
@@ -13,7 +11,6 @@ import LegalFooter from "components/LegalFooter";
 import {
   createRouteForAddressPage,
   createRouteForOwnerPage,
-  createRouteForSavedListsPage,
 } from "routes";
 import { parseLocaleFromPath } from "i18n";
 import { isLegacyPath } from "components/WowzaToggle";
@@ -69,7 +66,6 @@ function formatMailing(owner: FindOwnersV2SearchOwner) {
 
 const FindOwnersV2Page: React.FC = () => {
   const location = useLocation();
-  const history = useHistory();
   const locale = parseLocaleFromPath(location.pathname) || undefined;
   const legacy = isLegacyPath(location.pathname);
 
@@ -195,6 +191,12 @@ const FindOwnersV2Page: React.FC = () => {
                 </select>
               </div>
             </div>
+
+            {!hasPolygon && !isLoading && !error && (
+              <div className="FindOwnersPage__loading">
+                <Trans>Zoom into Chicago and draw a polygon to load matching owners.</Trans>
+              </div>
+            )}
 
             {error && (
               <div className="FindOwnersPage__error">{error}</div>
