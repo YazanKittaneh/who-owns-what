@@ -188,6 +188,211 @@
   text-decoration: underline;
 }
 
+.FindOwnersPage--v2 {
+  background: linear-gradient(180deg, #eef3f8 0%, #f8fafc 45%, #ffffff 100%);
+}
+
+.FindOwnersPage--v2 .FindOwnersPage__content {
+  gap: 16px;
+  padding: 16px;
+  height: calc(100vh - 60px);
+}
+
+.FindOwnersPage--v2 .FindOwnersPage__search-section {
+  width: 430px;
+  min-width: 430px;
+  padding: 0;
+  overflow-y: auto;
+  background: transparent;
+  border-right: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.FindOwnersPage--v2 .FindOwnersPage__map-container {
+  border-radius: 18px;
+  overflow: hidden;
+  min-height: 560px;
+  box-shadow: 0 18px 40px rgba(24, 39, 75, 0.14);
+}
+
+.FindOwnersPage__panel {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.FindOwnersPage__panel--intro {
+  background: linear-gradient(135deg, #ffffff 0%, #f3f8ff 100%);
+}
+
+.FindOwnersPage__eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0088ce;
+}
+
+.FindOwnersPage__panel h1,
+.FindOwnersPage__panel h2 {
+  margin-top: 0;
+}
+
+.FindOwnersPage__lead {
+  margin: 0;
+  color: #475467;
+  line-height: 1.55;
+}
+
+.FindOwnersPage__panelHeader {
+  margin-bottom: 16px;
+}
+
+.FindOwnersPage__panelHeader h2 {
+  margin-bottom: 6px;
+  font-size: 20px;
+}
+
+.FindOwnersPage__panelHeader p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.FindOwnersPage__summaryChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.FindOwnersPage__summaryChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eff6ff;
+  border: 1px solid #cfe3ff;
+  color: #0f4c81;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.FindOwnersPage__helperText {
+  margin: 8px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.FindOwnersPage--v2 .FindOwnersPage__chip {
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border-color: #d0d5dd;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.FindOwnersPage--v2 .FindOwnersPage__chip.active {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+.FindOwnersPage__select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d0d5dd;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.FindOwnersPage__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.FindOwnersPage__steps span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.FindOwnersPage__resultsSubhead {
+  margin: 4px 0 0;
+  color: #667085;
+  font-size: 13px;
+}
+
+.FindOwnersPage__result-card--active {
+  border: 1px solid #b2ddff;
+  box-shadow: 0 0 0 3px rgba(0, 136, 206, 0.12);
+}
+
+.FindOwnersPage__resultHeaderMain {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.FindOwnersPage__resultActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.FindOwnersPage__secondaryAction {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.FindOwnersPage__secondaryAction:hover,
+.FindOwnersPage__parcelLocate:hover {
+  border-color: #0088ce;
+  color: #0088ce;
+}
+
+.FindOwnersPage__parcelLocate {
+  margin-right: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
 @media (max-width: 768px) {
   .FindOwnersPage__content {
     flex-direction: column;
@@ -203,5 +408,44 @@
   
   .FindOwnersPage__map-container {
     height: 50vh;
+  }
+
+  .FindOwnersPage--v2 .FindOwnersPage__content {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .FindOwnersPage--v2 .FindOwnersPage__search-section {
+    order: 2;
+    width: 100%;
+    min-width: 0;
+    max-height: none;
+  }
+
+  .FindOwnersPage--v2 .FindOwnersPage__map-container {
+    order: 1;
+    height: 58vh;
+    min-height: 420px;
+  }
+
+  .FindOwnersPage__panel {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .FindOwnersPage__results-header,
+  .FindOwnersPage__resultHeaderMain {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .FindOwnersPage__resultActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .FindOwnersPage__stats {
+    flex-direction: column;
+    gap: 4px;
   }
 }

@@ -36,23 +36,24 @@ type PortfolioSizeOption = {
 
 const BUILDING_TYPE_OPTIONS: BuildingTypeOption[] = [
   { value: "single_family", label: "Single-family" },
-  { value: "two_flat", label: "Two-flat" },
-  { value: "three_flat", label: "Three-flat" },
-  { value: "multi_family", label: "Multi-family (4+)" },
+  { value: "two_flat", label: "2-flat" },
+  { value: "three_flat", label: "3-flat" },
+  { value: "multi_family", label: "4+ unit multifamily" },
   { value: "condo", label: "Condo / co-op" },
-  { value: "commercial", label: "Commercial / mixed use" },
+  { value: "commercial", label: "Commercial / mixed-use" },
 ];
 
 const PORTFOLIO_SIZE_OPTIONS: PortfolioSizeOption[] = [
-  { value: "any", label: "Any portfolio size", min: 1, max: null },
-  { value: "1", label: "1 parcel", min: 1, max: 1 },
-  { value: "2_5", label: "2-5 parcels", min: 2, max: 5 },
-  { value: "6_20", label: "6-20 parcels", min: 6, max: 20 },
-  { value: "21_50", label: "21-50 parcels", min: 21, max: 50 },
-  { value: "50_plus", label: "50+ parcels", min: 50, max: null },
+  { value: "any", label: "Any holdings", min: 1, max: null },
+  { value: "1", label: "1 property", min: 1, max: 1 },
+  { value: "2_5", label: "2-5 properties", min: 2, max: 5 },
+  { value: "6_20", label: "6-20 properties", min: 6, max: 20 },
+  { value: "21_50", label: "21-50 properties", min: 21, max: 50 },
+  { value: "50_plus", label: "50+ properties", min: 50, max: null },
 ];
 
 const RESULT_LIMIT = 100;
+const ANY_PROPERTY_TYPE = "any_property_type";
 
 function formatAddress(address?: string | null, pin?: string) {
   return address || pin || "Unknown parcel";
@@ -64,19 +65,26 @@ function formatMailing(owner: FindOwnersV2SearchOwner) {
     .join(owner.mailing_address ? ", " : " ");
 }
 
+function getSavedOwnerLookupKey(owner: FindOwnersV2SearchOwner) {
+  const ownerType = owner.owner_id ? "id" : "name";
+  const ownerKey = owner.owner_id || owner.owner_name || owner.owner_key;
+  return `owner:${ownerType}:${ownerKey}`;
+}
+
 const FindOwnersV2Page: React.FC = () => {
   const location = useLocation();
   const locale = parseLocaleFromPath(location.pathname) || undefined;
   const legacy = isLegacyPath(location.pathname);
 
   const [buildingTypes, setBuildingTypes] = useState<string[]>(
-    BUILDING_TYPE_OPTIONS.map((option) => option.value)
+    []
   );
   const [portfolioSize, setPortfolioSize] = useState<string>("any");
   const [data, setData] = useState<FindOwnersV2SearchResults | null>(null);
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPin, setSelectedPin] = useState<string | null>(null);
+  const [selectedOwnerKey, setSelectedOwnerKey] = useState<string | null>(null);
   const [, setSavedVersion] = useState(0);
   const [hasPolygon, setHasPolygon] = useState(false);
 
@@ -98,6 +106,7 @@ const FindOwnersV2Page: React.FC = () => {
           limit: RESULT_LIMIT,
         });
         setData(results);
+        setSelectedOwnerKey(results.result[0]?.owner_key || null);
       } catch (err: any) {
         setError(err.message || "Failed to search owners");
       } finally {
@@ -111,9 +120,16 @@ const FindOwnersV2Page: React.FC = () => {
     setHasPolygon(false);
     setData(null);
     setError(null);
+    setSelectedOwnerKey(null);
+    setSelectedPin(null);
   }, []);
 
   const toggleBuildingType = (value: string) => {
+    if (value === ANY_PROPERTY_TYPE) {
+      setBuildingTypes([]);
+      return;
+    }
+
     setBuildingTypes((prev) => {
       const next = prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value];
       return next;
@@ -124,10 +140,30 @@ const FindOwnersV2Page: React.FC = () => {
     setPortfolioSize(e.target.value);
   };
 
+  const focusOwnerOnMap = useCallback((owner: FindOwnersV2SearchOwner) => {
+    setSelectedOwnerKey(owner.owner_key);
+    setSelectedPin(owner.parcels?.[0]?.pin || null);
+  }, []);
+
+  const highlightedPins = React.useMemo(
+    () => data?.result.find((owner) => owner.owner_key === selectedOwnerKey)?.parcels.map((parcel) => parcel.pin) || [],
+    [data, selectedOwnerKey]
+  );
+
+  const propertyTypeSummary = React.useMemo(() => {
+    if (buildingTypes.length === 0) {
+      return "Any property type";
+    }
+    if (buildingTypes.length === 1) {
+      return BUILDING_TYPE_OPTIONS.find((option) => option.value === buildingTypes[0])?.label || "1 type";
+    }
+    return `${buildingTypes.length} property types`;
+  }, [buildingTypes]);
+
   const toggleSavedOwner = (owner: FindOwnersV2SearchOwner) => {
     const ownerType = owner.owner_id ? "id" : "name";
     const ownerKey = owner.owner_id || owner.owner_name || owner.owner_key;
-    const key = `owner:${ownerType}:${ownerKey}`;
+    const key = getSavedOwnerLookupKey(owner);
     if (isSavedNearbyItem(key)) {
       removeSavedNearbyItem(key);
     } else {
@@ -160,18 +196,38 @@ const FindOwnersV2Page: React.FC = () => {
 
   return (
     <Page title="Find Owners" >
-      <div className="FindOwnersPage">
+      <div className="FindOwnersPage FindOwnersPage--v2">
         <div className="FindOwnersPage__content">
           <div className="FindOwnersPage__search-section">
-            <h1><Trans>Find Owners</Trans></h1>
-            <p><Trans>Draw a polygon on the map to find property owners in that area.</Trans></p>
+            <div className="FindOwnersPage__panel FindOwnersPage__panel--intro">
+              <p className="FindOwnersPage__eyebrow"><Trans>Area Search</Trans></p>
+              <h1><Trans>Find owners with a map-based area search</Trans></h1>
+              <p className="FindOwnersPage__lead">
+                <Trans>
+                  Outline a search area on the map, then refine by property type and owner holdings.
+                </Trans>
+              </p>
+            </div>
             
-            <div className="FindOwnersPage__filters">
+            <div className="FindOwnersPage__panel FindOwnersPage__panel--filters">
+              <div className="FindOwnersPage__panelHeader">
+                <h2><Trans>Refine Search</Trans></h2>
+                <p><Trans>Set the property profile you want to review before drawing the area.</Trans></p>
+              </div>
+              <div className="FindOwnersPage__filters">
               <div className="FindOwnersPage__filter-group">
-                <label><Trans>Building Types</Trans></label>
+                <label><Trans>Property Type</Trans></label>
                 <div className="FindOwnersPage__building-types">
+                  <button
+                    type="button"
+                    className={`FindOwnersPage__chip ${buildingTypes.length === 0 ? "active" : ""}`}
+                    onClick={() => toggleBuildingType(ANY_PROPERTY_TYPE)}
+                  >
+                    <Trans>Any</Trans>
+                  </button>
                   {BUILDING_TYPE_OPTIONS.map((option) => (
                     <button
+                      type="button"
                       key={option.value}
                       className={`FindOwnersPage__chip ${buildingTypes.includes(option.value) ? "active" : ""}`}
                       onClick={() => toggleBuildingType(option.value)}
@@ -183,35 +239,60 @@ const FindOwnersV2Page: React.FC = () => {
               </div>
               
               <div className="FindOwnersPage__filter-group">
-                <label><Trans>Portfolio Size</Trans></label>
-                <select value={portfolioSize} onChange={handlePortfolioSizeChange}>
+                <label><Trans>Owner Holdings</Trans></label>
+                <select className="FindOwnersPage__select" value={portfolioSize} onChange={handlePortfolioSizeChange}>
                   {PORTFOLIO_SIZE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
+                <p className="FindOwnersPage__helperText">
+                  <Trans>Filter owners by how many properties they hold across the dataset.</Trans>
+                </p>
+              </div>
+              </div>
+
+              <div className="FindOwnersPage__summaryChips">
+                <span className="FindOwnersPage__summaryChip">{propertyTypeSummary}</span>
+                <span className="FindOwnersPage__summaryChip">{selectedPortfolioSize.label}</span>
               </div>
             </div>
 
             {!hasPolygon && !isLoading && !error && (
-              <div className="FindOwnersPage__loading">
-                <Trans>Zoom into Chicago and draw a polygon to load matching owners.</Trans>
+              <div className="FindOwnersPage__panel FindOwnersPage__panel--emptyState">
+                <div className="FindOwnersPage__steps">
+                  <span><Trans>1. Move the map</Trans></span>
+                  <span><Trans>2. Draw an area</Trans></span>
+                  <span><Trans>3. Review matching owners</Trans></span>
+                </div>
+                <div className="FindOwnersPage__loading">
+                  <Trans>Zoom into Chicago and draw an area to load matching owners.</Trans>
+                </div>
               </div>
             )}
 
             {error && (
-              <div className="FindOwnersPage__error">{error}</div>
+              <div className="FindOwnersPage__panel">
+                <div className="FindOwnersPage__error">{error}</div>
+              </div>
             )}
 
             {isLoading && (
-              <div className="FindOwnersPage__loading"><Trans>Searching owners...</Trans></div>
+              <div className="FindOwnersPage__panel">
+                <div className="FindOwnersPage__loading"><Trans>Searching owners...</Trans></div>
+              </div>
             )}
 
             {data && !isLoading && (
-              <div className="FindOwnersPage__results">
+              <div className="FindOwnersPage__panel FindOwnersPage__results">
                 <div className="FindOwnersPage__results-header">
-                  <h2>
-                    <Trans>{data.result.length} owners found</Trans>
-                  </h2>
+                  <div>
+                    <h2>
+                      <Trans>{data.result.length} owners match this area</Trans>
+                    </h2>
+                    <p className="FindOwnersPage__resultsSubhead">
+                      <Trans>Use the map and cards together to review likely owners.</Trans>
+                    </p>
+                  </div>
                   <CSVDownloader
                     data={exportCSVData}
                     filename="find-owners-v2"
@@ -224,25 +305,40 @@ const FindOwnersV2Page: React.FC = () => {
 
                 <div className="FindOwnersPage__results-list">
                   {data.result.map((owner) => (
-                    <div key={owner.owner_key} className="FindOwnersPage__result-card">
+                    <div
+                      key={owner.owner_key}
+                      className={`FindOwnersPage__result-card ${selectedOwnerKey === owner.owner_key ? "FindOwnersPage__result-card--active" : ""}`}
+                    >
                       <div className="FindOwnersPage__result-header">
-                        <Link
-                          to={createRouteForOwnerPage({
-                            locale,
-                            ownerType: owner.owner_id ? "id" : "name",
-                            ownerKey: owner.owner_id || owner.owner_name || owner.owner_key,
-                          }, legacy)}
-                          className="FindOwnersPage__owner-link"
-                        >
-                          {owner.owner_name || "Unknown Owner"}
-                        </Link>
-                        <button
-                          className={`FindOwnersPage__save-btn ${isSavedNearbyItem(owner.owner_key) ? "saved" : ""}`}
-                          onClick={() => toggleSavedOwner(owner)}
-                          title={isSavedNearbyItem(owner.owner_key) ? "Remove from saved" : "Save owner"}
-                        >
-                          {isSavedNearbyItem(owner.owner_key) ? "★" : "☆"}
-                        </button>
+                        <div className="FindOwnersPage__resultHeaderMain">
+                          <Link
+                            to={createRouteForOwnerPage({
+                              locale,
+                              ownerType: owner.owner_id ? "id" : "name",
+                              ownerKey: owner.owner_id || owner.owner_name || owner.owner_key,
+                            }, legacy)}
+                            className="FindOwnersPage__owner-link"
+                          >
+                            {owner.owner_name || "Unknown Owner"}
+                          </Link>
+                          <div className="FindOwnersPage__resultActions">
+                            <button
+                              type="button"
+                              className="FindOwnersPage__secondaryAction"
+                              onClick={() => focusOwnerOnMap(owner)}
+                            >
+                              <Trans>Show on map</Trans>
+                            </button>
+                            <button
+                              type="button"
+                              className={`FindOwnersPage__save-btn ${isSavedNearbyItem(getSavedOwnerLookupKey(owner)) ? "saved" : ""}`}
+                              onClick={() => toggleSavedOwner(owner)}
+                              title={isSavedNearbyItem(getSavedOwnerLookupKey(owner)) ? "Remove from saved" : "Save owner"}
+                            >
+                              {isSavedNearbyItem(getSavedOwnerLookupKey(owner)) ? "★" : "☆"}
+                            </button>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="FindOwnersPage__result-details">
@@ -250,9 +346,9 @@ const FindOwnersV2Page: React.FC = () => {
                           <div className="FindOwnersPage__mailing">{formatMailing(owner)}</div>
                         )}
                         <div className="FindOwnersPage__stats">
-                          <span>{owner.parcel_count} parcels</span>
+                          <span>{owner.parcel_count} properties</span>
                           {owner.nearest_distance_m && (
-                            <span>Nearest: {Math.round(owner.nearest_distance_m)}m</span>
+                            <span>{Math.round(owner.nearest_distance_m)}m from drawn area</span>
                           )}
                         </div>
 
@@ -272,6 +368,16 @@ const FindOwnersV2Page: React.FC = () => {
                             <ul>
                               {owner.parcels.slice(0, 6).map((parcel) => (
                                 <li key={parcel.pin}>
+                                  <button
+                                    type="button"
+                                    className="FindOwnersPage__parcelLocate"
+                                    onClick={() => {
+                                      setSelectedOwnerKey(owner.owner_key);
+                                      setSelectedPin(parcel.pin);
+                                    }}
+                                  >
+                                    <Trans>Locate</Trans>
+                                  </button>
                                   <Link
                                     to={createRouteForAddressPage({
                                       locale,
@@ -301,6 +407,7 @@ const FindOwnersV2Page: React.FC = () => {
               onPolygonDrawn={handlePolygonDrawn}
               onPolygonDeleted={handlePolygonDeleted}
               selectedPin={selectedPin}
+              highlightedPins={highlightedPins}
               onPinSelect={setSelectedPin}
             />
           </div>

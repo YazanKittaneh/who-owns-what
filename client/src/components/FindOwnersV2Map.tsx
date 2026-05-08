@@ -123,6 +123,7 @@ export interface FindOwnersV2MapProps {
   onPolygonDrawn?: (geojson: string) => void;
   onPolygonDeleted?: () => void;
   selectedPin?: string | null;
+  highlightedPins?: string[];
   onPinSelect?: (pin: string | null) => void;
 }
 
@@ -148,6 +149,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
   onPolygonDrawn,
   onPolygonDeleted,
   selectedPin,
+  highlightedPins = [],
   onPinSelect,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -160,6 +162,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
   const [hasPolygon, setHasPolygon] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [drawVertexCount, setDrawVertexCount] = useState(0);
 
   const buildParcelFeatureCollection = useCallback((): FeatureCollection => {
     return {
@@ -190,10 +193,27 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     drawRef.current.deleteAll();
     setIsDrawing(false);
     setHasPolygon(false);
+    setDrawVertexCount(0);
     if (onPolygonDeleted) {
       onPolygonDeleted();
     }
   }, [onPolygonDeleted]);
+
+  const syncDraftVertexCount = useCallback(() => {
+    if (!drawRef.current) {
+      setDrawVertexCount(0);
+      return;
+    }
+
+    const feature = drawRef.current.getAll()?.features?.[0];
+    const coordinates = feature?.geometry?.coordinates?.[0];
+    if (!Array.isArray(coordinates)) {
+      setDrawVertexCount(0);
+      return;
+    }
+
+    setDrawVertexCount(Math.max(0, coordinates.length - 1));
+  }, []);
 
   const startDrawing = useCallback(() => {
     if (!drawRef.current) {
@@ -204,10 +224,24 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     drawRef.current.changeMode("draw_polygon");
     setHasPolygon(false);
     setIsDrawing(true);
+    setDrawVertexCount(0);
     if (onPolygonDeleted) {
       onPolygonDeleted();
     }
   }, [onPolygonDeleted]);
+
+  const finishDrawing = useCallback(() => {
+    if (!drawRef.current || drawRef.current.getMode() !== "draw_polygon") {
+      return;
+    }
+
+    const feature = drawRef.current.getAll()?.features?.[0];
+    if (!feature?.id || drawVertexCount < 3) {
+      return;
+    }
+
+    drawRef.current.changeMode("simple_select", { featureIds: [feature.id] });
+  }, [drawVertexCount]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) {
@@ -227,10 +261,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
 
     const draw = new MapboxDraw({
       displayControlsDefault: false,
-      controls: {
-        polygon: true,
-        trash: true,
-      },
+      controls: {},
       styles: DRAW_STYLES as any,
     });
 
@@ -243,6 +274,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       }
       setHasPolygon(true);
       setIsDrawing(false);
+      setDrawVertexCount(0);
       if (onPolygonDrawn) {
         onPolygonDrawn(JSON.stringify(feature.geometry));
       }
@@ -251,6 +283,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     const handlePolygonDelete = () => {
       setHasPolygon(false);
       setIsDrawing(false);
+      setDrawVertexCount(0);
       if (onPolygonDeleted) {
         onPolygonDeleted();
       }
@@ -258,6 +291,13 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
 
     const handleModeChange = (event: any) => {
       setIsDrawing(event.mode === "draw_polygon");
+      if (event.mode !== "draw_polygon") {
+        setDrawVertexCount(0);
+      }
+    };
+
+    const handleDrawRender = () => {
+      syncDraftVertexCount();
     };
 
     const handleLoad = () => {
@@ -291,6 +331,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     map.on("draw.update", handlePolygonChange);
     map.on("draw.delete", handlePolygonDelete);
     map.on("draw.modechange", handleModeChange);
+    map.on("draw.render", handleDrawRender);
 
     mapRef.current = map;
     drawRef.current = draw;
@@ -305,11 +346,12 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       map.off("draw.update", handlePolygonChange);
       map.off("draw.delete", handlePolygonDelete);
       map.off("draw.modechange", handleModeChange);
+      map.off("draw.render", handleDrawRender);
       map.remove();
       mapRef.current = null;
       drawRef.current = null;
     };
-  }, [onPolygonDeleted, onPolygonDrawn]);
+  }, [onPolygonDeleted, onPolygonDrawn, syncDraftVertexCount]);
 
   const fetchParcels = useCallback(async () => {
     if (!mapRef.current || !isMapReady || hasPolygon) {
@@ -399,15 +441,18 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       .forEach((parcel) => {
         const markerElement = document.createElement("button");
         const isSelected = parcel.pin === selectedPin;
+        const isHighlighted = highlightedPins.includes(parcel.pin);
 
         markerElement.type = "button";
         markerElement.setAttribute("aria-label", parcel.address || parcel.pin);
-        markerElement.style.width = isSelected ? "16px" : "12px";
-        markerElement.style.height = isSelected ? "16px" : "12px";
+        markerElement.style.width = isSelected ? "18px" : isHighlighted ? "14px" : "12px";
+        markerElement.style.height = isSelected ? "18px" : isHighlighted ? "14px" : "12px";
         markerElement.style.borderRadius = "9999px";
         markerElement.style.border = isSelected ? "3px solid #ffffff" : "2px solid #ffffff";
         markerElement.style.background = isSelected
           ? SELECTED_PARCEL_MARKER_COLOR
+          : isHighlighted
+          ? DRAW_ACTIVE_COLOR
           : PARCEL_MARKER_COLOR;
         markerElement.style.boxShadow = "0 0 0 1px rgba(0, 0, 0, 0.15)";
         markerElement.style.cursor = "pointer";
@@ -430,7 +475,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       markerRefs.current.forEach((marker) => marker.remove());
       markerRefs.current = [];
     };
-  }, [isDrawing, isMapReady, onPinSelect, parcels, selectedPin]);
+  }, [highlightedPins, isDrawing, isMapReady, onPinSelect, parcels, selectedPin]);
 
   useEffect(() => {
     if (!mapRef.current || !selectedPin) {
@@ -515,6 +560,26 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
             Clear area
           </button>
         )}
+        {isDrawing && (
+          <button
+            type="button"
+            disabled={drawVertexCount < 3}
+            onClick={finishDrawing}
+            style={{
+              background: drawVertexCount >= 3 ? "#ffffff" : "rgba(255,255,255,0.65)",
+              color: "#111111",
+              border: "1px solid rgba(0,0,0,0.15)",
+              borderRadius: 6,
+              padding: "10px 12px",
+              fontSize: 14,
+              fontWeight: 600,
+              textAlign: "left",
+              cursor: drawVertexCount >= 3 ? "pointer" : "not-allowed",
+            }}
+          >
+            Finish area
+          </button>
+        )}
         <div
           style={{
             background: "rgba(17,17,17,0.8)",
@@ -526,8 +591,8 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
           }}
         >
           {isDrawing
-            ? "Tap the map to add corners. Tap the first point again to finish the shape."
-            : "Tap Draw area, then tap the map to outline your search area."}
+            ? `Click or tap the map to add corners. ${drawVertexCount >= 3 ? "Use Finish area when you are ready." : "Add at least 3 corners to finish."}`
+            : "Click or tap Draw area, then outline the search area on the map."}
         </div>
       </div>
       {!hasPolygon && parcels.length > 0 ? (
