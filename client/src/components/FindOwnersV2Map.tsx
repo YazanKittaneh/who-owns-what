@@ -120,10 +120,13 @@ const DRAW_STYLES = [
 ];
 
 export interface FindOwnersV2MapProps {
+  searchMode?: "draw" | "radius";
   onPolygonDrawn?: (geojson: string) => void;
   onPolygonDeleted?: () => void;
   selectedPin?: string | null;
   highlightedPins?: string[];
+  focusLocation?: { lat: number; lng: number; zoom?: number } | null;
+  clearPolygonToken?: number;
   onPinSelect?: (pin: string | null) => void;
 }
 
@@ -146,10 +149,13 @@ const emptyFeatureCollection = (): FeatureCollection => ({
 });
 
 const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
+  searchMode = "draw",
   onPolygonDrawn,
   onPolygonDeleted,
   selectedPin,
   highlightedPins = [],
+  focusLocation,
+  clearPolygonToken = 0,
   onPinSelect,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -216,7 +222,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
   }, []);
 
   const startDrawing = useCallback(() => {
-    if (!drawRef.current) {
+    if (!drawRef.current || searchMode !== "draw") {
       return;
     }
 
@@ -228,10 +234,10 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     if (onPolygonDeleted) {
       onPolygonDeleted();
     }
-  }, [onPolygonDeleted]);
+  }, [onPolygonDeleted, searchMode]);
 
   const finishDrawing = useCallback(() => {
-    if (!drawRef.current || drawRef.current.getMode() !== "draw_polygon") {
+    if (!drawRef.current || searchMode !== "draw" || drawRef.current.getMode() !== "draw_polygon") {
       return;
     }
 
@@ -241,7 +247,30 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     }
 
     drawRef.current.changeMode("simple_select", { featureIds: [feature.id] });
-  }, [drawVertexCount]);
+  }, [drawVertexCount, searchMode]);
+
+  useEffect(() => {
+    if (!drawRef.current || !mapRef.current) {
+      return;
+    }
+
+    drawRef.current.deleteAll();
+    setHasPolygon(false);
+    setIsDrawing(false);
+    setDrawVertexCount(0);
+  }, [clearPolygonToken]);
+
+  useEffect(() => {
+    if (!mapRef.current || !focusLocation) {
+      return;
+    }
+
+    mapRef.current.flyTo({
+      center: [focusLocation.lng, focusLocation.lat],
+      zoom: focusLocation.zoom || 14,
+      essential: true,
+    });
+  }, [focusLocation]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) {
@@ -354,7 +383,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
   }, [onPolygonDeleted, onPolygonDrawn, syncDraftVertexCount]);
 
   const fetchParcels = useCallback(async () => {
-    if (!mapRef.current || !isMapReady || hasPolygon) {
+    if (!mapRef.current || !isMapReady || (searchMode === "draw" && hasPolygon)) {
       return;
     }
 
@@ -382,7 +411,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [hasPolygon, isMapReady]);
+  }, [hasPolygon, isMapReady, searchMode]);
 
   useEffect(() => {
     if (!mapRef.current || !isMapReady) {
@@ -429,7 +458,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
     markerRefs.current.forEach((marker) => marker.remove());
     markerRefs.current = [];
 
-    if (isDrawing) {
+    if (searchMode === "draw" && isDrawing) {
       return () => {
         markerRefs.current.forEach((marker) => marker.remove());
         markerRefs.current = [];
@@ -475,7 +504,7 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
       markerRefs.current.forEach((marker) => marker.remove());
       markerRefs.current = [];
     };
-  }, [highlightedPins, isDrawing, isMapReady, onPinSelect, parcels, selectedPin]);
+  }, [highlightedPins, isDrawing, isMapReady, onPinSelect, parcels, searchMode, selectedPin]);
 
   useEffect(() => {
     if (!mapRef.current || !selectedPin) {
@@ -512,43 +541,26 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
           Loading parcels...
         </div>
       ) : null}
-      <div
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          zIndex: 1000,
-          maxWidth: 220,
-        }}
-      >
-        <button
-          type="button"
-          onClick={startDrawing}
+      {searchMode === "draw" && (
+        <div
           style={{
-            background: isDrawing ? DRAW_ACTIVE_COLOR : "#ffffff",
-            color: isDrawing ? "#111111" : "#111111",
-            border: "1px solid rgba(0,0,0,0.15)",
-            borderRadius: 6,
-            padding: "10px 12px",
-            fontSize: 14,
-            fontWeight: 600,
-            textAlign: "left",
-            cursor: "pointer",
+            position: "absolute",
+            top: 10,
+            left: 10,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            zIndex: 1000,
+            maxWidth: 220,
           }}
         >
-          {hasPolygon ? "Redraw area" : isDrawing ? "Drawing area..." : "Draw area"}
-        </button>
-        {(hasPolygon || isDrawing) && (
           <button
             type="button"
-            onClick={clearPolygon}
+            onClick={startDrawing}
             style={{
-              background: "rgba(17,17,17,0.85)",
-              color: "#ffffff",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: isDrawing ? DRAW_ACTIVE_COLOR : "#ffffff",
+              color: "#111111",
+              border: "1px solid rgba(0,0,0,0.15)",
               borderRadius: 6,
               padding: "10px 12px",
               fontSize: 14,
@@ -557,44 +569,63 @@ const FindOwnersV2Map: React.FC<FindOwnersV2MapProps> = ({
               cursor: "pointer",
             }}
           >
-            Clear area
+            {hasPolygon ? "Redraw area" : isDrawing ? "Drawing area..." : "Draw area"}
           </button>
-        )}
-        {isDrawing && (
-          <button
-            type="button"
-            disabled={drawVertexCount < 3}
-            onClick={finishDrawing}
+          {(hasPolygon || isDrawing) && (
+            <button
+              type="button"
+              onClick={clearPolygon}
+              style={{
+                background: "rgba(17,17,17,0.85)",
+                color: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 6,
+                padding: "10px 12px",
+                fontSize: 14,
+                fontWeight: 600,
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              Clear area
+            </button>
+          )}
+          {isDrawing && (
+            <button
+              type="button"
+              disabled={drawVertexCount < 3}
+              onClick={finishDrawing}
+              style={{
+                background: drawVertexCount >= 3 ? "#ffffff" : "rgba(255,255,255,0.65)",
+                color: "#111111",
+                border: "1px solid rgba(0,0,0,0.15)",
+                borderRadius: 6,
+                padding: "10px 12px",
+                fontSize: 14,
+                fontWeight: 600,
+                textAlign: "left",
+                cursor: drawVertexCount >= 3 ? "pointer" : "not-allowed",
+              }}
+            >
+              Finish area
+            </button>
+          )}
+          <div
             style={{
-              background: drawVertexCount >= 3 ? "#ffffff" : "rgba(255,255,255,0.65)",
-              color: "#111111",
-              border: "1px solid rgba(0,0,0,0.15)",
+              background: "rgba(17,17,17,0.8)",
+              color: "#ffffff",
               borderRadius: 6,
               padding: "10px 12px",
-              fontSize: 14,
-              fontWeight: 600,
-              textAlign: "left",
-              cursor: drawVertexCount >= 3 ? "pointer" : "not-allowed",
+              fontSize: 12,
+              lineHeight: 1.4,
             }}
           >
-            Finish area
-          </button>
-        )}
-        <div
-          style={{
-            background: "rgba(17,17,17,0.8)",
-            color: "#ffffff",
-            borderRadius: 6,
-            padding: "10px 12px",
-            fontSize: 12,
-            lineHeight: 1.4,
-          }}
-        >
-          {isDrawing
-            ? `Click or tap the map to add corners. ${drawVertexCount >= 3 ? "Use Finish area when you are ready." : "Add at least 3 corners to finish."}`
-            : "Click or tap Draw area, then outline the search area on the map."}
+            {isDrawing
+              ? `Click or tap the map to add corners. ${drawVertexCount >= 3 ? "Use Finish area when you are ready." : "Add at least 3 corners to finish."}`
+              : "Click or tap Draw area, then outline the search area on the map."}
+          </div>
         </div>
-      </div>
+      )}
       {!hasPolygon && parcels.length > 0 ? (
         <div
           style={{

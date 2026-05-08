@@ -190,17 +190,22 @@
 
 .FindOwnersPage--v2 {
   background: linear-gradient(180deg, #eef3f8 0%, #f8fafc 45%, #ffffff 100%);
+  width: 100%;
 }
 
 .FindOwnersPage--v2 .FindOwnersPage__content {
+  display: grid;
+  grid-template-columns: minmax(22rem, 26rem) minmax(0, 1fr);
   gap: 16px;
   padding: 16px;
   height: calc(100vh - 60px);
+  width: 100%;
 }
 
 .FindOwnersPage--v2 .FindOwnersPage__search-section {
-  width: 430px;
-  min-width: 430px;
+  width: auto;
+  min-width: 0;
+  max-width: 26rem;
   padding: 0;
   overflow-y: auto;
   background: transparent;
@@ -215,6 +220,7 @@
   overflow: hidden;
   min-height: 560px;
   box-shadow: 0 18px 40px rgba(24, 39, 75, 0.14);
+  width: 100%;
 }
 
 .FindOwnersPage__panel {
@@ -236,6 +242,33 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #0088ce;
+}
+
+.FindOwnersPage__modeSwitch {
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.06);
+}
+
+.FindOwnersPage__modeButton {
+  min-height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #475467;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.FindOwnersPage__modeButton.active {
+  background: #111827;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16);
 }
 
 .FindOwnersPage__panel h1,
@@ -290,6 +323,13 @@
   color: #667085;
   font-size: 12px;
   line-height: 1.45;
+}
+
+.FindOwnersPage__searchBlockV2 {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .FindOwnersPage--v2 .FindOwnersPage__chip {
@@ -411,8 +451,10 @@
   }
 
   .FindOwnersPage--v2 .FindOwnersPage__content {
+    display: flex;
     gap: 12px;
     padding: 12px;
+    height: auto;
   }
 
   .FindOwnersPage--v2 .FindOwnersPage__search-section {
@@ -426,6 +468,14 @@
     order: 1;
     height: 58vh;
     min-height: 420px;
+  }
+
+  .FindOwnersPage__modeSwitch {
+    width: 100%;
+  }
+
+  .FindOwnersPage__modeButton {
+    flex: 1;
   }
 
   .FindOwnersPage__panel {

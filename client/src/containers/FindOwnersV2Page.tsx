@@ -5,7 +5,13 @@ import { CSVDownloader } from "react-papaparse";
 
 import Page from "components/Page";
 import APIClient from "components/APIClient";
-import { FindOwnersV2SearchOwner, FindOwnersV2SearchResults } from "components/APIDataTypes";
+import AddressSearch, { SearchAddress } from "components/AddressSearch";
+import {
+  FindOwnersV2SearchOwner,
+  FindOwnersV2SearchResults,
+  OwnerAreaSearchResults,
+  OwnerAreaSearchSeed,
+} from "components/APIDataTypes";
 import FindOwnersV2Map from "components/FindOwnersV2Map";
 import LegalFooter from "components/LegalFooter";
 import {
@@ -34,6 +40,23 @@ type PortfolioSizeOption = {
   max: number | null;
 };
 
+type SearchMode = "draw" | "radius";
+
+type SearchOwnerCard = Pick<
+  FindOwnersV2SearchOwner,
+  | "owner_key"
+  | "owner_id"
+  | "owner_name"
+  | "mailing_address"
+  | "mailing_city"
+  | "mailing_state"
+  | "mailing_zip"
+  | "parcel_count"
+  | "nearest_distance_m"
+  | "building_type_counts"
+  | "parcels"
+>;
+
 const BUILDING_TYPE_OPTIONS: BuildingTypeOption[] = [
   { value: "single_family", label: "Single-family" },
   { value: "two_flat", label: "2-flat" },
@@ -52,6 +75,8 @@ const PORTFOLIO_SIZE_OPTIONS: PortfolioSizeOption[] = [
   { value: "50_plus", label: "50+ properties", min: 50, max: null },
 ];
 
+const RADIUS_OPTIONS = [300, 600, 1000, 2000];
+
 const RESULT_LIMIT = 100;
 const ANY_PROPERTY_TYPE = "any_property_type";
 
@@ -59,13 +84,13 @@ function formatAddress(address?: string | null, pin?: string) {
   return address || pin || "Unknown parcel";
 }
 
-function formatMailing(owner: FindOwnersV2SearchOwner) {
+function formatMailing(owner: SearchOwnerCard) {
   return [owner.mailing_address, owner.mailing_city, owner.mailing_state, owner.mailing_zip]
     .filter(Boolean)
     .join(owner.mailing_address ? ", " : " ");
 }
 
-function getSavedOwnerLookupKey(owner: FindOwnersV2SearchOwner) {
+function getSavedOwnerLookupKey(owner: SearchOwnerCard) {
   const ownerType = owner.owner_id ? "id" : "name";
   const ownerKey = owner.owner_id || owner.owner_name || owner.owner_key;
   return `owner:${ownerType}:${ownerKey}`;
@@ -76,26 +101,49 @@ const FindOwnersV2Page: React.FC = () => {
   const locale = parseLocaleFromPath(location.pathname) || undefined;
   const legacy = isLegacyPath(location.pathname);
 
+  const [searchMode, setSearchMode] = useState<SearchMode>("draw");
   const [buildingTypes, setBuildingTypes] = useState<string[]>(
     []
   );
   const [portfolioSize, setPortfolioSize] = useState<string>("any");
-  const [data, setData] = useState<FindOwnersV2SearchResults | null>(null);
+  const [radiusM, setRadiusM] = useState<number>(600);
+  const [drawData, setDrawData] = useState<FindOwnersV2SearchResults | null>(null);
+  const [radiusData, setRadiusData] = useState<OwnerAreaSearchResults | null>(null);
+  const [radiusSeed, setRadiusSeed] = useState<OwnerAreaSearchSeed | null>(null);
+  const [radiusSearchPin, setRadiusSearchPin] = useState<string>("");
   const [isLoading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPin, setSelectedPin] = useState<string | null>(null);
   const [selectedOwnerKey, setSelectedOwnerKey] = useState<string | null>(null);
   const [, setSavedVersion] = useState(0);
   const [hasPolygon, setHasPolygon] = useState(false);
+  const [clearPolygonToken, setClearPolygonToken] = useState(0);
 
   const selectedPortfolioSize =
     PORTFOLIO_SIZE_OPTIONS.find((option) => option.value === portfolioSize) || PORTFOLIO_SIZE_OPTIONS[0];
 
+  const activeData = searchMode === "draw" ? drawData : radiusData;
+  const activeOwners: SearchOwnerCard[] = React.useMemo(
+    () => (activeData?.result || []) as SearchOwnerCard[],
+    [activeData]
+  );
+  const focusLocation = React.useMemo(
+    () => (
+      searchMode === "radius" && radiusSeed?.lat != null && radiusSeed?.lng != null
+        ? { lat: radiusSeed.lat, lng: radiusSeed.lng, zoom: 14 }
+        : null
+    ),
+    [radiusSeed, searchMode]
+  );
+
   const handlePolygonDrawn = useCallback(
     async (geojson: string) => {
+      setSearchMode("draw");
       setHasPolygon(true);
       setLoading(true);
       setError(null);
+      setRadiusData(null);
+      setRadiusSeed(null);
 
       try {
         const results = await APIClient.findOwnersV2Search({
@@ -105,8 +153,9 @@ const FindOwnersV2Page: React.FC = () => {
           maxParcels: selectedPortfolioSize.max,
           limit: RESULT_LIMIT,
         });
-        setData(results);
+        setDrawData(results);
         setSelectedOwnerKey(results.result[0]?.owner_key || null);
+        setSelectedPin(results.result[0]?.parcels?.[0]?.pin || null);
       } catch (err: any) {
         setError(err.message || "Failed to search owners");
       } finally {
@@ -116,13 +165,70 @@ const FindOwnersV2Page: React.FC = () => {
     [buildingTypes, selectedPortfolioSize]
   );
 
+  const runRadiusSearch = useCallback(
+    async (pin: string) => {
+      setSearchMode("radius");
+      setLoading(true);
+      setError(null);
+      setHasPolygon(false);
+      setDrawData(null);
+      setClearPolygonToken((value) => value + 1);
+
+      try {
+        const results = await APIClient.searchOwnersByArea({
+          pin,
+          radiusM,
+          buildingTypes: buildingTypes.length > 0 ? buildingTypes : undefined,
+          minParcels: selectedPortfolioSize.min,
+          maxParcels: selectedPortfolioSize.max,
+          limit: RESULT_LIMIT,
+        });
+        setRadiusData(results);
+        setRadiusSeed(results.seed || null);
+        setSelectedOwnerKey(results.result[0]?.owner_key || null);
+        setSelectedPin(results.seed?.pin || results.result[0]?.parcels?.[0]?.pin || null);
+      } catch (searchError: any) {
+        setRadiusData(null);
+        setRadiusSeed(null);
+        setSelectedOwnerKey(null);
+        setSelectedPin(null);
+        setError(searchError.message || "Failed to search owners");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [buildingTypes, radiusM, selectedPortfolioSize.max, selectedPortfolioSize.min]
+  );
+
   const handlePolygonDeleted = useCallback(() => {
     setHasPolygon(false);
-    setData(null);
+    setDrawData(null);
     setError(null);
     setSelectedOwnerKey(null);
     setSelectedPin(null);
   }, []);
+
+  const handleRadiusAddressSubmit = useCallback(
+    (searchAddress: SearchAddress, searchError: any) => {
+      if (searchError) {
+        setError(searchError instanceof Error ? searchError.message : "Address search failed.");
+        return;
+      }
+
+      if (!searchAddress.pin) {
+        return;
+      }
+
+      setSearchMode("radius");
+      setHasPolygon(false);
+      setDrawData(null);
+      setClearPolygonToken((value) => value + 1);
+      setSelectedOwnerKey(null);
+      setSelectedPin(null);
+      setRadiusSearchPin(searchAddress.pin);
+    },
+    []
+  );
 
   const toggleBuildingType = (value: string) => {
     if (value === ANY_PROPERTY_TYPE) {
@@ -140,14 +246,22 @@ const FindOwnersV2Page: React.FC = () => {
     setPortfolioSize(e.target.value);
   };
 
-  const focusOwnerOnMap = useCallback((owner: FindOwnersV2SearchOwner) => {
+  React.useEffect(() => {
+    if (searchMode !== "radius" || !radiusSearchPin) {
+      return;
+    }
+
+    runRadiusSearch(radiusSearchPin);
+  }, [buildingTypes, portfolioSize, radiusM, radiusSearchPin, runRadiusSearch, searchMode]);
+
+  const focusOwnerOnMap = useCallback((owner: SearchOwnerCard) => {
     setSelectedOwnerKey(owner.owner_key);
     setSelectedPin(owner.parcels?.[0]?.pin || null);
   }, []);
 
   const highlightedPins = React.useMemo(
-    () => data?.result.find((owner) => owner.owner_key === selectedOwnerKey)?.parcels.map((parcel) => parcel.pin) || [],
-    [data, selectedOwnerKey]
+    () => activeOwners.find((owner) => owner.owner_key === selectedOwnerKey)?.parcels.map((parcel) => parcel.pin) || [],
+    [activeOwners, selectedOwnerKey]
   );
 
   const propertyTypeSummary = React.useMemo(() => {
@@ -160,7 +274,35 @@ const FindOwnersV2Page: React.FC = () => {
     return `${buildingTypes.length} property types`;
   }, [buildingTypes]);
 
-  const toggleSavedOwner = (owner: FindOwnersV2SearchOwner) => {
+  const radiusSummary = radiusM >= 1000 ? `${radiusM / 1000} km radius` : `${radiusM} m radius`;
+  const activeResultsHeadline =
+    searchMode === "radius"
+      ? `${activeOwners.length} owners match this address search`
+      : `${activeOwners.length} owners match this area`;
+  const activeResultsSubhead =
+    searchMode === "radius"
+      ? "Review owners near the selected address and compare their nearby holdings."
+      : "Use the map and cards together to review likely owners.";
+
+  const handleSearchModeChange = useCallback((mode: SearchMode) => {
+    setSearchMode(mode);
+    setError(null);
+    setSelectedOwnerKey(null);
+    setSelectedPin(null);
+
+    if (mode === "draw") {
+      setRadiusData(null);
+      setRadiusSeed(null);
+      setRadiusSearchPin("");
+      return;
+    }
+
+    setHasPolygon(false);
+    setDrawData(null);
+    setClearPolygonToken((value) => value + 1);
+  }, []);
+
+  const toggleSavedOwner = (owner: SearchOwnerCard) => {
     const ownerType = owner.owner_id ? "id" : "name";
     const ownerKey = owner.owner_id || owner.owner_name || owner.owner_key;
     const key = getSavedOwnerLookupKey(owner);
@@ -182,8 +324,8 @@ const FindOwnersV2Page: React.FC = () => {
   };
 
   const exportCSVData = React.useMemo(() => {
-    if (!data) return [];
-    return data.result.map((owner) => ({
+    if (!activeOwners.length) return [];
+    return activeOwners.map((owner) => ({
       "Owner Name": owner.owner_name || "",
       "Mailing Address": formatMailing(owner),
       "Parcel Count": owner.parcel_count || 0,
@@ -192,7 +334,7 @@ const FindOwnersV2Page: React.FC = () => {
         .join(", "),
       "Parcels": (owner.parcels || []).map((p) => p.address || p.pin).join("; "),
     }));
-  }, [data]);
+  }, [activeOwners]);
 
   return (
     <Page title="Find Owners" >
@@ -204,16 +346,64 @@ const FindOwnersV2Page: React.FC = () => {
               <h1><Trans>Find owners with a map-based area search</Trans></h1>
               <p className="FindOwnersPage__lead">
                 <Trans>
-                  Outline a search area on the map, then refine by property type and owner holdings.
+                  Switch between a map-drawn area search and an address-based radius search, then refine by property type and owner holdings.
                 </Trans>
               </p>
+              <div className="FindOwnersPage__modeSwitch" role="tablist" aria-label="Search mode">
+                <button
+                  type="button"
+                  className={`FindOwnersPage__modeButton ${searchMode === "draw" ? "active" : ""}`}
+                  onClick={() => handleSearchModeChange("draw")}
+                >
+                  <Trans>Draw Search</Trans>
+                </button>
+                <button
+                  type="button"
+                  className={`FindOwnersPage__modeButton ${searchMode === "radius" ? "active" : ""}`}
+                  onClick={() => handleSearchModeChange("radius")}
+                >
+                  <Trans>Radius Search</Trans>
+                </button>
+              </div>
             </div>
             
             <div className="FindOwnersPage__panel FindOwnersPage__panel--filters">
               <div className="FindOwnersPage__panelHeader">
                 <h2><Trans>Refine Search</Trans></h2>
-                <p><Trans>Set the property profile you want to review before drawing the area.</Trans></p>
+                <p>
+                  {searchMode === "draw" ? (
+                    <Trans>Set the property profile you want to review before drawing the area.</Trans>
+                  ) : (
+                    <Trans>Search a Chicago address, choose a radius, and compare nearby owner holdings.</Trans>
+                  )}
+                </p>
               </div>
+              {searchMode === "radius" && (
+                <div className="FindOwnersPage__searchBlockV2">
+                  <AddressSearch
+                    labelText={<Trans>Search a Chicago address</Trans>}
+                    labelClass="text-assistive"
+                    onFormSubmit={handleRadiusAddressSubmit}
+                    showSubmitButton
+                    submitButtonText={<Trans>Run radius search</Trans>}
+                  />
+                  <div className="FindOwnersPage__filter-group">
+                    <label><Trans>Search Radius</Trans></label>
+                    <div className="FindOwnersPage__building-types">
+                      {RADIUS_OPTIONS.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          className={`FindOwnersPage__chip ${option === radiusM ? "active" : ""}`}
+                          onClick={() => setRadiusM(option)}
+                        >
+                          {option >= 1000 ? `${option / 1000} km` : `${option} m`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="FindOwnersPage__filters">
               <div className="FindOwnersPage__filter-group">
                 <label><Trans>Property Type</Trans></label>
@@ -254,10 +444,11 @@ const FindOwnersV2Page: React.FC = () => {
               <div className="FindOwnersPage__summaryChips">
                 <span className="FindOwnersPage__summaryChip">{propertyTypeSummary}</span>
                 <span className="FindOwnersPage__summaryChip">{selectedPortfolioSize.label}</span>
+                {searchMode === "radius" && <span className="FindOwnersPage__summaryChip">{radiusSummary}</span>}
               </div>
             </div>
 
-            {!hasPolygon && !isLoading && !error && (
+            {searchMode === "draw" && !hasPolygon && !isLoading && !error && (
               <div className="FindOwnersPage__panel FindOwnersPage__panel--emptyState">
                 <div className="FindOwnersPage__steps">
                   <span><Trans>1. Move the map</Trans></span>
@@ -266,6 +457,19 @@ const FindOwnersV2Page: React.FC = () => {
                 </div>
                 <div className="FindOwnersPage__loading">
                   <Trans>Zoom into Chicago and draw an area to load matching owners.</Trans>
+                </div>
+              </div>
+            )}
+
+            {searchMode === "radius" && !radiusSearchPin && !isLoading && !error && (
+              <div className="FindOwnersPage__panel FindOwnersPage__panel--emptyState">
+                <div className="FindOwnersPage__steps">
+                  <span><Trans>1. Search an address</Trans></span>
+                  <span><Trans>2. Choose a radius</Trans></span>
+                  <span><Trans>3. Review nearby owners</Trans></span>
+                </div>
+                <div className="FindOwnersPage__loading">
+                  <Trans>Search a Chicago address to load nearby owners and parcels on the map.</Trans>
                 </div>
               </div>
             )}
@@ -282,16 +486,21 @@ const FindOwnersV2Page: React.FC = () => {
               </div>
             )}
 
-            {data && !isLoading && (
+            {activeData && !isLoading && (
               <div className="FindOwnersPage__panel FindOwnersPage__results">
                 <div className="FindOwnersPage__results-header">
                   <div>
                     <h2>
-                      <Trans>{data.result.length} owners match this area</Trans>
+                      {activeResultsHeadline}
                     </h2>
                     <p className="FindOwnersPage__resultsSubhead">
-                      <Trans>Use the map and cards together to review likely owners.</Trans>
+                      {activeResultsSubhead}
                     </p>
+                    {searchMode === "radius" && radiusSeed?.address && (
+                      <p className="FindOwnersPage__resultsSubhead">
+                        <Trans>Centered on</Trans> {radiusSeed.address}
+                      </p>
+                    )}
                   </div>
                   <CSVDownloader
                     data={exportCSVData}
@@ -304,7 +513,7 @@ const FindOwnersV2Page: React.FC = () => {
                 </div>
 
                 <div className="FindOwnersPage__results-list">
-                  {data.result.map((owner) => (
+                  {activeOwners.map((owner) => (
                     <div
                       key={owner.owner_key}
                       className={`FindOwnersPage__result-card ${selectedOwnerKey === owner.owner_key ? "FindOwnersPage__result-card--active" : ""}`}
@@ -348,7 +557,9 @@ const FindOwnersV2Page: React.FC = () => {
                         <div className="FindOwnersPage__stats">
                           <span>{owner.parcel_count} properties</span>
                           {owner.nearest_distance_m && (
-                            <span>{Math.round(owner.nearest_distance_m)}m from drawn area</span>
+                            <span>
+                              {Math.round(owner.nearest_distance_m)}m {searchMode === "radius" ? "from search address" : "from drawn area"}
+                            </span>
                           )}
                         </div>
 
@@ -404,10 +615,13 @@ const FindOwnersV2Page: React.FC = () => {
 
           <div className="FindOwnersPage__map-container">
             <FindOwnersV2Map
+              searchMode={searchMode}
               onPolygonDrawn={handlePolygonDrawn}
               onPolygonDeleted={handlePolygonDeleted}
               selectedPin={selectedPin}
               highlightedPins={highlightedPins}
+              focusLocation={focusLocation}
+              clearPolygonToken={clearPolygonToken}
               onPinSelect={setSelectedPin}
             />
           </div>
