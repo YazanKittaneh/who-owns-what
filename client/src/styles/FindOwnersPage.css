@@ -208,6 +208,7 @@
   max-width: 26rem;
   padding: 0;
   overflow-y: auto;
+  overflow-x: visible;
   background: transparent;
   border-right: none;
   display: flex;
@@ -233,6 +234,12 @@
 
 .FindOwnersPage__panel--intro {
   background: linear-gradient(135deg, #ffffff 0%, #f3f8ff 100%);
+}
+
+.FindOwnersPage__panel--filters {
+  position: relative;
+  z-index: 4;
+  overflow: visible;
 }
 
 .FindOwnersPage__eyebrow {
@@ -330,6 +337,48 @@
   flex-direction: column;
   gap: 14px;
   margin-bottom: 16px;
+  position: relative;
+  z-index: 6;
+}
+
+.FindOwnersPage__searchBlockV2 .AddressSearch {
+  margin: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.FindOwnersPage__searchBlockV2 .AddressSearch form {
+  margin: 0;
+  justify-content: flex-start;
+}
+
+.FindOwnersPage__searchBlockV2 .AddressSearch .AddressSearch__inputGroup {
+  flex: 1 1 100%;
+  margin-right: 0;
+}
+
+.FindOwnersPage__searchBlockV2 .AddressSearch .geosuggest {
+  margin-bottom: 0;
+}
+
+.FindOwnersPage__searchBlockV2 .AddressSearch .geosuggest__input {
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+.FindOwnersPage__searchBlockV2 .AddressSearch .geosuggest__suggests-wrapper {
+  z-index: 40;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+
+.FindOwnersPage__searchBlockV2 .AddressSearch .geosuggest__suggests:not(.geosuggest__suggests--hidden) {
+  background: #ffffff;
+}
+
+.FindOwnersPage__searchBlockV2 .AddressSearch .geosuggest__item {
+  font-size: 14px;
 }
 
 .FindOwnersPage--v2 .FindOwnersPage__chip {
