@@ -60,6 +60,29 @@ def normalize_street_base(value: str | None) -> str:
     return text
 
 
+def split_mailing_address(value: str | None) -> tuple[str, str]:
+    text = re.sub(r"\s+", " ", (value or "").strip())
+    if not text:
+        return "", ""
+
+    patterns = [
+        r"^(.*?)(?:\s+#\s*([A-Z0-9-]+))$",
+        r"^(.*?)(?:\s+(APT|UNIT|STE|SUITE|FL|FLOOR)\s*#?\s*([A-Z0-9-]+.*))$",
+    ]
+    for pattern in patterns:
+        match = re.match(pattern, text, re.IGNORECASE)
+        if not match:
+            continue
+        if len(match.groups()) == 2:
+            address, unit = match.groups()
+        else:
+            address = match.group(1)
+            unit = " ".join([part for part in match.groups()[1:] if part])
+        return address.strip(), unit.strip()
+
+    return text, ""
+
+
 def get_primary_parcel_address(parcels: str) -> str:
     first = (parcels or "").split(" | ")[0]
     if ":" in first:
@@ -112,12 +135,66 @@ def enrich_row(row: dict[str, str]) -> dict[str, str]:
     }
 
 
+def get_primary_pin(parcels: str) -> str:
+    first = (parcels or "").split(" | ")[0]
+    if ":" in first:
+        return first.split(":", 1)[0].strip()
+    return ""
+
+
 def write_csv(path: Path, rows: list[dict[str, str]], fieldnames: list[str]) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for row in rows:
             writer.writerow({key: row.get(key, "") for key in fieldnames})
+
+
+def build_simple_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    simple_rows = []
+    for row in rows:
+        address, unit = split_mailing_address(row.get("mailing_address", ""))
+        simple_rows.append(
+            {
+                "Address": address,
+                "Unit#": unit,
+                "City": row.get("mailing_city", ""),
+                "State": row.get("mailing_state", ""),
+                "Zip": row.get("mailing_zip", ""),
+                "County": "Cook",
+                "FIPS": "17031",
+                "APN#": get_primary_pin(row.get("parcels", "")),
+            }
+        )
+    return simple_rows
+
+
+def dedupe_simple_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    grouped: dict[tuple[str, str, str, str, str], dict[str, str]] = {}
+    grouped_apns: dict[tuple[str, str, str, str, str], list[str]] = {}
+
+    for row in rows:
+        key = (
+            row.get("Address", "").strip().upper(),
+            row.get("Unit#", "").strip().upper(),
+            row.get("City", "").strip().upper(),
+            row.get("State", "").strip().upper(),
+            row.get("Zip", "").strip(),
+        )
+        if key not in grouped:
+            grouped[key] = row.copy()
+            grouped_apns[key] = []
+
+        apn = row.get("APN#", "").strip()
+        if apn and apn not in grouped_apns[key]:
+            grouped_apns[key].append(apn)
+
+    deduped_rows = []
+    for key, row in grouped.items():
+        row["APN#"] = " | ".join(grouped_apns[key])
+        deduped_rows.append(row)
+
+    return deduped_rows
 
 
 def main() -> int:
@@ -134,6 +211,14 @@ def main() -> int:
 
     absentee_rows = [row for row in rows if row["absentee_flag"] == "True"]
     likely_investor_rows = [row for row in rows if row["investor_reason"]]
+    combined_rows = []
+    seen_owner_keys: set[str] = set()
+    for row in absentee_rows + likely_investor_rows:
+        owner_key = row.get("owner_key", "")
+        if owner_key in seen_owner_keys:
+            continue
+        seen_owner_keys.add(owner_key)
+        combined_rows.append(row)
 
     enriched_fields = [
         "seed_pin",
@@ -198,6 +283,27 @@ def main() -> int:
             "emails",
             "parcels",
         ],
+    )
+    write_csv(
+        out_dir / f"{base_name}-absentee-owners-simple.csv",
+        build_simple_rows(absentee_rows),
+        ["Address", "Unit#", "City", "State", "Zip", "County", "FIPS", "APN#"],
+    )
+    write_csv(
+        out_dir / f"{base_name}-likely-investors-simple.csv",
+        build_simple_rows(likely_investor_rows),
+        ["Address", "Unit#", "City", "State", "Zip", "County", "FIPS", "APN#"],
+    )
+    combined_simple_rows = build_simple_rows(combined_rows)
+    write_csv(
+        out_dir / f"{base_name}-combined-simple.csv",
+        combined_simple_rows,
+        ["Address", "Unit#", "City", "State", "Zip", "County", "FIPS", "APN#"],
+    )
+    write_csv(
+        out_dir / f"{base_name}-combined-simple-deduped.csv",
+        dedupe_simple_rows(combined_simple_rows),
+        ["Address", "Unit#", "City", "State", "Zip", "County", "FIPS", "APN#"],
     )
     return 0
 
