@@ -1,6 +1,6 @@
 # Data Storage Map
 
-Last updated: 2026-05-05
+Last updated: 2026-05-16
 
 ## Purpose
 
@@ -44,7 +44,8 @@ and what to clean up after refresh runs.
 ├── chi_owners.csv
 ├── chi_parcels.csv
 ├── chi_permits.csv
-└── chi_violations.csv
+├── chi_violations.csv
+└── Property Export 2436+N+Albany+Prospecting.xlsx
 ```
 
 ### `/backup-pool/dump/wow-backups`
@@ -70,6 +71,7 @@ and what to clean up after refresh runs.
 4. Delete stale `.tmp` and `.progress` files after interrupted fetches.
 5. Keep generated outreach exports under `data/exports/nearby-owner-outreach/` so they are easy to prune or move to pooled storage later.
 6. Keep at least one recent `wow-*.dump` at the backup-root top level so fresh dev DB volumes can auto-restore.
+7. PropStream uploads can be staged from `data/` and imported into the runtime `propstream_parcel_records` table keyed by normalized PIN/APN.
 
 ## Update Checklist (Required)
 

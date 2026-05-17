@@ -1,0 +1,21 @@
+services:
+  real-estate-mls:
+    build:
+      context: ./real-estate-mls
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://dev-wow-api.yazan.io}
+    image: who-owns-what-real-estate-mls:dev2
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-https://dev-wow-api.yazan.io}
+    expose:
+      - "3000"
+    ports:
+      - "127.0.0.1:3002:3000"
+    networks:
+      - wow-dev-network
+
+networks:
+  wow-dev-network:
+    external: true
+    name: who-owns-what-dev_wow-network

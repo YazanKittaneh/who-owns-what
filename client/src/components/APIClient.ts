@@ -326,6 +326,21 @@ async function getParcelEntities(pin: string): Promise<ParcelEntitiesResult> {
   return getApiJson(`/api/parcel/entities?${params.toString()}`);
 }
 
+async function uploadPropstreamCsv(file: File): Promise<{
+  imported_parcels: number;
+  imported_rows: number;
+  skipped_rows: number;
+}> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await friendlyFetch(apiURL("/api/propstream/upload"), {
+    method: "POST",
+    headers: { accept: "application/json" },
+    body: formData,
+  });
+  return res.json();
+}
+
 const friendlyFetch: typeof fetch = async (input, init) => {
   let response: Response;
   try {
@@ -377,6 +392,7 @@ const Client = {
   searchEntities,
   getEntityContacts,
   getParcelEntities,
+  uploadPropstreamCsv,
 };
 
 export default Client;

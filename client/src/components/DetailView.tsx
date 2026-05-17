@@ -13,6 +13,7 @@ import { UsefulLinks } from "./UsefulLinks";
 import EmailAlertSignup from "./EmailAlertSignup";
 import GetRepairs from "./GetRepairs";
 import { Accordion } from "./Accordion";
+import APIClient from "./APIClient";
 import { HpdFullContact } from "./APIDataTypes";
 import "styles/DetailView.css";
 
@@ -25,6 +26,38 @@ type Props = withI18nProps &
 };
 
 const NUM_COMPLAINT_TYPES_TO_SHOW = 3;
+const PROPSTREAM_DISPLAY_FIELDS = [
+  "Owner 1 First Name",
+  "Owner 1 Last Name",
+  "Owner 2 First Name",
+  "Owner 2 Last Name",
+  "Mailing Care of Name",
+  "Mailing Address",
+  "Mailing Unit #",
+  "Mailing City",
+  "Mailing State",
+  "Mailing Zip",
+  "Phone 1",
+  "Phone 1 Type",
+  "Phone 2",
+  "Phone 2 Type",
+  "Email 1",
+  "Email 2",
+  "Address",
+  "Unit #",
+  "City",
+  "State",
+  "Zip",
+  "APN",
+  "Property Type",
+  "Last Sale Recording Date",
+  "Last Sale Amount",
+  "Est. Value",
+  "Est. Equity",
+  "MLS Status",
+  "MLS Date",
+  "MLS Amount",
+];
 
 type GroupedContact = [
   string, // contact name
@@ -37,6 +70,9 @@ export const sortContactsByImportance = (contact: GroupedContact) =>
 const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelineHref }) => {
   const isMobile = Browser.isMobile();
   const { detailAddr } = state.context.portfolioData;
+  const [propstreamRecords, setPropstreamRecords] = React.useState(detailAddr.propstream_records || []);
+  const [propstreamStatus, setPropstreamStatus] = React.useState<string | null>(null);
+  const [isPropstreamUploading, setPropstreamUploading] = React.useState(false);
   const locale = getI18nLocale(i18n);
   const addressLine =
     detailAddr.address ||
@@ -56,6 +92,35 @@ const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelin
         detailAddr.state || ""
       }`
   );
+
+  React.useEffect(() => {
+    setPropstreamRecords(detailAddr.propstream_records || []);
+    setPropstreamStatus(null);
+  }, [detailAddr.pin, detailAddr.propstream_records]);
+
+  const handlePropstreamUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setPropstreamUploading(true);
+    setPropstreamStatus(null);
+    try {
+      const result = await APIClient.uploadPropstreamCsv(file);
+      const refreshed = await APIClient.getBuildingInfo(detailAddr.pin);
+      const current = refreshed.result.find((addr) => addr.pin === detailAddr.pin);
+      setPropstreamRecords(current?.propstream_records || []);
+      setPropstreamStatus(
+        i18n._(
+          `Imported ${result.imported_rows} PropStream row(s) for ${result.imported_parcels} parcel(s).`
+        )
+      );
+    } catch (_error) {
+      setPropstreamStatus(i18n._("Could not import that PropStream CSV."));
+    } finally {
+      setPropstreamUploading(false);
+      event.target.value = "";
+    }
+  };
 
   return (
     <CSSTransition in={!isMobile || mobileShow} timeout={500} classNames="DetailView">
@@ -176,6 +241,47 @@ const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelin
                       ) : null}
                     </div>
                   )}
+
+                  <div className="card-body-registration">
+                    <p>
+                      <b>
+                        <Trans>PropStream enrichment:</Trans>
+                      </b>{" "}
+                      {propstreamRecords.length > 0 ? (
+                        <span>
+                          {propstreamRecords.length} <Trans>record(s) imported</Trans>
+                        </span>
+                      ) : (
+                        <Trans>No PropStream records imported for this parcel yet.</Trans>
+                      )}
+                    </p>
+                    <label className="btn btn-sm btn-primary" htmlFor="propstream-csv-upload">
+                      {isPropstreamUploading ? (
+                        <Trans>Uploading...</Trans>
+                      ) : (
+                        <Trans>Upload PropStream CSV</Trans>
+                      )}
+                    </label>
+                    <input
+                      id="propstream-csv-upload"
+                      type="file"
+                      accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                      disabled={isPropstreamUploading}
+                      onChange={handlePropstreamUpload}
+                      style={{ display: "none" }}
+                    />
+                    {propstreamStatus && <p>{propstreamStatus}</p>}
+                    {propstreamRecords.map((record, idx) => (
+                      <div className="landlord-contact-info" key={`propstream-${idx}`}>
+                        {PROPSTREAM_DISPLAY_FIELDS.filter((field) => record[field]).map((field) => (
+                          <div key={field}>
+                            <span className="text-bold text-dark">{field}: </span>
+                            {record[field]}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
 
                   {(detailAddr.lastregistrationdate || detailAddr.registrationenddate) && (
                     <div className="card-body-registration">

@@ -74,6 +74,7 @@ export type AddressRecord = {
   latest_mortgage_amount?: number | null;
   latest_quitclaim_date?: string | null;
   latest_quitclaim_amount?: number | null;
+  propstream_records?: Record<string, string>[];
   mapType?: "base" | "search";
   // Legacy NYC fields kept optional for compatibility with unused UI pieces.
   bbl?: string;

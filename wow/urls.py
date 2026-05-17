@@ -22,6 +22,7 @@ urlpatterns = [
         name="address_indicatorhistory",
     ),
     path("address/export", views.address_export, name="address_export"),
+    path("propstream/upload", views.propstream_upload, name="propstream_upload"),
     # Contact data endpoints
     path("entity/search", views.entity_search, name="entity_search"),
     path("entity/contacts", views.entity_contacts, name="entity_contacts"),

@@ -1,11 +1,16 @@
 import csv
+import io
+import json
 import logging
 import re
+import zipfile
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from xml.etree import ElementTree
 from django.http import HttpResponse, JsonResponse
 from django.db import ProgrammingError, connections
+from django.views.decorators.csrf import csrf_exempt
 
 from .dbutil import call_db_func, exec_db_query
 from .datautil import float_or_none, int_or_none, str_or_none
@@ -43,6 +48,7 @@ def iso_or_none(value: Any) -> Optional[str]:
 def clean_addr_dict(addr):
     return {
         **addr,
+        "propstream_records": list(addr.get("propstream_records") or []),
         "units_res": int_or_none(addr.get("units_res")),
         "permits_total": int_or_none(addr.get("permits_total")),
         "violations_open": int_or_none(addr.get("violations_open")),
@@ -64,6 +70,114 @@ def clean_addr_dict(addr):
         "latest_quitclaim_date": str_or_none(addr.get("latest_quitclaim_date")),
         "latest_quitclaim_amount": float_or_none(addr.get("latest_quitclaim_amount")),
     }
+
+
+def ensure_propstream_table():
+    with connections["wow"].cursor() as cursor:
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS propstream_parcel_records (
+                pin text PRIMARY KEY,
+                records jsonb NOT NULL DEFAULT '[]'::jsonb,
+                uploaded_at timestamptz NOT NULL DEFAULT now()
+            )
+            """
+        )
+
+
+def normalize_propstream_pin(row: Dict[str, Any]) -> str:
+    value = row.get("APN#") or row.get("APN") or row.get("pin") or row.get("PIN") or ""
+    return re.sub(r"\D", "", str(value))
+
+
+def parse_xlsx_rows(upload) -> list[Dict[str, Any]]:
+    ns = {"a": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+
+    def cell_index(cell_ref: str) -> int:
+        letters = re.match(r"[A-Z]+", cell_ref).group(0)
+        index = 0
+        for letter in letters:
+            index = index * 26 + ord(letter) - 64
+        return index - 1
+
+    with zipfile.ZipFile(upload.file) as workbook:
+        shared_strings = []
+        if "xl/sharedStrings.xml" in workbook.namelist():
+            root = ElementTree.fromstring(workbook.read("xl/sharedStrings.xml"))
+            for shared_item in root.findall("a:si", ns):
+                shared_strings.append(
+                    "".join(text_node.text or "" for text_node in shared_item.findall(".//a:t", ns))
+                )
+
+        sheet_root = ElementTree.fromstring(workbook.read("xl/worksheets/sheet1.xml"))
+
+        def cell_value(cell) -> str:
+            value = cell.find("a:v", ns)
+            if value is None:
+                inline_text = cell.find(".//a:t", ns)
+                return inline_text.text if inline_text is not None else ""
+            raw_value = value.text or ""
+            if cell.attrib.get("t") == "s":
+                return shared_strings[int(raw_value)]
+            return raw_value
+
+        parsed_rows = []
+        for row in sheet_root.findall(".//a:sheetData/a:row", ns):
+            values = []
+            for cell in row.findall("a:c", ns):
+                index = cell_index(cell.attrib["r"])
+                while len(values) < index:
+                    values.append("")
+                values.append(cell_value(cell))
+            parsed_rows.append(values)
+
+    if not parsed_rows:
+        return []
+
+    headers = [str(header or "").strip() for header in parsed_rows[0]]
+    return [
+        {headers[index]: value for index, value in enumerate(row) if index < len(headers) and headers[index]}
+        for row in parsed_rows[1:]
+    ]
+
+
+def parse_propstream_upload_rows(upload) -> list[Dict[str, Any]]:
+    filename = (upload.name or "").lower()
+    if filename.endswith(".xlsx"):
+        return parse_xlsx_rows(upload)
+
+    text_file = io.TextIOWrapper(upload.file, encoding="utf-8-sig", newline="")
+    return list(csv.DictReader(text_file))
+
+
+def clean_propstream_records(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    if isinstance(rows, str):
+        rows = json.loads(rows)
+    return [{key: value for key, value in row.items() if value not in (None, "")} for row in rows]
+
+
+def fetch_propstream_records_for_pins(pins: list[str]) -> Dict[str, list[Dict[str, Any]]]:
+    pins = [pin for pin in pins if pin]
+    if not pins:
+        return {}
+
+    try:
+        with connections["wow"].cursor() as cursor:
+            cursor.execute(
+                "SELECT pin, records FROM propstream_parcel_records WHERE pin = ANY(%s)",
+                [pins],
+            )
+            return {pin: clean_propstream_records(records or []) for pin, records in cursor.fetchall()}
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        return {}
+
+
+def attach_propstream_records(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    records_by_pin = fetch_propstream_records_for_pins([row.get("pin") for row in rows])
+    return [{**row, "propstream_records": records_by_pin.get(row.get("pin"), [])} for row in rows]
 
 
 def clean_map_addr_dict(addr):
@@ -373,7 +487,7 @@ def address_query(request):
             "Using fallback address query because WOW DB functions are missing."
         )
         addrs = get_address_result_from_fallback(pin)
-    cleaned_addrs = list(map(clean_addr_dict, addrs))
+    cleaned_addrs = list(map(clean_addr_dict, attach_propstream_records(list(addrs))))
     return JsonResponse(
         {
             "geosearch": {"pin": pin},
@@ -529,8 +643,51 @@ def address_buildinginfo(request):
             "Using fallback building info query because WOW tables are missing."
         )
         result = get_address_result_from_fallback(pin)
-    cleaned_result = list(map(clean_addr_dict, result))
+    cleaned_result = list(map(clean_addr_dict, attach_propstream_records(list(result))))
     return JsonResponse({"result": cleaned_result})
+
+
+@csrf_exempt
+@api
+def propstream_upload(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    upload = request.FILES.get("file")
+    if not upload:
+        return JsonResponse({"error": "Upload a CSV or Excel file in the 'file' field."}, status=400)
+
+    try:
+        rows_by_pin: Dict[str, list[Dict[str, Any]]] = {}
+        skipped_rows = 0
+        for row in parse_propstream_upload_rows(upload):
+            pin = normalize_propstream_pin(row)
+            if not pin:
+                skipped_rows += 1
+                continue
+            rows_by_pin.setdefault(pin, []).append(row)
+    except (UnicodeDecodeError, zipfile.BadZipFile, ElementTree.ParseError):
+        return JsonResponse({"error": "Upload a valid UTF-8 CSV or Excel .xlsx file."}, status=400)
+
+    ensure_propstream_table()
+    with connections["wow"].cursor() as cursor:
+        for pin, rows in rows_by_pin.items():
+            cursor.execute(
+                """
+                INSERT INTO propstream_parcel_records (pin, records, uploaded_at)
+                VALUES (%s, %s::jsonb, now())
+                ON CONFLICT (pin) DO UPDATE SET records = EXCLUDED.records, uploaded_at = now()
+                """,
+                [pin, json.dumps(clean_propstream_records(rows))],
+            )
+
+    return JsonResponse(
+        {
+            "imported_parcels": len(rows_by_pin),
+            "imported_rows": sum(len(rows) for rows in rows_by_pin.values()),
+            "skipped_rows": skipped_rows,
+        }
+    )
 
 
 @api
