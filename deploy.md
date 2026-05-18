@@ -1,5 +1,7 @@
 # Deploy Notes For Next LLM
 
+Canonical deployment docs now live in `docs/DEPLOYMENT.md`; use `docs/ops-runbook.md` for operational refresh/recovery procedures. This file is retained as historical handoff notes until its unique details are fully merged.
+
 This repo now has a real dev/prod split on the same host.
 
 ## Branch To Environment Mapping

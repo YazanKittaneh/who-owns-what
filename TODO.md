@@ -25,6 +25,14 @@ Validation status: Rechecked against the current repository plus the running `wo
 
 ## P1 - Core Pipeline and Data Modeling
 
+- [ ] **Stabilize contact-data backfills before broad live deploys**
+  - Split deploys from backfills so code fixes do not require expensive data reloads.
+  - Move business-license ingestion from Python loops to SQL on top of `chi_business_licenses`.
+  - Disable `contact_audit_log` writes for automated bulk loads; keep audit logging for manual/admin changes.
+  - Add resumable chunking for large refreshes and run targeted pilots before citywide backfills.
+  - Clean Docker build cache and reduce image rebuild churn before additional broad refresh work.
+  - Add pre-deploy SQL and endpoint smoke tests, then measure runtime, rows written, audit volume, and API impact.
+
 - [ ] **Automate `chi_owners` historical maintenance**
   - Add incremental update mode (append new year while preserving old years).
   - Avoid destructive reloads when only latest year changes.

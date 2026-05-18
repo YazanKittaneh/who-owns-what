@@ -5,15 +5,11 @@ env/*
 /.env
 client/src/**/*.css
 dist
-scripts/*
-!scripts/fetch_chi_data.py
-!scripts/weekly_refresh_prod.sh
-!scripts/load_supplemental_data.py
-!scripts/report_supplemental_data.py
 nycdb/
 .mypy_cache/
 docker-compose.override.yml
 __pycache__/
+*.pyc
 db.sqlite3
 *.log
 .ssh/
@@ -46,7 +42,13 @@ skills-lock.json
 
 # Local environments
 .venv/
+client/.env
+apps/web/.env.local
 
-# Next.js build cache
+# Build/test output
 .next/
+apps/web/.next/
+apps/web/.open-next/
+apps/web/test-results/
+test-results/
 *.sst

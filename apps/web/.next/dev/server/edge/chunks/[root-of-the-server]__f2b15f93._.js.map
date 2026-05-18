@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 16, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/middleware.ts"],"sourcesContent":["import {\n  convexAuthNextjsMiddleware,\n  nextjsMiddlewareRedirect,\n} from \"@convex-dev/auth/nextjs/server\";\n\nexport default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {\n  const isProtectedRoute = request.nextUrl.pathname.startsWith(\"/account\");\n  if (!isProtectedRoute) {\n    return;\n  }\n\n  const convexConfigured = Boolean(\n    process.env.NEXT_PUBLIC_CONVEX_URL || process.env.CONVEX_URL,\n  );\n\n  if (!convexConfigured) {\n    return nextjsMiddlewareRedirect(request, \"/login\");\n  }\n\n  if (!(await convexAuth.isAuthenticated())) {\n    return nextjsMiddlewareRedirect(request, \"/login\");\n  }\n});\n\nexport const config = {\n  matcher: [\"/account/:path*\", \"/api/auth/:path*\"],\n};\n"],"names":[],"mappings":";;;;;;AAAA;;uCAKe,IAAA,kOAA0B,EAAC,OAAO,SAAS,EAAE,UAAU,EAAE;IACtE,MAAM,mBAAmB,QAAQ,OAAO,CAAC,QAAQ,CAAC,UAAU,CAAC;IAC7D,IAAI,CAAC,kBAAkB;QACrB;IACF;IAEA,MAAM,mBAAmB,QACvB,QAAQ,GAAG,CAAC,sBAAsB,IAAI,QAAQ,GAAG,CAAC,UAAU;IAG9D,IAAI,CAAC,kBAAkB;QACrB,OAAO,IAAA,gOAAwB,EAAC,SAAS;IAC3C;IAEA,IAAI,CAAE,MAAM,WAAW,eAAe,IAAK;QACzC,OAAO,IAAA,gOAAwB,EAAC,SAAS;IAC3C;AACF;AAEO,MAAM,SAAS;IACpB,SAAS;QAAC;QAAmB;KAAmB;AAClD"}}]
-}

@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 22, "column": 0}, "map": {"version":3,"sources":["file:///Users/yazankittaneh/code/Projects/who-owns-what/apps/web/src/lib/convexClient.ts"],"sourcesContent":["import { ConvexReactClient } from \"convex/react\";\n\nconst convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;\n\nexport const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;\n"],"names":[],"mappings":";;;;AAAA;AAAA;;AAEA,MAAM,YAAY,QAAQ,GAAG,CAAC,sBAAsB;AAE7C,MAAM,SAAS,YAAY,IAAI,6KAAiB,CAAC,aAAa"}},
-    {"offset": {"line": 35, "column": 0}, "map": {"version":3,"sources":["file:///Users/yazankittaneh/code/Projects/who-owns-what/apps/web/src/app/providers.tsx"],"sourcesContent":["\"use client\";\n\nimport { ConvexAuthProvider } from \"@convex-dev/auth/react\";\nimport type { ReactNode } from \"react\";\nimport { convex } from \"@/lib/convexClient\";\n\ntype Props = {\n  children: ReactNode;\n};\n\nexport default function Providers({ children }: Props) {\n  if (!convex) {\n    return <>{children}</>;\n  }\n\n  return <ConvexAuthProvider client={convex}>{children}</ConvexAuthProvider>;\n}\n"],"names":[],"mappings":";;;;;AAEA;AAEA;AAJA;;;;AAUe,SAAS,UAAU,EAAE,QAAQ,EAAS;IACnD,IAAI,CAAC,oIAAM,EAAE;QACX,qBAAO;sBAAG;;IACZ;IAEA,qBAAO,8OAAC,uLAAkB;QAAC,QAAQ,oIAAM;kBAAG;;;;;;AAC9C"}}]
-}

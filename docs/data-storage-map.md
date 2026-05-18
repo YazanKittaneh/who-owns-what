@@ -30,15 +30,34 @@ and what to clean up after refresh runs.
 /root/who-owns-what/data
 ├── exports/
 │   └── nearby-owner-outreach/
+│       ├── README.md
 │       ├── 1443-w-berteau-ave/
 │       │   ├── nearby-owner-contacts.csv
 │       │   ├── nearby-owner-summary.csv
 │       │   └── owners-250m-propstream-no-apn.csv
+│       ├── 2436-n-albany-ave/
+│       │   ├── absentee-owners-simple.csv
+│       │   ├── absentee-owners.csv
+│       │   ├── combined-simple-deduped.csv
+│       │   ├── combined-simple.csv
+│       │   ├── likely-investors-simple.csv
+│       │   ├── likely-investors.csv
+│       │   ├── mailing-list-ready.csv
+│       │   ├── nearby-owner-contacts.csv
+│       │   └── nearby-owner-summary.csv
+│       ├── 3134-n-kimball-ave/
+│       │   ├── nearby-owner-contacts.csv
+│       │   ├── nearby-owner-simple.csv
+│       │   └── nearby-owner-summary.csv
+│       ├── 3137-n-kimball-ave/
+│       │   ├── business-targets.csv
+│       │   ├── enrichment-import-template.csv
+│       │   ├── nearby-owner-contacts.csv
+│       │   └── nearby-owner-summary.csv
 │       ├── 833-w-newport-ave/
 │       │   ├── nearby-owner-contacts.csv
 │       │   ├── nearby-owner-summary.csv
 │       │   └── owners-250m-propstream-no-apn.csv
-│       └── *.csv
 ├── fetch-smoke/
 ├── full-refresh-20260328/
 ├── mvp/
@@ -82,7 +101,7 @@ and what to clean up after refresh runs.
 2. Keep only active/needed source files on root disk.
 3. Move stale staging artifacts to pool storage.
 4. Delete stale `.tmp` and `.progress` files after interrupted fetches.
-5. Keep generated outreach exports under `data/exports/nearby-owner-outreach/` so they are easy to prune or move to pooled storage later. For multi-file searched-address exports, use a slug folder such as `data/exports/nearby-owner-outreach/833-w-newport-ave/`.
+5. Keep curated outreach exports under `data/exports/nearby-owner-outreach/<searched-address-slug>/` so they are easy to prune or move to pooled storage later. Generated/ad hoc exports remain ignored unless they are intentionally force-added.
 6. Keep at least one recent `wow-*.dump` at the backup-root top level so fresh dev DB volumes can auto-restore.
 7. PropStream uploads can be staged from `data/` and imported into the runtime `propstream_parcel_records` table keyed by normalized PIN/APN.
 

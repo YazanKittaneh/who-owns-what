@@ -1,5 +1,7 @@
 # Cloudflare Tunnel Deployment Guide
 
+Canonical deployment docs now live in `docs/DEPLOYMENT.md`; use this file only for Cloudflare Tunnel-specific details.
+
 This project's real `dev` and `prod` environments are served through Cloudflare Tunnels, not Cloudflare Pages.
 
 ## Current Model
