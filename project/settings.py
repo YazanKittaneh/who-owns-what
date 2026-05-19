@@ -178,6 +178,23 @@ CSRF_TRUSTED_ORIGINS += get_csv_env("CSRF_EXTRA_TRUSTED_ORIGINS")
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# Rate limiting (django-ratelimit). Backed by Django's cache framework.
+# Local-memory cache is fine for a single worker; production with multiple
+# workers should point CACHES["default"] at a shared backend (Redis/memcached)
+# so counters are consistent across processes.
+CACHES = {
+    "default": {
+        "BACKEND": os.environ.get(
+            "DJANGO_CACHE_BACKEND",
+            "django.core.cache.backends.locmem.LocMemCache",
+        ),
+        "LOCATION": os.environ.get("DJANGO_CACHE_LOCATION", "wow-ratelimit"),
+    }
+}
+
+RATELIMIT_USE_CACHE = "default"
+RATELIMIT_ENABLE = os.environ.get("RATELIMIT_ENABLE", "true").lower() != "false"
+
 # This is based off the default Django logging configuration:
 # https://github.com/django/django/blob/master/django/utils/log.py
 LOGGING = {

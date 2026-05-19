@@ -3,6 +3,7 @@ from typing import Dict, Any
 import functools
 from django.http import JsonResponse
 from django.conf import settings
+from django_ratelimit.exceptions import Ratelimited
 
 
 class InvalidFormError(Exception):
@@ -31,6 +32,19 @@ class AuthorizationError(Exception):
             },
             status=401,
         )
+
+
+def client_ip(group, request):
+    """Key function for django-ratelimit that prefers the real client IP.
+
+    Honours the first entry of X-Forwarded-For when present (set by our
+    reverse proxies) so we rate-limit per end-user, not per proxy hop.
+    Falls back to REMOTE_ADDR.
+    """
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR") or ""
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR") or "unknown"
 
 
 def _origin_is_allowed(origin: str) -> bool:
@@ -69,6 +83,11 @@ def api(fn):
             response = fn(request, *args, **kwargs)
         except (InvalidFormError, AuthorizationError) as e:
             response = e.as_json_response()
+        except Ratelimited:
+            response = JsonResponse(
+                {"error": "Too many requests. Please slow down and try again."},
+                status=429,
+            )
         return apply_cors_policy(request, response)
 
     return wrapper

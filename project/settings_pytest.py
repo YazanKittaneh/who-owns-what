@@ -17,3 +17,8 @@ if "TEST_DATABASE_URL" in os.environ:
 # be able to load fixture data into it that's scoped to the whole testing
 # session.
 DATABASES["wow"]["TEST"] = {"NAME": DATABASES["wow"]["NAME"] + "_djangotest"}
+
+# Rate limiting is off by default in tests so per-IP counters don't accumulate
+# across unrelated test cases. The dedicated rate-limit tests opt back in with
+# override_settings(RATELIMIT_ENABLE=True).
+RATELIMIT_ENABLE = False
