@@ -68,7 +68,10 @@ def rf() -> Iterator[RequestFactory]:
 
 
 def test_admin_data_coverage_requires_auth(rf):
-    request = rf.get("/api/admin/data-coverage")
+    request = rf.get(
+        "/api/admin/data-coverage",
+        HTTP_ORIGIN="http://localhost:3000",
+    )
 
     response = views.admin_data_coverage(request)
 
@@ -172,6 +175,25 @@ def test_admin_data_coverage_includes_latest_audit_metadata_when_available(rf, m
     assert datasets["chi_owners"]["last_loaded_at"] == "2026-04-09T00:00:00+00:00"
     assert datasets["chi_owners"]["last_load_row_count"] == 10
     assert datasets["chi_owners"]["last_load_run_id"] == "core-20260409T000000Z"
+
+
+def test_apply_cors_policy_only_echoes_allowed_origin(rf):
+    from wow import apiutil
+
+    allowed = rf.get("/api/health/", HTTP_ORIGIN="http://localhost:3000")
+    blocked = rf.get("/api/health/", HTTP_ORIGIN="http://evil.example")
+    no_origin = rf.get("/api/health/")
+
+    from django.http import JsonResponse
+
+    allowed_resp = apiutil.apply_cors_policy(allowed, JsonResponse({}))
+    blocked_resp = apiutil.apply_cors_policy(blocked, JsonResponse({}))
+    no_origin_resp = apiutil.apply_cors_policy(no_origin, JsonResponse({}))
+
+    assert allowed_resp["Access-Control-Allow-Origin"] == "http://localhost:3000"
+    assert allowed_resp["Access-Control-Allow-Credentials"] == "true"
+    assert "Access-Control-Allow-Origin" not in blocked_resp
+    assert "Access-Control-Allow-Origin" not in no_origin_resp
 
 
 def test_health_check_returns_healthy_when_db_cursor_succeeds(rf, monkeypatch):

@@ -26,9 +26,17 @@ urlpatterns = [
 ]
 
 
-ALERTS_AUTH_ARG = {"HTTP_AUTHORIZATION": f"Token {settings.ALERTS_API_TOKEN}"}
+ALLOWED_ORIGIN = "http://localhost:3000"
 
-SIGNATURE_AUTH_ARG = {"HTTP_AUTHORIZATION": f"Token {settings.SIGNATURE_API_TOKEN}"}
+ALERTS_AUTH_ARG = {
+    "HTTP_AUTHORIZATION": f"Token {settings.ALERTS_API_TOKEN}",
+    "HTTP_ORIGIN": ALLOWED_ORIGIN,
+}
+
+SIGNATURE_AUTH_ARG = {
+    "HTTP_AUTHORIZATION": f"Token {settings.SIGNATURE_API_TOKEN}",
+    "HTTP_ORIGIN": ALLOWED_ORIGIN,
+}
 
 
 class ApiTest:
@@ -188,7 +196,7 @@ class TestAddressExport(ApiTest):
         assert len(list(csvreader)) > 0
 
     def test_it_returns_404_when_no_bbls_exist(self, db, client):
-        res = client.get("/api/address/export?bbl=1234567890")
+        res = client.get("/api/address/export?bbl=1234567890", HTTP_ORIGIN=ALLOWED_ORIGIN)
         assert res.status_code == 404
         assert "Access-Control-Allow-Origin" in res
 

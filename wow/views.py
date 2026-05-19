@@ -25,6 +25,7 @@ from .forms import (
     NearbyPropertiesForm,
     CurrentOwnerForm,
     EntitySearchForm,
+    EntityContactsForm,
     OwnerSearchByAreaForm,
 )
 
@@ -647,6 +648,13 @@ def address_buildinginfo(request):
     return JsonResponse({"result": cleaned_result})
 
 
+# NOTE: review-findings (kept intentionally until user auth lands):
+#   - Endpoint is unauthenticated and @csrf_exempt — anyone reachable can upsert
+#     into propstream_parcel_records via the ON CONFLICT path below. Acceptable
+#     only because we have no user system yet; gate this behind authorize_for_admin
+#     (or similar) the moment auth exists.
+#   - ensure_propstream_table runs DDL on every request. Once we have a real
+#     schema migration story, move this into a create_propstream_*.sql file.
 @csrf_exempt
 @api
 def propstream_upload(request):
@@ -920,6 +928,8 @@ def admin_data_coverage(request):
                 )
                 continue
 
+            # `table` is interpolated, not parameterized — safe because it
+            # always comes from the hardcoded `datasets` allowlist above.
             cursor.execute(f"SELECT COUNT(*) FROM {table}")
             count_row = cursor.fetchone()
             row_count = int(count_row[0]) if count_row and count_row[0] is not None else 0
@@ -1010,31 +1020,31 @@ def entity_search(request):
     """Search for entities by name with fuzzy matching."""
     args = get_validated_form_data(EntitySearchForm, request.GET)
     query = args["q"]
-    entity_type = args.get("entity_type", "all")
-    limit = args.get("limit", 20)
-    
+    entity_type = args.get("entity_type") or "all"
+    limit = args.get("limit") or 20
+
     try:
         with connections["wow"].cursor() as cursor:
-            # Check if contact tables exist
             cursor.execute("SELECT to_regclass('canonical_entities')")
             if not cursor.fetchone()[0]:
                 return JsonResponse({"result": [], "note": "Contact tables not yet created"})
-            
-            # Build query based on entity type filter
+
+            params: list[Any] = [query, query]
             type_filter = ""
-            params = [query, query]
             if entity_type != "all":
                 type_filter = "AND entity_type = %s"
-                params = [query, query, entity_type]
+                params.append(entity_type)
             params.append(limit)
-            
+
+            # `type_filter` is a literal SQL fragment chosen from a closed set
+            # above; user input only flows in via parameterized placeholders.
             cursor.execute(
                 f"""
-                SELECT 
+                SELECT
                     id,
                     entity_type,
                     canonical_name,
-                    similarity(normalize_name(canonical_name), normalize_name(%s)) as match_score,
+                    similarity(normalize_name(canonical_name), normalize_name(%s)) AS match_score,
                     parcel_count
                 FROM canonical_entities
                 WHERE normalize_name(canonical_name) %% normalize_name(%s)
@@ -1042,65 +1052,58 @@ def entity_search(request):
                 ORDER BY match_score DESC, parcel_count DESC
                 LIMIT %s
                 """,
-                params
+                params,
             )
-            
-            results = []
-            for row in cursor.fetchall():
-                results.append({
+
+            results = [
+                {
                     "entity_id": row[0],
                     "entity_type": row[1],
                     "name": row[2],
                     "match_score": round(float(row[3]), 3) if row[3] else 0,
                     "parcel_count": row[4] or 0,
-                })
-            
+                }
+                for row in cursor.fetchall()
+            ]
+
             return JsonResponse({"result": results, "query": query})
-    
-    except Exception as e:
-        logger.exception("Entity search failed")
-        return JsonResponse({"error": str(e)}, status=500)
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning("Entity search skipped because contact tables are missing.")
+        return JsonResponse({"result": [], "note": "Contact tables not yet created"})
 
 
 @api
 def entity_contacts(request):
     """Get contact information for a specific entity."""
-    entity_id = request.GET.get("entity_id")
-    if not entity_id:
-        return JsonResponse({"error": "entity_id is required"}, status=400)
-    
-    try:
-        entity_id = int(entity_id)
-    except ValueError:
-        return JsonResponse({"error": "entity_id must be an integer"}, status=400)
-    
-    min_confidence = int(request.GET.get("min_confidence", 70))
-    
+    args = get_validated_form_data(EntityContactsForm, request.GET)
+    entity_id = args["entity_id"]
+    min_confidence = args.get("min_confidence") or 70
+
     try:
         with connections["wow"].cursor() as cursor:
-            # Check if contact tables exist
             cursor.execute("SELECT to_regclass('entity_contacts')")
             if not cursor.fetchone()[0]:
                 return JsonResponse({"result": [], "note": "Contact tables not yet created"})
-            
-            # Get entity info
+
             cursor.execute(
                 """
                 SELECT id, entity_type, canonical_name, parcel_count
                 FROM canonical_entities
                 WHERE id = %s
                 """,
-                [entity_id]
+                [entity_id],
             )
             entity_row = cursor.fetchone()
-            
+
             if not entity_row:
                 return JsonResponse({"error": "Entity not found"}, status=404)
-            
-            # Get contacts
+
             cursor.execute(
                 """
-                SELECT 
+                SELECT
                     contact_type,
                     contact_value,
                     confidence_score,
@@ -1111,7 +1114,7 @@ def entity_contacts(request):
                     last_seen_at
                 FROM entity_contacts
                 WHERE entity_id = %s AND confidence_score >= %s
-                ORDER BY 
+                ORDER BY
                     CASE contact_type
                         WHEN 'phone' THEN 1
                         WHEN 'email' THEN 2
@@ -1121,12 +1124,11 @@ def entity_contacts(request):
                     confidence_score DESC,
                     is_primary DESC
                 """,
-                [entity_id, min_confidence]
+                [entity_id, min_confidence],
             )
-            
-            contacts = []
-            for row in cursor.fetchall():
-                contacts.append({
+
+            contacts = [
+                {
                     "type": row[0],
                     "value": row[1],
                     "confidence": row[2],
@@ -1135,8 +1137,10 @@ def entity_contacts(request):
                     "is_verified": row[5],
                     "first_seen": iso_or_none(row[6]),
                     "last_seen": iso_or_none(row[7]),
-                })
-            
+                }
+                for row in cursor.fetchall()
+            ]
+
             return JsonResponse({
                 "entity": {
                     "id": entity_row[0],
@@ -1147,32 +1151,29 @@ def entity_contacts(request):
                 "contacts": contacts,
                 "min_confidence": min_confidence,
             })
-    
-    except Exception as e:
-        logger.exception("Entity contacts lookup failed")
-        return JsonResponse({"error": str(e)}, status=500)
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning("Entity contacts skipped because contact tables are missing.")
+        return JsonResponse({"result": [], "note": "Contact tables not yet created"})
 
 
 @api
 def parcel_entities(request):
     """Get entities and their contacts associated with a parcel PIN."""
-    try:
-        args = get_validated_form_data(NearbyPropertiesForm, request.GET)
-        pin = args["pin"]
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
-    
+    args = get_validated_form_data(NearbyPropertiesForm, request.GET)
+    pin = args["pin"]
+
     try:
         with connections["wow"].cursor() as cursor:
-            # Check if contact tables exist
             cursor.execute("SELECT to_regclass('entity_parcel_mappings')")
             if not cursor.fetchone()[0]:
                 return JsonResponse({"result": [], "note": "Contact tables not yet created"})
-            
-            # Get entities for this parcel
+
             cursor.execute(
                 """
-                SELECT 
+                SELECT
                     ce.id,
                     ce.entity_type,
                     ce.canonical_name,
@@ -1183,85 +1184,88 @@ def parcel_entities(request):
                 WHERE epm.pin = %s
                 ORDER BY epm.mapping_confidence DESC
                 """,
-                [pin]
+                [pin],
             )
-            
-            entities = []
-            for row in cursor.fetchall():
-                entity_id = row[0]
-                
-                # Get primary contacts for this entity
+            entity_rows = cursor.fetchall()
+            entity_ids = [row[0] for row in entity_rows]
+
+            contacts_by_entity: Dict[int, list[Dict[str, Any]]] = {}
+            if entity_ids:
                 cursor.execute(
                     """
-                    SELECT 
+                    SELECT
+                        entity_id,
                         contact_type,
                         contact_value,
                         confidence_score,
                         source_system,
                         is_verified
                     FROM entity_contacts
-                    WHERE entity_id = %s AND is_primary = TRUE AND confidence_score >= 70
-                    ORDER BY contact_type, confidence_score DESC
+                    WHERE entity_id = ANY(%s)
+                      AND is_primary = TRUE
+                      AND confidence_score >= 70
+                    ORDER BY entity_id, contact_type, confidence_score DESC
                     """,
-                    [entity_id]
+                    [entity_ids],
                 )
-                
-                contacts = []
-                for contact_row in cursor.fetchall():
-                    contacts.append({
-                        "type": contact_row[0],
-                        "value": contact_row[1],
-                        "confidence": contact_row[2],
-                        "source": contact_row[3],
-                        "is_verified": contact_row[4],
+                for entity_id, contact_type, contact_value, confidence, source, is_verified in cursor.fetchall():
+                    contacts_by_entity.setdefault(entity_id, []).append({
+                        "type": contact_type,
+                        "value": contact_value,
+                        "confidence": confidence,
+                        "source": source,
+                        "is_verified": is_verified,
                     })
-                
-                entities.append({
-                    "entity_id": entity_id,
+
+            entities = [
+                {
+                    "entity_id": row[0],
                     "entity_type": row[1],
                     "name": row[2],
                     "mapping_confidence": row[3],
                     "owner_name_at_time": row[4],
-                    "contacts": contacts,
-                })
+                    "contacts": contacts_by_entity.get(row[0], []),
+                }
+                for row in entity_rows
+            ]
 
-            nearby_rows = get_nearby_rows(pin, args["radius_m"], args["limit"])
-            nearby_owners = group_nearby_owner_rows(nearby_rows)
-            
-            return JsonResponse({
-                "pin": pin,
-                "entities": entities,
-                "nearby": {
-                    "radius_m": args["radius_m"],
-                    "owners": nearby_owners,
-                    "parcels": nearby_rows,
-                },
-            })
-    
-    except Exception as e:
-        logger.exception("Parcel entities lookup failed")
-        return JsonResponse({"error": str(e)}, status=500)
+        nearby_rows = get_nearby_rows(pin, args["radius_m"], args["limit"])
+        nearby_owners = group_nearby_owner_rows(nearby_rows)
+
+        return JsonResponse({
+            "pin": pin,
+            "entities": entities,
+            "nearby": {
+                "radius_m": args["radius_m"],
+                "owners": nearby_owners,
+                "parcels": nearby_rows,
+            },
+        })
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning("Parcel entities skipped because contact tables are missing.")
+        return JsonResponse({"result": [], "note": "Contact tables not yet created"})
 
 
 @api
 def admin_contact_coverage(request):
     """Admin endpoint to view contact data coverage statistics."""
     apiutil.authorize_for_admin(request)
-    
+
     try:
         with connections["wow"].cursor() as cursor:
-            # Check if contact tables exist
             cursor.execute("SELECT to_regclass('canonical_entities')")
             if not cursor.fetchone()[0]:
                 return JsonResponse({
                     "status": "not_initialized",
-                    "message": "Contact tables have not been created yet."
+                    "message": "Contact tables have not been created yet.",
                 })
-            
-            # Get overall coverage stats
+
             cursor.execute("SELECT * FROM get_contact_coverage_stats()")
             stats_row = cursor.fetchone()
-            
+
             stats = {
                 "entity_count": stats_row[0] or 0,
                 "entities_with_phone": stats_row[1] or 0,
@@ -1270,59 +1274,62 @@ def admin_contact_coverage(request):
                 "avg_confidence": round(float(stats_row[4]), 2) if stats_row[4] else 0,
                 "high_confidence_entities": stats_row[5] or 0,
             }
-            
-            # Get source breakdown
+
             cursor.execute(
                 """
-                SELECT 
+                SELECT
                     source_system,
-                    COUNT(DISTINCT entity_id) as entity_count,
-                    COUNT(*) as contact_count,
-                    AVG(confidence_score)::numeric(5,2) as avg_confidence
+                    COUNT(DISTINCT entity_id) AS entity_count,
+                    COUNT(*) AS contact_count,
+                    AVG(confidence_score)::numeric(5,2) AS avg_confidence
                 FROM entity_contacts
                 GROUP BY source_system
                 ORDER BY entity_count DESC
                 """
             )
-            
-            sources = []
-            for row in cursor.fetchall():
-                sources.append({
+            sources = [
+                {
                     "source": row[0],
                     "entity_count": row[1],
                     "contact_count": row[2],
                     "avg_confidence": float(row[3]) if row[3] else 0,
-                })
-            
-            # Get recent audit activity
+                }
+                for row in cursor.fetchall()
+            ]
+
             cursor.execute(
                 """
-                SELECT 
+                SELECT
                     action,
-                    COUNT(*) as count,
-                    MAX(performed_at) as last_at
+                    COUNT(*) AS count,
+                    MAX(performed_at) AS last_at
                 FROM contact_audit_log
                 WHERE performed_at > NOW() - INTERVAL '7 days'
                 GROUP BY action
                 ORDER BY count DESC
                 """
             )
-            
-            recent_activity = []
-            for row in cursor.fetchall():
-                recent_activity.append({
+            recent_activity = [
+                {
                     "action": row[0],
                     "count": row[1],
                     "last_at": iso_or_none(row[2]),
-                })
-            
+                }
+                for row in cursor.fetchall()
+            ]
+
             return JsonResponse({
                 "generated_at": datetime.now(tz=timezone.utc).isoformat(),
                 "coverage": stats,
                 "sources": sources,
                 "recent_activity": recent_activity,
             })
-    
-    except Exception as e:
-        logger.exception("Contact coverage stats failed")
-        return JsonResponse({"error": str(e)}, status=500)
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning("Contact coverage stats skipped because contact tables are missing.")
+        return JsonResponse({
+            "status": "not_initialized",
+            "message": "Contact tables have not been created yet.",
+        })

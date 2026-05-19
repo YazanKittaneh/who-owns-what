@@ -1,3 +1,4 @@
+import re
 from typing import Dict, Any
 import functools
 from django.http import JsonResponse
@@ -32,8 +33,27 @@ class AuthorizationError(Exception):
         )
 
 
+def _origin_is_allowed(origin: str) -> bool:
+    if origin in getattr(settings, "CORS_ALLOWED_ORIGINS", []):
+        return True
+    for pattern in getattr(settings, "CORS_ALLOWED_ORIGIN_REGEXES", []):
+        if re.fullmatch(pattern, origin):
+            return True
+    return False
+
+
 def apply_cors_policy(request, response):
-    response["Access-Control-Allow-Origin"] = "*"
+    # Echo the request Origin only when it matches the configured allowlist.
+    # Using "*" together with CORS_ALLOW_CREDENTIALS=True is rejected by browsers
+    # and would defeat the explicit CORS_ALLOWED_ORIGINS in settings.
+    response.setdefault("Vary", "Origin")
+    if "Vary" in response and "Origin" not in response["Vary"]:
+        response["Vary"] = response["Vary"] + ", Origin"
+
+    origin = request.headers.get("Origin")
+    if origin and _origin_is_allowed(origin):
+        response["Access-Control-Allow-Origin"] = origin
+        response["Access-Control-Allow-Credentials"] = "true"
     return response
 
 

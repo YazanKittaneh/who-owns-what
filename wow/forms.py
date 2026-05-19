@@ -163,3 +163,9 @@ class ContactConfidenceFilterForm(forms.Form):
         required=False,
         initial='all'
     )
+
+
+class EntityContactsForm(forms.Form):
+    """Form for the /entity/contacts endpoint."""
+    entity_id = forms.IntegerField(required=True, min_value=1)
+    min_confidence = forms.IntegerField(required=False, min_value=0, max_value=100, initial=70)
