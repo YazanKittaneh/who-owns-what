@@ -226,6 +226,9 @@ export type OwnerAreaSearchSeed = {
 export type OwnerAreaSearchParcel = {
   pin: string;
   address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
   lat?: number | null;
   lng?: number | null;
   distance_m?: number | null;

@@ -63,7 +63,9 @@ const PORTFOLIO_SIZE_OPTIONS: PortfolioSizeOption[] = [
 
 const MIN_RADIUS_M = 5;
 const MAX_RADIUS_M = 2000;
-const RESULT_LIMIT = 100;
+const RESULT_LIMIT = 20;
+const COOK_COUNTY = "Cook";
+const COOK_COUNTY_FIPS = "17031";
 
 function formatAddress(address?: string | null, pin?: string) {
   return address || pin || "Unknown parcel";
@@ -81,13 +83,27 @@ function formatRadiusLabel(radiusM: number) {
   return `${Number.isInteger(kmValue) ? kmValue : kmValue.toFixed(1)}km`;
 }
 
+function splitAddressAndUnit(address?: string | null) {
+  const fullAddress = (address || "").trim();
+  const match = fullAddress.match(/^(.*?\b(?:AVE|AV|ST|RD|DR|BLVD|CT|CIR|PL|TER|PKWY|HWY|WAY|LN))\s+(.+)$/i);
+
+  if (!match) {
+    return { address: fullAddress, unit: "" };
+  }
+
+  return {
+    address: match[1].trim(),
+    unit: match[2].trim(),
+  };
+}
+
 const FindOwnersPage: React.FC = () => {
   const location = useLocation();
   const locale = parseLocaleFromPath(location.pathname) || undefined;
   const legacy = isLegacyPath(location.pathname);
 
   const [searchPin, setSearchPin] = React.useState<string>("");
-  const [radiusM, setRadiusM] = React.useState<number>(600);
+  const [radiusM, setRadiusM] = React.useState<number>(250);
   const [buildingTypes, setBuildingTypes] = React.useState<string[]>(
     BUILDING_TYPE_OPTIONS.map((option) => option.value)
   );
@@ -231,6 +247,30 @@ const FindOwnersPage: React.FC = () => {
     [data]
   );
 
+  const propstreamExportRows = React.useMemo(
+    () =>
+      (data?.result || []).flatMap((owner) =>
+        owner.parcels.map((parcel) => {
+          const addressParts = splitAddressAndUnit(parcel.address);
+          return {
+            "Owner Name": owner.owner_name || "",
+            "Owner Mailing Address": owner.mailing_address || "",
+            "Owner Mailing City": owner.mailing_city || "",
+            "Owner Mailing State": owner.mailing_state || "",
+            "Owner Mailing Zip": owner.mailing_zip || "",
+            Address: addressParts.address,
+            "Unit#": addressParts.unit,
+            City: parcel.city || "",
+            State: parcel.state || "",
+            Zip: parcel.zip || "",
+            County: COOK_COUNTY,
+            FIPS: COOK_COUNTY_FIPS,
+          };
+        })
+      ),
+    [data]
+  );
+
   const toggleSavedOwner = React.useCallback(
     (owner: OwnerAreaSearchOwner) => {
       const ownerType = owner.owner_id ? "id" : "name";
@@ -266,14 +306,25 @@ const FindOwnersPage: React.FC = () => {
               <Trans>Nearby owner search</Trans>
             </p>
             <h1>
-              <Trans>Search an address, then filter nearby owners by building type and portfolio size</Trans>
+              <Trans>Find nearby owners from one address</Trans>
             </h1>
             <p>
               <Trans>
-                Start with a Chicago address, choose a search radius, and narrow the nearby owner list
-                to the kinds of buildings you want to research.
+                Search a Chicago address, review nearby owners within the default 250m radius, then export
+                a PropStream-ready CSV without APN/PIN columns.
               </Trans>
             </p>
+            <ol className="FindOwnersPage__processList">
+              <li>
+                <Trans>Enter an address, like 833 W Newport.</Trans>
+              </li>
+              <li>
+                <Trans>Adjust radius, building type, or portfolio filters if needed.</Trans>
+              </li>
+              <li>
+                <Trans>Download the no-APN PropStream export or the full owner research CSV.</Trans>
+              </li>
+            </ol>
           </div>
           <div className="FindOwnersPage__actions">
             <Link to={createRouteForSavedListsPage(locale, legacy)}>
@@ -312,7 +363,7 @@ const FindOwnersPage: React.FC = () => {
                   />
                   <div className="FindOwnersPage__sliderScale">
                     <span>5m</span>
-                    <span>600m</span>
+                    <span>250m</span>
                     <span>2km</span>
                   </div>
                 </div>
@@ -387,9 +438,17 @@ const FindOwnersPage: React.FC = () => {
                   </p>
                 </div>
                 {ownerExportRows.length > 0 && (
-                  <CSVDownloader data={ownerExportRows} filename={`find-owners-${data.seed.pin}-owners`}>
-                    <Button labelText="Export owners CSV" variant="secondary" size="small" />
-                  </CSVDownloader>
+                  <div className="FindOwnersPage__exportButtons">
+                    <CSVDownloader
+                      data={propstreamExportRows}
+                      filename={`find-owners-${data.seed.pin}-propstream-no-apn`}
+                    >
+                      <Button labelText="Export PropStream CSV" variant="primary" size="small" />
+                    </CSVDownloader>
+                    <CSVDownloader data={ownerExportRows} filename={`find-owners-${data.seed.pin}-owners-full`}>
+                      <Button labelText="Export full owners CSV" variant="secondary" size="small" />
+                    </CSVDownloader>
+                  </div>
                 )}
               </div>
             </section>

@@ -1,0 +1,258 @@
+.FindOwnersPage {
+  width: min(94vw, 92rem);
+  margin: 0 auto;
+  padding: 1.5rem 0 2rem;
+}
+
+.FindOwnersPage .FindOwnersPage__intro,
+.FindOwnersPage .FindOwnersPage__controls,
+.FindOwnersPage .FindOwnersPage__summary,
+.FindOwnersPage .FindOwnersPage__map,
+.FindOwnersPage .FindOwnersPage__results,
+.FindOwnersPage .FindOwnersPage__empty {
+  border: 1px solid #727e96;
+  background: #fff;
+}
+
+.FindOwnersPage .FindOwnersPage__intro,
+.FindOwnersPage .FindOwnersPage__controls,
+.FindOwnersPage .FindOwnersPage__summary,
+.FindOwnersPage .FindOwnersPage__results,
+.FindOwnersPage .FindOwnersPage__empty {
+  padding: 1.5rem;
+}
+
+.FindOwnersPage .FindOwnersPage__intro {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.FindOwnersPage .FindOwnersPage__eyebrow {
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #727e96;
+}
+
+.FindOwnersPage .FindOwnersPage__processList {
+  margin: 1rem 0 0;
+  padding-left: 1.25rem;
+  color: #454d5d;
+}
+
+.FindOwnersPage .FindOwnersPage__processList li + li {
+  margin-top: 0.35rem;
+}
+
+.FindOwnersPage .FindOwnersPage__controls,
+.FindOwnersPage .FindOwnersPage__summary,
+.FindOwnersPage .FindOwnersPage__empty {
+  margin-top: 1.5rem;
+}
+
+.FindOwnersPage .FindOwnersPage__summaryContent {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.FindOwnersPage .FindOwnersPage__exportButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.FindOwnersPage .FindOwnersPage__searchBlock .AddressSearch {
+  margin: 0;
+}
+
+.FindOwnersPage .FindOwnersPage__searchBlock {
+  position: relative;
+  z-index: 5;
+}
+
+.FindOwnersPage .FindOwnersPage__filterGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.FindOwnersPage .FindOwnersPage__filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.FindOwnersPage .FindOwnersPage__filterGroup--wide {
+  grid-column: span 2;
+}
+
+.FindOwnersPage .FindOwnersPage__filterLabel {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #727e96;
+}
+
+.FindOwnersPage .FindOwnersPage__sliderBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.FindOwnersPage .FindOwnersPage__sliderValue {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.FindOwnersPage .FindOwnersPage__slider {
+  width: 100%;
+  accent-color: #242323;
+}
+
+.FindOwnersPage .FindOwnersPage__sliderScale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #727e96;
+}
+
+.FindOwnersPage .FindOwnersPage__chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.FindOwnersPage .FindOwnersPage__chipRow button {
+  border: 1px solid #727e96;
+  background: #fff;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+}
+
+.FindOwnersPage .FindOwnersPage__chipRow button.active {
+  background: #242323;
+  color: #fff;
+  border-color: #242323;
+}
+
+.FindOwnersPage .FindOwnersPage__checkboxGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem 1rem;
+}
+
+.FindOwnersPage .FindOwnersPage__checkboxGrid label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.FindOwnersPage .FindOwnersPage__resultsLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(22rem, 0.85fr);
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.FindOwnersPage .FindOwnersPage__map {
+  overflow: hidden;
+}
+
+.FindOwnersPage .FindOwnersPage__ownerList {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.FindOwnersPage .FindOwnersPage__ownerCard {
+  border: 1px solid #d3d7de;
+  padding: 1rem;
+}
+
+.FindOwnersPage .FindOwnersPage__ownerHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.FindOwnersPage .FindOwnersPage__ownerHeader h3 {
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+}
+
+.FindOwnersPage .FindOwnersPage__ownerHeader p,
+.FindOwnersPage .FindOwnersPage__buildingTypes {
+  margin-bottom: 0;
+}
+
+.FindOwnersPage .FindOwnersPage__ownerMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-end;
+  white-space: nowrap;
+}
+
+.FindOwnersPage .FindOwnersPage__sameOwnerBadge {
+  color: #ff813a;
+  font-weight: 600;
+}
+
+.FindOwnersPage .FindOwnersPage__buildingTypes {
+  margin-top: 0.75rem;
+  color: #454d5d;
+}
+
+.FindOwnersPage .FindOwnersPage__ownerActions {
+  margin-top: 0.75rem;
+}
+
+.FindOwnersPage .FindOwnersPage__ownerActions button {
+  border: 1px solid #727e96;
+  background: #fff;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+}
+
+.FindOwnersPage .FindOwnersPage__parcelLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.85rem;
+}
+
+@media (max-width: 899px) {
+  .FindOwnersPage .FindOwnersPage__intro,
+  .FindOwnersPage .FindOwnersPage__summaryContent,
+  .FindOwnersPage .FindOwnersPage__ownerHeader,
+  .FindOwnersPage .FindOwnersPage__resultsLayout {
+    display: block;
+  }
+
+  .FindOwnersPage .FindOwnersPage__actions,
+  .FindOwnersPage .FindOwnersPage__exportButtons,
+  .FindOwnersPage .FindOwnersPage__ownerMeta,
+  .FindOwnersPage .FindOwnersPage__results {
+    margin-top: 1rem;
+  }
+
+  .FindOwnersPage .FindOwnersPage__exportButtons {
+    justify-content: flex-start;
+  }
+
+  .FindOwnersPage .FindOwnersPage__filterGrid,
+  .FindOwnersPage .FindOwnersPage__checkboxGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .FindOwnersPage .FindOwnersPage__filterGroup--wide {
+    grid-column: auto;
+  }
+
+  .FindOwnersPage .FindOwnersPage__ownerMeta {
+    align-items: flex-start;
+  }
+}

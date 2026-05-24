@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ "$#" -eq 0 ]; then
+  echo "Usage: findn <address>" >&2
+  echo "       findn --pin <pin>" >&2
+  exit 2
+fi
+
+exec python3 "$ROOT_DIR/find_nearby.py" --radius-m "${FINDN_RADIUS_M:-250}" --limit "${FINDN_LIMIT:-20}" "$@"
