@@ -177,6 +177,75 @@ def test_admin_data_coverage_includes_latest_audit_metadata_when_available(rf, m
     assert datasets["chi_owners"]["last_load_run_id"] == "core-20260409T000000Z"
 
 
+@override_settings(RATELIMIT_ENABLE=True)
+def test_ratelimited_address_search_returns_json_429(rf, monkeypatch):
+    from django.core.cache import cache
+
+    cache.clear()
+    monkeypatch.setattr(
+        views,
+        "exec_db_query",
+        lambda _sql_path, params: [{"pin": "17032270221140", "address": "X"}],
+    )
+
+    # 120/m, so the 121st request from a single IP should be rate-limited.
+    last_response = None
+    for _ in range(121):
+        last_response = views.address_search(
+            rf.get(
+                "/api/address/search",
+                {"q": "test"},
+                HTTP_X_FORWARDED_FOR="203.0.113.10",
+            )
+        )
+
+    assert last_response.status_code == 429
+    assert json.loads(last_response.content)["error"].startswith("Too many requests")
+    cache.clear()
+
+
+@override_settings(RATELIMIT_ENABLE=True)
+def test_ratelimit_uses_x_forwarded_for_first_ip(rf, monkeypatch):
+    from django.core.cache import cache
+
+    cache.clear()
+    monkeypatch.setattr(
+        views,
+        "exec_db_query",
+        lambda _sql_path, params: [],
+    )
+
+    # First IP exhausts its budget.
+    for _ in range(120):
+        views.address_search(
+            rf.get(
+                "/api/address/search",
+                {"q": "test"},
+                HTTP_X_FORWARDED_FOR="203.0.113.20, 10.0.0.1",
+            )
+        )
+
+    blocked = views.address_search(
+        rf.get(
+            "/api/address/search",
+            {"q": "test"},
+            HTTP_X_FORWARDED_FOR="203.0.113.20, 10.0.0.1",
+        )
+    )
+    assert blocked.status_code == 429
+
+    # A different upstream IP, same proxy chain, should still be allowed.
+    allowed = views.address_search(
+        rf.get(
+            "/api/address/search",
+            {"q": "test"},
+            HTTP_X_FORWARDED_FOR="203.0.113.21, 10.0.0.1",
+        )
+    )
+    assert allowed.status_code == 200
+    cache.clear()
+
+
 def test_apply_cors_policy_only_echoes_allowed_origin(rf):
     from wow import apiutil
 

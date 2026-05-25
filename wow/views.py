@@ -11,11 +11,12 @@ from xml.etree import ElementTree
 from django.http import HttpResponse, JsonResponse
 from django.db import ProgrammingError, connections
 from django.views.decorators.csrf import csrf_exempt
+from django_ratelimit.decorators import ratelimit
 
 from .dbutil import call_db_func, exec_db_query
 from .datautil import float_or_none, int_or_none, str_or_none
 from . import csvutil, apiutil
-from .apiutil import api, get_validated_form_data
+from .apiutil import api, client_ip, get_validated_form_data
 from .forms import (
     PinForm,
     PinListForm,
@@ -460,6 +461,7 @@ def get_pin_from_request(request) -> str:
 
 
 @api
+@ratelimit(key=client_ip, rate="120/m", block=True)
 def address_search(request):
     args = get_validated_form_data(AddressSearchForm, request.GET)
     try:
@@ -476,6 +478,7 @@ def address_search(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="60/m", block=True)
 def address_query(request):
     pin = get_pin_from_request(request)
     try:
@@ -498,6 +501,7 @@ def address_query(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="60/m", block=True)
 def address_overview_map(request):
     args = get_validated_form_data(MapViewportForm, request.GET)
     try:
@@ -524,6 +528,7 @@ def address_overview_map(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="30/m", block=True)
 def address_nearby(request):
     args = get_validated_form_data(NearbyPropertiesForm, request.GET)
     try:
@@ -546,6 +551,7 @@ def address_nearby(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="30/m", block=True)
 def owner_current(request):
     args = get_validated_form_data(CurrentOwnerForm, request.GET)
     try:
@@ -584,6 +590,7 @@ def owner_current(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="15/m", block=True)
 def owner_search_by_area(request):
     args = get_validated_form_data(OwnerSearchByAreaForm, request.GET)
     query_args = {
@@ -624,6 +631,7 @@ def owner_search_by_area(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="30/m", block=True)
 def address_aggregate(request):
     pin = get_pin_from_request(request)
     result = call_db_func("get_agg_info_from_pin", [pin])
@@ -632,6 +640,7 @@ def address_aggregate(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="60/m", block=True)
 def address_buildinginfo(request):
     pin = get_pin_from_request(request)
     try:
@@ -655,8 +664,12 @@ def address_buildinginfo(request):
 #     (or similar) the moment auth exists.
 #   - ensure_propstream_table runs DDL on every request. Once we have a real
 #     schema migration story, move this into a create_propstream_*.sql file.
+#   - Stricter per-IP throttle than the read endpoints since this is the only
+#     unauthenticated write path.
 @csrf_exempt
 @api
+@ratelimit(key=client_ip, rate="5/m", block=True)
+@ratelimit(key=client_ip, rate="30/h", block=True)
 def propstream_upload(request):
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
@@ -699,6 +712,7 @@ def propstream_upload(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="30/m", block=True)
 def address_indicatorhistory(request):
     args = get_validated_form_data(PinOrBblForm, request.GET)
     try:
@@ -738,6 +752,7 @@ def _fixup_addr_for_csv(addr: Dict[str, Any]):
 
 
 @api
+@ratelimit(key=client_ip, rate="10/m", block=True)
 def address_export(request):
     pin = get_pin_from_request(request)
     addrs = call_db_func("get_assoc_addrs_from_pin", [pin])
@@ -1016,6 +1031,7 @@ def admin_data_coverage(request):
 # ============================================================================
 
 @api
+@ratelimit(key=client_ip, rate="60/m", block=True)
 def entity_search(request):
     """Search for entities by name with fuzzy matching."""
     args = get_validated_form_data(EntitySearchForm, request.GET)
@@ -1076,6 +1092,7 @@ def entity_search(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="60/m", block=True)
 def entity_contacts(request):
     """Get contact information for a specific entity."""
     args = get_validated_form_data(EntityContactsForm, request.GET)
@@ -1160,6 +1177,7 @@ def entity_contacts(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="30/m", block=True)
 def parcel_entities(request):
     """Get entities and their contacts associated with a parcel PIN."""
     args = get_validated_form_data(NearbyPropertiesForm, request.GET)
