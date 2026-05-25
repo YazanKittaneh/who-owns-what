@@ -1,13 +1,17 @@
 from django.urls import path
 
-from . import views
+from . import views, views_entity
 
 app_name = "wow"
 
 urlpatterns = [
     path("health/", views.health_check, name="health_check"),
     path("admin/data-coverage", views.admin_data_coverage, name="admin_data_coverage"),
-    path("admin/contact-coverage", views.admin_contact_coverage, name="admin_contact_coverage"),
+    path(
+        "admin/contact-coverage",
+        views_entity.admin_contact_coverage,
+        name="admin_contact_coverage",
+    ),
     path("address/search", views.address_search, name="address_search"),
     path("address", views.address_query, name="address_query"),
     path("address/overview-map", views.address_overview_map, name="address_overview_map"),
@@ -23,8 +27,8 @@ urlpatterns = [
     ),
     path("address/export", views.address_export, name="address_export"),
     path("propstream/upload", views.propstream_upload, name="propstream_upload"),
-    # Contact data endpoints
-    path("entity/search", views.entity_search, name="entity_search"),
-    path("entity/contacts", views.entity_contacts, name="entity_contacts"),
-    path("parcel/entities", views.parcel_entities, name="parcel_entities"),
+    # Contact data endpoints (defined in views_entity.py).
+    path("entity/search", views_entity.entity_search, name="entity_search"),
+    path("entity/contacts", views_entity.entity_contacts, name="entity_contacts"),
+    path("parcel/entities", views_entity.parcel_entities, name="parcel_entities"),
 ]
