@@ -14,12 +14,19 @@ urlpatterns = [
     ),
     path("address/search", views.address_search, name="address_search"),
     path("address", views.address_query, name="address_query"),
-    path("address/overview-map", views.address_overview_map, name="address_overview_map"),
+    path(
+        "address/overview-map", views.address_overview_map, name="address_overview_map"
+    ),
     path("address/nearby", views.address_nearby, name="address_nearby"),
     path("owner/current", views.owner_current, name="owner_current"),
-    path("owner/search-by-area", views.owner_search_by_area, name="owner_search_by_area"),
+    path(
+        "owner/search-by-area", views.owner_search_by_area, name="owner_search_by_area"
+    ),
+    path("business-linkage", views.business_linkage, name="business_linkage"),
     path("address/aggregate", views.address_aggregate, name="address_aggregate"),
-    path("address/buildinginfo", views.address_buildinginfo, name="address_buildinginfo"),
+    path(
+        "address/buildinginfo", views.address_buildinginfo, name="address_buildinginfo"
+    ),
     path(
         "address/indicatorhistory",
         views.address_indicatorhistory,

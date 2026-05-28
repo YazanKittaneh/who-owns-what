@@ -8,8 +8,6 @@ import PropertiesSummary from "../components/PropertiesSummary";
 import Indicators from "../components/Indicators";
 import ComplaintsSummary from "../components/ComplaintsSummary";
 import ViolationsSummary from "../components/ViolationsSummary";
-import EvictionsSummary from "../components/EvictionsSummary";
-import RentstabSummary from "../components/RentstabSummary";
 import { LoadingPage } from "../components/Loader";
 
 import "styles/AddressPage.css";
@@ -291,12 +289,6 @@ export default class AddressPage extends Component<AddressPageProps, State> {
                 </div>
                 <div className="card p-2 mb-2">
                   <ViolationsSummary state={state} send={send} />
-                </div>
-                <div className="card p-2 mb-2">
-                  <EvictionsSummary state={state} send={send} />
-                </div>
-                <div className="card p-2 mb-2">
-                  <RentstabSummary state={state} send={send} />
                 </div>
               </div>
             </div>

@@ -58,8 +58,12 @@ def clean_addr_dict(addr):
         "scavenger_tax_sale_count": int_or_none(addr.get("scavenger_tax_sale_count")),
         "tax_sale_event_count": int_or_none(addr.get("tax_sale_event_count")),
         "latest_tax_sale_year": int_or_none(addr.get("latest_tax_sale_year")),
-        "latest_tax_sale_buyer_name": str_or_none(addr.get("latest_tax_sale_buyer_name")),
-        "total_tax_sale_amount_paid": float_or_none(addr.get("total_tax_sale_amount_paid")),
+        "latest_tax_sale_buyer_name": str_or_none(
+            addr.get("latest_tax_sale_buyer_name")
+        ),
+        "total_tax_sale_amount_paid": float_or_none(
+            addr.get("total_tax_sale_amount_paid")
+        ),
         "recorder_doc_count": int_or_none(addr.get("recorder_doc_count")),
         "mortgage_doc_count": int_or_none(addr.get("mortgage_doc_count")),
         "quitclaim_doc_count": int_or_none(addr.get("quitclaim_doc_count")),
@@ -106,7 +110,10 @@ def parse_xlsx_rows(upload) -> list[Dict[str, Any]]:
             root = ElementTree.fromstring(workbook.read("xl/sharedStrings.xml"))
             for shared_item in root.findall("a:si", ns):
                 shared_strings.append(
-                    "".join(text_node.text or "" for text_node in shared_item.findall(".//a:t", ns))
+                    "".join(
+                        text_node.text or ""
+                        for text_node in shared_item.findall(".//a:t", ns)
+                    )
                 )
 
         sheet_root = ElementTree.fromstring(workbook.read("xl/worksheets/sheet1.xml"))
@@ -136,7 +143,11 @@ def parse_xlsx_rows(upload) -> list[Dict[str, Any]]:
 
     headers = [str(header or "").strip() for header in parsed_rows[0]]
     return [
-        {headers[index]: value for index, value in enumerate(row) if index < len(headers) and headers[index]}
+        {
+            headers[index]: value
+            for index, value in enumerate(row)
+            if index < len(headers) and headers[index]
+        }
         for row in parsed_rows[1:]
     ]
 
@@ -153,10 +164,15 @@ def parse_propstream_upload_rows(upload) -> list[Dict[str, Any]]:
 def clean_propstream_records(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
     if isinstance(rows, str):
         rows = json.loads(rows)
-    return [{key: value for key, value in row.items() if value not in (None, "")} for row in rows]
+    return [
+        {key: value for key, value in row.items() if value not in (None, "")}
+        for row in rows
+    ]
 
 
-def fetch_propstream_records_for_pins(pins: list[str]) -> Dict[str, list[Dict[str, Any]]]:
+def fetch_propstream_records_for_pins(
+    pins: list[str],
+) -> Dict[str, list[Dict[str, Any]]]:
     pins = [pin for pin in pins if pin]
     if not pins:
         return {}
@@ -167,7 +183,10 @@ def fetch_propstream_records_for_pins(pins: list[str]) -> Dict[str, list[Dict[st
                 "SELECT pin, records FROM propstream_parcel_records WHERE pin = ANY(%s)",
                 [pins],
             )
-            return {pin: clean_propstream_records(records or []) for pin, records in cursor.fetchall()}
+            return {
+                pin: clean_propstream_records(records or [])
+                for pin, records in cursor.fetchall()
+            }
     except ProgrammingError as error:
         if not is_missing_db_object_error(error):
             raise
@@ -177,7 +196,10 @@ def fetch_propstream_records_for_pins(pins: list[str]) -> Dict[str, list[Dict[st
 
 def attach_propstream_records(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
     records_by_pin = fetch_propstream_records_for_pins([row.get("pin") for row in rows])
-    return [{**row, "propstream_records": records_by_pin.get(row.get("pin"), [])} for row in rows]
+    return [
+        {**row, "propstream_records": records_by_pin.get(row.get("pin"), [])}
+        for row in rows
+    ]
 
 
 def clean_map_addr_dict(addr):
@@ -235,6 +257,39 @@ def clean_owner_search_result_dict(row):
     }
 
 
+def clean_business_linkage_summary(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "pin": row.get("pin"),
+        "business_name_match_count": int_or_none(row.get("business_name_match_count"))
+        or 0,
+        "business_address_match_count": int_or_none(
+            row.get("business_address_match_count")
+        )
+        or 0,
+        "business_ambiguous_match_count": int_or_none(
+            row.get("business_ambiguous_match_count")
+        )
+        or 0,
+        "business_best_match_score": int_or_none(row.get("business_best_match_score")),
+        "matched_business_names": list(row.get("matched_business_names") or []),
+        "matched_business_account_numbers": list(
+            row.get("matched_business_account_numbers") or []
+        ),
+    }
+
+
+def clean_business_linkage_match(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "pin": row.get("pin"),
+        "match_type": row.get("match_type"),
+        "account_number": row.get("account_number"),
+        "matched_name": row.get("matched_name"),
+        "match_score": int_or_none(row.get("match_score")),
+        "address_variant_used": row.get("address_variant_used"),
+        "is_ambiguous": bool(row.get("is_ambiguous")),
+    }
+
+
 def normalize_lookup_value(value: Optional[str]) -> str:
     if not value:
         return ""
@@ -257,7 +312,9 @@ def build_contact_payload(
     }
 
 
-def enrich_nearby_rows_with_contacts(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+def enrich_nearby_rows_with_contacts(
+    rows: list[Dict[str, Any]]
+) -> list[Dict[str, Any]]:
     if not rows:
         return rows
 
@@ -297,7 +354,14 @@ def enrich_nearby_rows_with_contacts(rows: list[Dict[str, Any]]) -> list[Dict[st
                 """,
                 [owner_name_keys],
             )
-            for normalized_alias, contact_type, contact_value, confidence_score, source_system, is_verified in cursor.fetchall():
+            for (
+                normalized_alias,
+                contact_type,
+                contact_value,
+                confidence_score,
+                source_system,
+                is_verified,
+            ) in cursor.fetchall():
                 contacts_by_owner.setdefault(normalized_alias, []).append(
                     build_contact_payload(
                         contact_type,
@@ -324,7 +388,14 @@ def enrich_nearby_rows_with_contacts(rows: list[Dict[str, Any]]) -> list[Dict[st
                 """,
                 [mailing_keys],
             )
-            for normalized_value, contact_type, contact_value, confidence_score, source_system, is_verified in cursor.fetchall():
+            for (
+                normalized_value,
+                contact_type,
+                contact_value,
+                confidence_score,
+                source_system,
+                is_verified,
+            ) in cursor.fetchall():
                 contacts_by_mailing.setdefault(normalized_value, []).append(
                     build_contact_payload(
                         contact_type,
@@ -360,7 +431,9 @@ def enrich_nearby_rows_with_contacts(rows: list[Dict[str, Any]]) -> list[Dict[st
 
         owner_key = normalize_lookup_value(row.get("owner_name"))
         mailing_key = (row.get("mailing_address") or "").strip().lower()
-        for payload in contacts_by_owner.get(owner_key, []) + contacts_by_mailing.get(mailing_key, []):
+        for payload in contacts_by_owner.get(owner_key, []) + contacts_by_mailing.get(
+            mailing_key, []
+        ):
             dedupe_key = (payload["type"], payload["value"], payload["source"])
             if dedupe_key in seen:
                 continue
@@ -376,7 +449,12 @@ def get_nearby_rows(pin: str, radius_m: int, limit: int) -> list[Dict[str, Any]]
     rows = list(
         map(
             clean_nearby_addr_dict,
-            list(exec_db_query(SQL_DIR / "address_nearby.sql", {"pin": pin, "radius_m": radius_m, "limit": limit})),
+            list(
+                exec_db_query(
+                    SQL_DIR / "address_nearby.sql",
+                    {"pin": pin, "radius_m": radius_m, "limit": limit},
+                )
+            ),
         )
     )
     return enrich_nearby_rows_with_contacts(rows)
@@ -420,7 +498,9 @@ def address_search(request):
         logger.warning(
             "Using fallback address search query because WOW tables are missing."
         )
-        result = exec_db_query(SQL_DIR / "address_search_fallback.sql", {"q": args["q"]})
+        result = exec_db_query(
+            SQL_DIR / "address_search_fallback.sql", {"q": args["q"]}
+        )
     return JsonResponse({"result": list(result)})
 
 
@@ -507,7 +587,9 @@ def owner_current(request):
         if not is_missing_db_object_error(error):
             raise
         rollback_wow_connection()
-        logger.warning("Using empty owner profile because WOW parcel tables are missing.")
+        logger.warning(
+            "Using empty owner profile because WOW parcel tables are missing."
+        )
         result = []
 
     addrs = list(map(clean_addr_dict, list(result)))
@@ -546,16 +628,24 @@ def owner_search_by_area(request):
     }
 
     try:
-        seed_rows = list(exec_db_query(SQL_DIR / "owner_search_seed.sql", {"pin": args["pin"]}))
+        seed_rows = list(
+            exec_db_query(SQL_DIR / "owner_search_seed.sql", {"pin": args["pin"]})
+        )
         if not seed_rows:
-            return JsonResponse({"error": "No mapped parcel found for this PIN."}, status=404)
+            return JsonResponse(
+                {"error": "No mapped parcel found for this PIN."}, status=404
+            )
 
-        result_rows = list(exec_db_query(SQL_DIR / "owner_search_by_area.sql", query_args))
+        result_rows = list(
+            exec_db_query(SQL_DIR / "owner_search_by_area.sql", query_args)
+        )
     except ProgrammingError as error:
         if not is_missing_db_object_error(error):
             raise
         rollback_wow_connection()
-        logger.warning("Using empty owner area search because WOW parcel tables are missing.")
+        logger.warning(
+            "Using empty owner area search because WOW parcel tables are missing."
+        )
         seed_rows = []
         result_rows = []
 
@@ -573,6 +663,39 @@ def owner_search_by_area(request):
                 "limit": args["limit"],
             },
             "result": cleaned_rows,
+        }
+    )
+
+
+@api
+@ratelimit(key=client_ip, rate="30/m", block=True)
+def business_linkage(request):
+    args = get_validated_form_data(PinForm, request.GET)
+    try:
+        summary_rows = list(
+            exec_db_query(SQL_DIR / "business_linkage_summary.sql", args)
+        )
+        match_rows = list(exec_db_query(SQL_DIR / "business_linkage_matches.sql", args))
+        degraded = False
+    except ProgrammingError as error:
+        if not is_missing_db_object_error(error):
+            raise
+        rollback_wow_connection()
+        logger.warning(
+            "Using empty business linkage because summary tables are missing."
+        )
+        summary_rows = []
+        match_rows = []
+        degraded = True
+
+    summary = clean_business_linkage_summary(summary_rows[0]) if summary_rows else None
+    matches = [clean_business_linkage_match(row) for row in match_rows]
+    return JsonResponse(
+        {
+            "pin": args["pin"],
+            "summary": summary,
+            "matches": matches,
+            "degraded": degraded,
         }
     )
 
@@ -604,26 +727,20 @@ def address_buildinginfo(request):
     return JsonResponse({"result": cleaned_result})
 
 
-# NOTE: review-findings (kept intentionally until user auth lands):
-#   - Endpoint is unauthenticated and @csrf_exempt — anyone reachable can upsert
-#     into propstream_parcel_records via the ON CONFLICT path below. Acceptable
-#     only because we have no user system yet; gate this behind authorize_for_admin
-#     (or similar) the moment auth exists.
-#   - ensure_propstream_table runs DDL on every request. Once we have a real
-#     schema migration story, move this into a create_propstream_*.sql file.
-#   - Stricter per-IP throttle than the read endpoints since this is the only
-#     unauthenticated write path.
 @csrf_exempt
 @api
 @ratelimit(key=client_ip, rate="5/m", block=True)
 @ratelimit(key=client_ip, rate="30/h", block=True)
 def propstream_upload(request):
+    apiutil.authorize_for_admin(request)
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
     upload = request.FILES.get("file")
     if not upload:
-        return JsonResponse({"error": "Upload a CSV or Excel file in the 'file' field."}, status=400)
+        return JsonResponse(
+            {"error": "Upload a CSV or Excel file in the 'file' field."}, status=400
+        )
 
     try:
         rows_by_pin: Dict[str, list[Dict[str, Any]]] = {}
@@ -635,9 +752,10 @@ def propstream_upload(request):
                 continue
             rows_by_pin.setdefault(pin, []).append(row)
     except (UnicodeDecodeError, zipfile.BadZipFile, ElementTree.ParseError):
-        return JsonResponse({"error": "Upload a valid UTF-8 CSV or Excel .xlsx file."}, status=400)
+        return JsonResponse(
+            {"error": "Upload a valid UTF-8 CSV or Excel .xlsx file."}, status=400
+        )
 
-    ensure_propstream_table()
     with connections["wow"].cursor() as cursor:
         for pin, rows in rows_by_pin.items():
             cursor.execute(
@@ -664,20 +782,29 @@ def address_indicatorhistory(request):
     args = get_validated_form_data(PinOrBblForm, request.GET)
     try:
         if args.get("bbl"):
-            result = exec_db_query(SQL_DIR / "address_indicatorhistory.sql", {"bbl": args["bbl"]})
+            result = exec_db_query(
+                SQL_DIR / "address_indicatorhistory.sql", {"bbl": args["bbl"]}
+            )
             schema = "nyc"
         else:
             # Use IHS-enhanced query if IHS tables exist
             try:
-                result = exec_db_query(SQL_DIR / "address_indicatorhistory_chi_with_ihs.sql", {"pin": args["pin"]})
+                result = exec_db_query(
+                    SQL_DIR / "address_indicatorhistory_chi_with_ihs.sql",
+                    {"pin": args["pin"]},
+                )
                 schema = "standard"
             except ProgrammingError as ihs_error:
                 if not is_missing_db_object_error(ihs_error):
                     raise
                 # Fall back to original query if IHS tables are missing
                 rollback_wow_connection()
-                logger.warning("IHS tables not found, using standard indicator history query.")
-                result = exec_db_query(SQL_DIR / "address_indicatorhistory_chi.sql", {"pin": args["pin"]})
+                logger.warning(
+                    "IHS tables not found, using standard indicator history query."
+                )
+                result = exec_db_query(
+                    SQL_DIR / "address_indicatorhistory_chi.sql", {"pin": args["pin"]}
+                )
                 schema = "standard"
     except ProgrammingError as error:
         if not is_missing_db_object_error(error):
@@ -745,16 +872,10 @@ def health_check(request):
             cursor.execute("SELECT 1")
             cursor.fetchone()
 
-        return JsonResponse(
-            {"status": "healthy", "database": "connected"},
-            status=200
-        )
+        return JsonResponse({"status": "healthy", "database": "connected"}, status=200)
     except Exception as e:
         logger.exception("Health check failed")
-        return JsonResponse(
-            {"status": "unhealthy", "error": str(e)},
-            status=503
-        )
+        return JsonResponse({"status": "unhealthy", "error": str(e)}, status=503)
 
 
 @api
@@ -795,7 +916,7 @@ def admin_data_coverage(request):
         {
             "name": "registered_chicago_taxpayer",
             "table": None,
-            "missing_reason": "source_retired_no_bulk_endpoint",
+            "missing_reason": "source_deprecated_no_replacement",
             "partial_reason": None,
         },
         {
@@ -894,9 +1015,16 @@ def admin_data_coverage(request):
             # always comes from the hardcoded `datasets` allowlist above.
             cursor.execute(f"SELECT COUNT(*) FROM {table}")
             count_row = cursor.fetchone()
-            row_count = int(count_row[0]) if count_row and count_row[0] is not None else 0
+            row_count = (
+                int(count_row[0]) if count_row and count_row[0] is not None else 0
+            )
 
-            if table in {"chi_owners", "woodstock_mortgage_metadata", "bor_search_results", "ihs_indicators"}:
+            if table in {
+                "chi_owners",
+                "woodstock_mortgage_metadata",
+                "bor_search_results",
+                "ihs_indicators",
+            }:
                 cursor.execute(
                     f"""
                     SELECT MIN((year)::int), MAX((year)::int)
@@ -922,8 +1050,12 @@ def admin_data_coverage(request):
                     """
                 )
                 depth_row = cursor.fetchone()
-                total_pins = int(depth_row[0]) if depth_row and depth_row[0] is not None else 0
-                pins_with_multi_year = int(depth_row[1]) if depth_row and depth_row[1] is not None else 0
+                total_pins = (
+                    int(depth_row[0]) if depth_row and depth_row[0] is not None else 0
+                )
+                pins_with_multi_year = (
+                    int(depth_row[1]) if depth_row and depth_row[1] is not None else 0
+                )
                 multi_year_pct = None
                 if total_pins > 0:
                     multi_year_pct = round((pins_with_multi_year / total_pins) * 100, 2)
@@ -934,7 +1066,11 @@ def admin_data_coverage(request):
                         "pins_with_multi_year_pct": multi_year_pct,
                     }
                 )
-                if min_year is not None and max_year is not None and min_year == max_year:
+                if (
+                    min_year is not None
+                    and max_year is not None
+                    and min_year == max_year
+                ):
                     status = "partial"
                     reason = "single_year_history_only"
 

@@ -19,8 +19,8 @@ const ComplaintsSummary: React.FC<withMachineInStateProps<"portfolioFound">> = (
       <Trans render="h6">Complaints to 311</Trans>
       <p>
         <Trans>
-          Tenants in this portfolio reported <b>{totals.requests_311_total}</b> total 311
-          complaints.
+          This portfolio has <b>{totals.requests_311_total}</b> total 311 service requests on
+          record.
         </Trans>{" "}
         {complaintTypes.length > 0 && (
           <Trans>

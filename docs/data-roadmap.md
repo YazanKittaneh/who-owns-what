@@ -76,8 +76,8 @@ Minimum checks to add:
 
 ### Missing sources and decision points
 
-- Registered Chicago taxpayer: either obtain a replacement authoritative source or formally deprecate the planned workflow.
-- BOR detail: either secure an approved data path or keep only sample/admin visibility.
+- Registered Chicago taxpayer: deprecated after a 2026-05-25 source recheck; the legacy page remains 404 and current finance pages do not expose registered-taxpayer records or a bulk endpoint.
+- BOR detail: keep sample/admin visibility only unless an official or approved access path is obtained; the public decision search remains form-based with no bulk/export endpoint.
 - Illinois SOS: either complete ingest or remove placeholder tables from the roadmap until needed.
 
 ### Operational refresh sequence

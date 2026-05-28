@@ -139,8 +139,8 @@ Legend:
 | IHS indicators | housingstudies.org data portal | Raw HTML in `data/supplemental-20260331/housing/ihs/`; normalized `data/supplemental-20260331/normalized/ihs_indicators.csv` | `ihs_indicators` | Yes | Y (`/api/address/indicatorhistory` for Chicago) | Y (timeline datasets) | Annual (new year publish) | 5 indicators, 77 community areas, 2005-2024 |
 | Woodstock mortgage metadata | Woodstock XLSX files | Raw XLSX in `data/supplemental-20260331/housing/woodstock/`; normalized `woodstock_metadata.json` | `woodstock_mortgage_metadata` | Yes | Partial (`/api/admin/data-coverage` only) | N | Annual | Metadata only; no row-level mortgage fact table yet |
 | BOR search results | Cook County BOR public search page scrape | `data/supplemental-20260331/normalized/bor_search_results.csv` | `bor_search_results` | Yes | Partial (`/api/admin/data-coverage` only) | N | Monthly/quarterly sample refresh | Current table holds small sampled scrape output |
-| Registered Chicago taxpayer | Legacy Chicago finance page | source manifest only (`404` documented) | none | No | Partial (`/api/admin/data-coverage` status row) | N | N/A until source identified | Blocked: legacy source retired/no stable bulk endpoint |
-| BOR detail-level data | BOR detail flow | none bulk | none | No | Partial (`/api/admin/data-coverage` status row) | N | N/A until access strategy | Blocked: detail page flow captcha-limited |
+| Registered Chicago taxpayer | Legacy Chicago finance page | source manifest only (`404` documented; rechecked 2026-05-25) | none | No | Partial (`/api/admin/data-coverage` status row) | N | None | Deprecated: legacy source remains retired, current finance pages are informational, and no replacement bulk endpoint was found |
+| BOR detail-level data | BOR detail flow | none bulk | none | No | Partial (`/api/admin/data-coverage` status row) | N | N/A unless approved access is obtained | Blocked/sample-only: public pages expose form search but no bulk/export endpoint; do not present as comprehensive product coverage |
 
 ### Illinois SOS tables
 
@@ -164,7 +164,7 @@ Legend:
 | `GET /api/address/indicatorhistory?bbl=` | `wow/sql/address_indicatorhistory.sql` | NYC legacy tables | Legacy/NYC mode path |
 | `GET /api/address/aggregate` | `get_agg_info_from_pin` (`sql/agg_function.sql`) | `wow_parcels`, `wow_indicators`, `wow_portfolios` | No explicit fallback |
 | `GET /api/address/export` | `get_assoc_addrs_from_pin` (`sql/search_function_pin.sql`) | same as `/api/address` | No explicit fallback |
-| `GET /api/admin/data-coverage` | `wow.views.admin_data_coverage` | table existence/count checks across target datasets + `data_load_audit` | Reports missing/partial reasons explicitly; no auth guard yet |
+| `GET /api/admin/data-coverage` | `wow.views.admin_data_coverage` | table existence/count checks across target datasets + `data_load_audit` | Reports missing/partial reasons explicitly; requires admin token |
 
 ### API fields sent but not strongly used in UI
 

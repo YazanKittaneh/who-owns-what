@@ -140,3 +140,5 @@ Example owner-linkage response shape:
 - `/api/admin/data-coverage` remains protected.
 - Current owner-profile and nearby-owner endpoints are documented as first-pass current-row lookups.
 - API docs clearly distinguish public endpoints, authenticated workflow endpoints, and admin endpoints.
+- Registered Chicago taxpayer is documented as deprecated unless a new authoritative bulk source is identified.
+- BOR detail remains sample/admin-only unless official bulk or approved targeted access is obtained.

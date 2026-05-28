@@ -272,6 +272,86 @@ export type OwnerAreaSearchResults = {
   result: OwnerAreaSearchOwner[];
 };
 
+export type BusinessLinkageSummary = {
+  pin: string;
+  business_name_match_count: number;
+  business_address_match_count: number;
+  business_ambiguous_match_count: number;
+  business_best_match_score: number | null;
+  matched_business_names: string[];
+  matched_business_account_numbers: string[];
+};
+
+export type BusinessLinkageMatch = {
+  pin: string;
+  match_type: string;
+  account_number: string | null;
+  matched_name: string | null;
+  match_score: number | null;
+  address_variant_used: string | null;
+  is_ambiguous: boolean;
+};
+
+export type BusinessLinkageResults = {
+  pin: string;
+  summary: BusinessLinkageSummary | null;
+  matches: BusinessLinkageMatch[];
+  degraded: boolean;
+};
+
+export type AdminDataCoverageDataset = {
+  dataset: string;
+  present: boolean;
+  row_count: number;
+  min_year: number | null;
+  max_year: number | null;
+  last_loaded_at: string | null;
+  status: "ok" | "partial" | "missing" | string;
+  reason: string | null;
+  total_pins?: number;
+  pins_with_multi_year?: number;
+  pins_with_multi_year_pct?: number | null;
+  last_load_row_count?: number | null;
+  last_load_source_ref?: string | null;
+  last_load_run_id?: string | null;
+  last_load_status?: string | null;
+};
+
+export type AdminDataCoverageResults = {
+  generated_at: string;
+  datasets: AdminDataCoverageDataset[];
+};
+
+export type AdminContactCoverageResults = {
+  generated_at?: string;
+  status?: string;
+  message?: string;
+  coverage?: {
+    entity_count: number;
+    entities_with_phone: number;
+    entities_with_email: number;
+    entities_with_address: number;
+    avg_confidence: number;
+    high_confidence_entities: number;
+  };
+  sources?: Array<{
+    source: string;
+    entity_count: number;
+    contact_count: number;
+    avg_confidence: number;
+  }>;
+  recent_activity?: Array<{
+    action: string;
+    count: number;
+    last_at: string | null;
+  }>;
+};
+
+export type AdminCoverageResults = {
+  dataCoverage: AdminDataCoverageResults;
+  contactCoverage: AdminContactCoverageResults;
+};
+
 export type IndicatorsHistoryRecord = {
   month: string;
   permits_total?: number;

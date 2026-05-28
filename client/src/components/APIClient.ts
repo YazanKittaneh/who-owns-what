@@ -6,6 +6,10 @@ import {
   NearbyPropertiesResults,
   OwnerProfileResults,
   OwnerAreaSearchResults,
+  BusinessLinkageResults,
+  AdminCoverageResults,
+  AdminDataCoverageResults,
+  AdminContactCoverageResults,
 } from "./APIDataTypes";
 import { SearchAddress } from "./AddressSearch";
 import { NetworkError, HTTPError } from "error-reporting";
@@ -141,7 +145,10 @@ function getNearbyProperties(
   return getApiJson(`/api/address/nearby?${params.toString()}`);
 }
 
-function getCurrentOwnerProfile(ownerType: "id" | "name", ownerKey: string): Promise<OwnerProfileResults> {
+function getCurrentOwnerProfile(
+  ownerType: "id" | "name",
+  ownerKey: string
+): Promise<OwnerProfileResults> {
   const params = new URLSearchParams(
     ownerType === "id" ? { owner_id: ownerKey } : { owner_name: ownerKey }
   );
@@ -172,6 +179,11 @@ function searchOwnersByArea(args: {
   }
 
   return getApiJson(`/api/owner/search-by-area?${params.toString()}`);
+}
+
+function getBusinessLinkage(pin: string): Promise<BusinessLinkageResults> {
+  const params = new URLSearchParams({ pin });
+  return getApiJson(`/api/business-linkage?${params.toString()}`);
 }
 
 const indicatorColumns: Record<IndicatorsDatasetId, string[]> = {
@@ -281,11 +293,9 @@ function getAvailableDatasets(mode: IndicatorTimelineMode, rawJson: any[]): Indi
   });
 }
 
-async function getIndicatorHistory(pin: string, bbl?: string): Promise<IndicatorsHistoryData> {
+async function getIndicatorHistory(pin: string, _bbl?: string): Promise<IndicatorsHistoryData> {
   const apiData: IndicatorsHistoryResults = await getApiJson(
-    bbl
-      ? `/api/address/indicatorhistory?bbl=${encodeURIComponent(bbl)}`
-      : `/api/address/indicatorhistory?pin=${encodeURIComponent(pin)}`
+    `/api/address/indicatorhistory?pin=${encodeURIComponent(pin)}`
   );
   const raw = apiData.result || [];
   const mode = detectTimelineMode(apiData.schema, raw);
@@ -303,7 +313,11 @@ async function getIndicatorHistory(pin: string, bbl?: string): Promise<Indicator
 
 // Contact Data API Functions
 
-async function searchEntities(query: string, entityType: string = "all", limit: number = 20): Promise<EntitySearchResult[]> {
+async function searchEntities(
+  query: string,
+  entityType: string = "all",
+  limit: number = 20
+): Promise<EntitySearchResult[]> {
   const params = new URLSearchParams({
     q: query,
     entity_type: entityType,
@@ -313,7 +327,10 @@ async function searchEntities(query: string, entityType: string = "all", limit: 
   return result.result || [];
 }
 
-async function getEntityContacts(entityId: number, minConfidence: number = 70): Promise<EntityContactsResult> {
+async function getEntityContacts(
+  entityId: number,
+  minConfidence: number = 70
+): Promise<EntityContactsResult> {
   const params = new URLSearchParams({
     entity_id: String(entityId),
     min_confidence: String(minConfidence),
@@ -326,7 +343,29 @@ async function getParcelEntities(pin: string): Promise<ParcelEntitiesResult> {
   return getApiJson(`/api/parcel/entities?${params.toString()}`);
 }
 
-async function uploadPropstreamCsv(file: File): Promise<{
+function adminHeaders(adminToken: string) {
+  return {
+    accept: "application/json",
+    Authorization: `Token ${adminToken}`,
+  };
+}
+
+async function getAdminCoverage(adminToken: string): Promise<AdminCoverageResults> {
+  const [dataCoverage, contactCoverage] = await Promise.all([
+    getApiJson("/api/admin/data-coverage", { headers: adminHeaders(adminToken) }) as Promise<
+      AdminDataCoverageResults
+    >,
+    getApiJson("/api/admin/contact-coverage", { headers: adminHeaders(adminToken) }) as Promise<
+      AdminContactCoverageResults
+    >,
+  ]);
+  return { dataCoverage, contactCoverage };
+}
+
+async function uploadPropstreamCsv(
+  file: File,
+  adminToken?: string
+): Promise<{
   imported_parcels: number;
   imported_rows: number;
   skipped_rows: number;
@@ -335,7 +374,9 @@ async function uploadPropstreamCsv(file: File): Promise<{
   formData.append("file", file);
   const res = await friendlyFetch(apiURL("/api/propstream/upload"), {
     method: "POST",
-    headers: { accept: "application/json" },
+    headers: adminToken
+      ? { accept: "application/json", Authorization: `Token ${adminToken}` }
+      : { accept: "application/json" },
     body: formData,
   });
   return res.json();
@@ -362,8 +403,11 @@ function apiURL(url: string): string {
   return `${process.env.REACT_APP_API_BASE_URL || ""}${url}`;
 }
 
-async function getApiJson(url: string): Promise<any> {
-  const res = await friendlyFetch(apiURL(url), { headers: { accept: "application/json" } });
+async function getApiJson(url: string, init?: RequestInit): Promise<any> {
+  const res = await friendlyFetch(apiURL(url), {
+    ...init,
+    headers: { accept: "application/json", ...init?.headers },
+  });
   const contentType = res.headers.get("Content-Type");
   if (!(contentType && /^application\/json/.test(contentType))) {
     throw new NetworkError(`Expected JSON response but got ${contentType} from ${res.url}`, true);
@@ -387,11 +431,13 @@ const Client = {
   getNearbyProperties,
   getCurrentOwnerProfile,
   searchOwnersByArea,
+  getBusinessLinkage,
   getIndicatorHistory,
   // Contact data
   searchEntities,
   getEntityContacts,
   getParcelEntities,
+  getAdminCoverage,
   uploadPropstreamCsv,
 };
 

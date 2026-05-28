@@ -170,17 +170,9 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
             size: "auto",
           },
           {
-            accessorKey: "boro",
-            header: i18n._(t`Borough`),
-            cell: (info) => info.getValue() ?? null,
-            footer: (props) => props.column.id,
-            enableColumnFilter: false,
-            size: "auto",
-          },
-          {
             accessorFn: (row) => row.bbl || row.pin,
-            id: "bbl",
-            header: "BBL",
+            id: "pin",
+            header: "PIN",
             cell: ({ row }) => {
               return (
                 <Link
@@ -190,11 +182,11 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
                   )}
                   onClick={() =>
                     logPortfolioAnalytics("addressChangePortfolio", {
-                      extraParams: { from: "bbl column" },
+                      extraParams: { from: "pin column" },
                     })
                   }
                 >
-                  {row.original.bbl}
+                  {row.original.pin}
                 </Link>
               );
             },
@@ -267,43 +259,7 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
         ],
       },
       {
-        header: i18n._(t`RS Units`),
-        footer: (props) => props.column.id,
-        columns: [
-          {
-            accessorKey: "rsunits2007",
-            header: "2007",
-            cell: (info) => info.getValue() ?? null,
-            footer: (props) => props.column.id,
-            enableColumnFilter: false,
-            size: "auto",
-          },
-          {
-            accessorKey: "rsunitslatest",
-            header: rsunitslatestyear,
-            cell: ({ row }) => {
-              return (
-                <span
-                  className={`${
-                    // TODO: double check this works with nulls
-                    (row.original.rsunitslatest ?? 0) < (row.original.rsunits2007 ?? 0)
-                      ? "text-danger"
-                      : ""
-                  }`}
-                >
-                  {row.original.rsunitslatest}
-                </span>
-              );
-            },
-            footer: (props) => props.column.id,
-            enableColumnFilter: false,
-            size: "auto",
-            filterFn: "isNonZero",
-          },
-        ],
-      },
-      {
-        header: i18n._(t`Landlord`),
+        header: i18n._(t`Owner`),
         footer: (props) => props.column.id,
         columns: [
           {
@@ -359,7 +315,7 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
         ],
       },
       {
-        header: i18n._(t`HPD Complaints`),
+        header: i18n._(t`311 Requests`),
         footer: (props) => props.column.id,
         columns: [
           {
@@ -392,7 +348,7 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
         ],
       },
       {
-        header: i18n._(t`HPD Violations`),
+        header: i18n._(t`Code Violations`),
         footer: (props) => props.column.id,
         columns: [
           {
@@ -410,52 +366,6 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
             footer: (props) => props.column.id,
             enableColumnFilter: false,
             size: "auto",
-          },
-        ],
-      },
-      {
-        header: i18n._(t`Evictions Since 2017`),
-        footer: (props) => props.column.id,
-        columns: [
-          {
-            accessorFn: (row) => row.evictionfilings || null,
-            id: "evictionfilings",
-            header: i18n._(t`Filed`),
-            cell: (info) => info.getValue() ?? null,
-            footer: (props) => props.column.id,
-            enableColumnFilter: false,
-            size: "auto",
-          },
-          {
-            accessorFn: (row) => row.evictions || null,
-            id: "evictions",
-            header: i18n._(t`Executed`),
-            cell: (info) => info.getValue() ?? null,
-            footer: (props) => props.column.id,
-            enableColumnFilter: false,
-            size: "auto",
-          },
-        ],
-      },
-      {
-        header: i18n._(t`Tax Exemptions`),
-        footer: (props) => props.column.id,
-        columns: [
-          {
-            accessorKey: "yearstartedj51",
-            header: "J-51",
-            cell: ({ row }) => formatAbatementStartYear(row.original.yearstartedj51, i18n),
-            footer: (props) => props.column.id,
-            enableColumnFilter: false,
-            size: 100,
-          },
-          {
-            accessorKey: "yearstarted421a",
-            header: "421a",
-            cell: ({ row }) => formatAbatementStartYear(row.original.yearstarted421a, i18n),
-            footer: (props) => props.column.id,
-            enableColumnFilter: false,
-            size: 100,
           },
         ],
       },
@@ -482,49 +392,6 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
             footer: (props) => props.column.id,
             enableColumnFilter: false,
             size: 100,
-          },
-          {
-            accessorKey: "lastsaleacrisid",
-            header: i18n._(t`Link to Deed`),
-            cell: ({ row }) =>
-              row.original.lastsaleacrisid ? (
-                <a
-                  onClick={() => {
-                    logPortfolioAnalytics("portfolioLinktoDeed", {
-                      gtmEvent: "portfolio-link-to-deed",
-                    });
-                  }}
-                  href={`https://a836-acris.nyc.gov/DS/DocumentSearch/DocumentImageView?doc_id=${row.original.lastsaleacrisid}`}
-                  className="btn"
-                  target="_blank"
-                  aria-label={i18n._(t`Link to Deed`)}
-                  rel="noopener noreferrer"
-                >
-                  <span style={{ padding: "0 3px" }}>&#8599;&#xFE0E;</span>
-                </a>
-              ) : null,
-            footer: (props) => props.column.id,
-            enableColumnFilter: false,
-            size: "auto",
-          },
-          {
-            accessorFn: (row) => {
-              // Make id's that are part of group sales show up first when sorted:
-              const idPrefix =
-                row.lastsaleacrisid && isPartOfGroupSale(row.lastsaleacrisid, data) ? " " : "";
-              return `${idPrefix}${row.lastsaleacrisid}`;
-            },
-            id: "lastsaleisgroupsale",
-            header: i18n._(t`Group Sale?`),
-            cell: ({ row }) =>
-              row.original.lastsaleacrisid
-                ? isPartOfGroupSale(row.original.lastsaleacrisid, data)
-                  ? i18n._(t`Yes`)
-                  : i18n._(t`No`)
-                : null,
-            footer: (props) => props.column.id,
-            enableColumnFilter: false,
-            size: "auto",
           },
         ],
       },
@@ -592,7 +459,15 @@ const PortfolioTableWithoutI18n = React.memo((props: PortfolioTableProps) => {
   });
 
   React.useEffect(() => {
-    const { rsunitslatest, taxSaleHistory, recorderHistory, foreclosureDocs, ownernames, unitsres, zip } = filterSelections;
+    const {
+      rsunitslatest,
+      taxSaleHistory,
+      recorderHistory,
+      foreclosureDocs,
+      ownernames,
+      unitsres,
+      zip,
+    } = filterSelections;
     table.getColumn("rsunitslatest").setFilterValue(rsunitslatest);
     table.getColumn("tax_sale_event_count").setFilterValue(taxSaleHistory);
     table.getColumn("recorder_doc_count").setFilterValue(recorderHistory);

@@ -14,6 +14,10 @@ const KEY_TAB = 9;
 const KEY_ESC = 27;
 const SEARCH_RESULTS_LIMIT = 5;
 const SEARCH_DEBOUNCE_MS = 120;
+const SEARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const SEARCH_CACHE_MAX_ENTRIES = 75;
+const SEARCH_CACHE_PREFIX = "wow-address-search:";
+const memorySearchCache = new Map<string, { expiresAt: number; results: SearchAddress[] }>();
 
 export interface SearchAddress {
   housenumber?: string | null;
@@ -54,6 +58,58 @@ export function searchAddressToString(sa: SearchAddress): string {
   const city = sa.city ? `, ${sa.city}` : "";
   const state = sa.state ? `, ${sa.state}` : "";
   return `${prefix}${street}${city}${state}`.trim();
+}
+
+export function normalizeAddressSearchQuery(query: string): string {
+  return query.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function getCachedSearchResults(query: string): SearchAddress[] | null {
+  const cacheKey = normalizeAddressSearchQuery(query);
+  const memoryEntry = memorySearchCache.get(cacheKey);
+  const now = Date.now();
+
+  if (memoryEntry && memoryEntry.expiresAt > now) {
+    return memoryEntry.results;
+  }
+
+  if (memoryEntry) {
+    memorySearchCache.delete(cacheKey);
+  }
+
+  try {
+    const rawEntry = window.sessionStorage.getItem(`${SEARCH_CACHE_PREFIX}${cacheKey}`);
+    if (!rawEntry) return null;
+    const parsedEntry = JSON.parse(rawEntry);
+    if (!parsedEntry || parsedEntry.expiresAt <= now || !Array.isArray(parsedEntry.results)) {
+      window.sessionStorage.removeItem(`${SEARCH_CACHE_PREFIX}${cacheKey}`);
+      return null;
+    }
+    memorySearchCache.set(cacheKey, parsedEntry);
+    return parsedEntry.results;
+  } catch {
+    return null;
+  }
+}
+
+function cacheSearchResults(query: string, results: SearchAddress[]) {
+  const cacheKey = normalizeAddressSearchQuery(query);
+  const entry = {
+    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+    results,
+  };
+
+  memorySearchCache.set(cacheKey, entry);
+  if (memorySearchCache.size > SEARCH_CACHE_MAX_ENTRIES) {
+    const firstKey = memorySearchCache.keys().next().value;
+    memorySearchCache.delete(firstKey);
+  }
+
+  try {
+    window.sessionStorage.setItem(`${SEARCH_CACHE_PREFIX}${cacheKey}`, JSON.stringify(entry));
+  } catch {
+    // Best-effort cache only.
+  }
 }
 
 async function fetchSearchResults(query: string, signal?: AbortSignal): Promise<SearchAddress[]> {
@@ -111,6 +167,16 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
   }
 
   async loadSearchResults(query: string): Promise<SearchAddress[]> {
+    const cachedResults = getCachedSearchResults(query);
+    if (cachedResults) {
+      const limitedResults = cachedResults.slice(0, SEARCH_RESULTS_LIMIT);
+      this.setState({
+        isLoading: false,
+        results: limitedResults,
+      });
+      return limitedResults;
+    }
+
     this.activeSearch = new AbortController();
     try {
       const results = await fetchSearchResults(query, this.activeSearch.signal);
@@ -122,6 +188,7 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
         isLoading: false,
         results: limitedResults,
       });
+      cacheSearchResults(query, limitedResults);
       return limitedResults;
     } finally {
       this.activeSearch = undefined;
@@ -137,6 +204,15 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
     }
 
     this.clearPendingSearch();
+
+    const cachedResults = getCachedSearchResults(normalizedValue);
+    if (cachedResults) {
+      this.setState({
+        isLoading: false,
+        results: cachedResults.slice(0, SEARCH_RESULTS_LIMIT),
+      });
+      return;
+    }
 
     this.setState({ isLoading: true });
     this.pendingSearch = window.setTimeout(async () => {
@@ -211,6 +287,8 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
     }
 
     if (ds.selectedItem && searchAddressToString(ds.selectedItem) === inputValue) {
+      this.clearPendingSearch();
+      this.setState({ isLoading: false, results: [] });
       this.props.onFormSubmit(ds.selectedItem, null);
       return;
     }
@@ -260,8 +338,11 @@ export default class AddressSearch extends React.Component<AddressSearchProps, S
               return changes;
           }
         }}
-        onChange={(sa) => {
+        onChange={(sa, downshift) => {
           if (sa) {
+            this.clearPendingSearch();
+            this.setState({ isLoading: false, results: [] });
+            downshift.closeMenu();
             this.props.onFormSubmit(sa, null);
           }
         }}

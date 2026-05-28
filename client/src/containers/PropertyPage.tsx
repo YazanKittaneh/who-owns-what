@@ -14,6 +14,7 @@ import BuildingStatsTable from "../components/BuildingStatsTable";
 import PropertiesMap from "../components/PropertiesMap";
 import PropertiesSummary from "../components/PropertiesSummary";
 import NearbyOwners from "../components/NearbyOwners";
+import BusinessLinkage from "../components/BusinessLinkage";
 import Indicators from "../components/Indicators";
 import { UsefulLinks } from "../components/UsefulLinks";
 import PropertiesList, { FilterContextProvider } from "../components/PropertiesList";
@@ -210,6 +211,8 @@ export default class PropertyPage extends Component<PropertyPageProps> {
             locale={locale}
             isLegacyRoute={isLegacyPath(this.props.location.pathname)}
           />
+
+          <BusinessLinkage pin={detailAddr.pin} />
 
           <section className="PropertyPage__section card">
             <div className="PropertyPage__sectionHeader">

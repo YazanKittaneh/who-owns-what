@@ -52,6 +52,7 @@ import ForgotPasswordPage from "./ForgotPasswordPage";
 import UnsubscribePage from "./UnsubscribePage";
 import LoginPage from "./LoginPage";
 import SavedListsPage from "./SavedListsPage";
+import AdminCoveragePage from "./AdminCoveragePage";
 import { JFLogo } from "components/JFLogo";
 import { STANDALONE_PAGES } from "components/StandalonePage";
 import { LoadingPage } from "components/Loader";
@@ -148,6 +149,7 @@ const WhoOwnsWhatRoutes: React.FC<{}> = () => {
       <Route path={paths.legacy.findOwners} component={FindOwnersPage} exact />
       <Route path={paths.savedLists} component={SavedListsPage} exact />
       <Route path={paths.legacy.savedLists} component={SavedListsPage} exact />
+      <Route path={paths.adminCoverage} component={AdminCoveragePage} exact />
       <Route
         path={paths.addressPage.portfolio}
         render={(props) => (

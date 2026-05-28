@@ -23,11 +23,7 @@ import {
 } from "routes";
 import { parseLocaleFromPath } from "i18n";
 import { isLegacyPath } from "components/WowzaToggle";
-import {
-  isSavedNearbyItem,
-  removeSavedNearbyItem,
-  saveNearbyOwner,
-} from "util/savedNearbyLists";
+import { isSavedNearbyItem, removeSavedNearbyItem, saveNearbyOwner } from "util/savedNearbyLists";
 
 import "styles/FindOwnersPage.css";
 
@@ -85,7 +81,9 @@ function formatRadiusLabel(radiusM: number) {
 
 function splitAddressAndUnit(address?: string | null) {
   const fullAddress = (address || "").trim();
-  const match = fullAddress.match(/^(.*?\b(?:AVE|AV|ST|RD|DR|BLVD|CT|CIR|PL|TER|PKWY|HWY|WAY|LN))\s+(.+)$/i);
+  const match = fullAddress.match(
+    /^(.*?\b(?:AVE|AV|ST|RD|DR|BLVD|CT|CIR|PL|TER|PKWY|HWY|WAY|LN))\s+(.+)$/i
+  );
 
   if (!match) {
     return { address: fullAddress, unit: "" };
@@ -113,12 +111,15 @@ const FindOwnersPage: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [selectedParcel, setSelectedParcel] = React.useState<OwnerAreaSearchParcel | null>(null);
   const [selectedOwner, setSelectedOwner] = React.useState<OwnerAreaSearchOwner | null>(null);
-  const [selectedParcelDetail, setSelectedParcelDetail] = React.useState<AddressRecord | null>(null);
+  const [selectedParcelDetail, setSelectedParcelDetail] = React.useState<AddressRecord | null>(
+    null
+  );
   const [isParcelDetailLoading, setParcelDetailLoading] = React.useState(false);
   const [, setSavedVersion] = React.useState(0);
 
   const selectedPortfolioSize =
-    PORTFOLIO_SIZE_OPTIONS.find((option) => option.value === portfolioSize) || PORTFOLIO_SIZE_OPTIONS[0];
+    PORTFOLIO_SIZE_OPTIONS.find((option) => option.value === portfolioSize) ||
+    PORTFOLIO_SIZE_OPTIONS[0];
 
   React.useEffect(() => {
     if (!searchPin) {
@@ -159,18 +160,21 @@ const FindOwnersPage: React.FC = () => {
     };
   }, [searchPin, radiusM, buildingTypes, selectedPortfolioSize.min, selectedPortfolioSize.max]);
 
-  const handleAddressSubmit = React.useCallback((searchAddress: SearchAddress, searchError: any) => {
-    if (searchError) {
-      setError(searchError instanceof Error ? searchError.message : "Address search failed.");
-      return;
-    }
+  const handleAddressSubmit = React.useCallback(
+    (searchAddress: SearchAddress, searchError: any) => {
+      if (searchError) {
+        setError(searchError instanceof Error ? searchError.message : "Address search failed.");
+        return;
+      }
 
-    if (!searchAddress.pin) {
-      return;
-    }
+      if (!searchAddress.pin) {
+        return;
+      }
 
-    setSearchPin(searchAddress.pin);
-  }, []);
+      setSearchPin(searchAddress.pin);
+    },
+    []
+  );
 
   const toggleBuildingType = React.useCallback((value: string) => {
     setBuildingTypes((current) =>
@@ -242,7 +246,9 @@ const FindOwnersPage: React.FC = () => {
           .map((entry) => `${entry.building_type_label} (${entry.parcel_count || 0})`)
           .join(" | "),
         parcel_pins: owner.parcels.map((parcel) => parcel.pin).join(", "),
-        parcel_addresses: owner.parcels.map((parcel) => formatAddress(parcel.address, parcel.pin)).join(" | "),
+        parcel_addresses: owner.parcels
+          .map((parcel) => formatAddress(parcel.address, parcel.pin))
+          .join(" | "),
       })),
     [data]
   );
@@ -310,8 +316,8 @@ const FindOwnersPage: React.FC = () => {
             </h1>
             <p>
               <Trans>
-                Search a Chicago address, review nearby owners within the default 250m radius, then export
-                a PropStream-ready CSV without APN/PIN columns.
+                Search a Chicago address, review nearby owners within the default 250m radius, then
+                export a PropStream-ready CSV without APN/PIN columns.
               </Trans>
             </p>
             <ol className="FindOwnersPage__processList">
@@ -344,30 +350,30 @@ const FindOwnersPage: React.FC = () => {
             />
           </div>
 
-            <div className="FindOwnersPage__filterGrid">
-              <div className="FindOwnersPage__filterGroup">
-                <label className="FindOwnersPage__filterLabel" htmlFor="radius-slider">
-                  <Trans>Radius</Trans>
-                </label>
-                <div className="FindOwnersPage__sliderBlock">
-                  <div className="FindOwnersPage__sliderValue">{formatRadiusLabel(radiusM)}</div>
-                  <input
-                    id="radius-slider"
-                    className="FindOwnersPage__slider"
-                    type="range"
-                    min={MIN_RADIUS_M}
-                    max={MAX_RADIUS_M}
-                    step={5}
-                    value={radiusM}
-                    onChange={(event) => setRadiusM(Number(event.target.value))}
-                  />
-                  <div className="FindOwnersPage__sliderScale">
-                    <span>5m</span>
-                    <span>250m</span>
-                    <span>2km</span>
-                  </div>
+          <div className="FindOwnersPage__filterGrid">
+            <div className="FindOwnersPage__filterGroup">
+              <label className="FindOwnersPage__filterLabel" htmlFor="radius-slider">
+                <Trans>Radius</Trans>
+              </label>
+              <div className="FindOwnersPage__sliderBlock">
+                <div className="FindOwnersPage__sliderValue">{formatRadiusLabel(radiusM)}</div>
+                <input
+                  id="radius-slider"
+                  className="FindOwnersPage__slider"
+                  type="range"
+                  min={MIN_RADIUS_M}
+                  max={MAX_RADIUS_M}
+                  step={5}
+                  value={radiusM}
+                  onChange={(event) => setRadiusM(Number(event.target.value))}
+                />
+                <div className="FindOwnersPage__sliderScale">
+                  <span>5m</span>
+                  <span>250m</span>
+                  <span>2km</span>
                 </div>
               </div>
+            </div>
 
             <div className="FindOwnersPage__filterGroup">
               <label className="FindOwnersPage__filterLabel" htmlFor="portfolio-size-select">
@@ -445,7 +451,10 @@ const FindOwnersPage: React.FC = () => {
                     >
                       <Button labelText="Export PropStream CSV" variant="primary" size="small" />
                     </CSVDownloader>
-                    <CSVDownloader data={ownerExportRows} filename={`find-owners-${data.seed.pin}-owners-full`}>
+                    <CSVDownloader
+                      data={ownerExportRows}
+                      filename={`find-owners-${data.seed.pin}-owners-full`}
+                    >
                       <Button labelText="Export full owners CSV" variant="secondary" size="small" />
                     </CSVDownloader>
                   </div>
@@ -497,8 +506,12 @@ const FindOwnersPage: React.FC = () => {
                             <p>{formatMailing(owner) || "N/A"}</p>
                           </div>
                           <div className="FindOwnersPage__ownerMeta">
-                            <span>{owner.parcel_count} parcels</span>
-                            <span>{owner.nearest_distance_m ?? "?"}m</span>
+                            <span>
+                              {owner.parcel_count === 1
+                                ? "1 parcel"
+                                : `${owner.parcel_count} parcels`}
+                            </span>
+                            <span>Nearest {owner.nearest_distance_m ?? "?"}m</span>
                             {owner.same_owner && (
                               <span className="FindOwnersPage__sameOwnerBadge">
                                 <Trans>Same owner</Trans>
@@ -508,7 +521,9 @@ const FindOwnersPage: React.FC = () => {
                         </div>
                         <p className="FindOwnersPage__buildingTypes">
                           {owner.building_type_counts
-                            .map((entry) => `${entry.building_type_label} (${entry.parcel_count || 0})`)
+                            .map(
+                              (entry) => `${entry.building_type_label} (${entry.parcel_count || 0})`
+                            )
                             .join(" • ")}
                         </p>
                         <div className="FindOwnersPage__ownerActions">
@@ -557,7 +572,9 @@ const FindOwnersPage: React.FC = () => {
           detailAddr={selectedParcelDetail}
           isLoading={isParcelDetailLoading}
           propertyHref={
-            selectedParcel ? createRouteForAddressPage({ pin: selectedParcel.pin, locale }, legacy) : "#"
+            selectedParcel
+              ? createRouteForAddressPage({ pin: selectedParcel.pin, locale }, legacy)
+              : "#"
           }
           onClose={handleCloseParcelModal}
         />

@@ -3,6 +3,7 @@ from collections.abc import Iterator
 
 import pytest
 from django.test import RequestFactory, override_settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from wow import views
 
@@ -23,15 +24,24 @@ class FakeCoverageCursor:
 
         if normalized_sql.startswith("SELECT to_regclass("):
             table_name = params[0]
-            self.result = (table_name,) if self.state["table_exists"].get(table_name, False) else (None,)
+            self.result = (
+                (table_name,)
+                if self.state["table_exists"].get(table_name, False)
+                else (None,)
+            )
             return
 
-        if normalized_sql.startswith("SELECT loaded_at, row_count, source_ref, run_id, status FROM data_load_audit"):
+        if normalized_sql.startswith(
+            "SELECT loaded_at, row_count, source_ref, run_id, status FROM data_load_audit"
+        ):
             dataset_name = params[0]
             self.result = self.state["audit_rows"].get(dataset_name)
             return
 
-        if normalized_sql == "SELECT COUNT(*), COUNT(*) FILTER (WHERE years_seen >= 2) FROM ( SELECT pin, COUNT(DISTINCT year) AS years_seen FROM chi_owners WHERE year ~ '^[0-9]{4}$' GROUP BY pin ) owner_history":
+        if (
+            normalized_sql
+            == "SELECT COUNT(*), COUNT(*) FILTER (WHERE years_seen >= 2) FROM ( SELECT pin, COUNT(DISTINCT year) AS years_seen FROM chi_owners WHERE year ~ '^[0-9]{4}$' GROUP BY pin ) owner_history"
+        ):
             self.result = self.state.get("chi_owners_depth")
             return
 
@@ -62,6 +72,30 @@ class FakeCoverageConnection:
         return None
 
 
+class FakePropstreamCursor:
+    def __init__(self):
+        self.statements = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def execute(self, sql, params=None):
+        normalized_sql = " ".join(sql.split())
+        assert normalized_sql.startswith("INSERT INTO propstream_parcel_records")
+        self.statements.append((normalized_sql, params))
+
+
+class FakePropstreamConnection:
+    def __init__(self):
+        self.cursor_obj = FakePropstreamCursor()
+
+    def cursor(self):
+        return self.cursor_obj
+
+
 @pytest.fixture
 def rf() -> Iterator[RequestFactory]:
     yield RequestFactory()
@@ -81,7 +115,9 @@ def test_admin_data_coverage_requires_auth(rf):
 
 
 @override_settings(ADMIN_API_TOKEN="coverage-secret")
-def test_admin_data_coverage_reports_present_partial_missing_and_auditless_states(rf, monkeypatch):
+def test_admin_data_coverage_reports_present_partial_missing_and_auditless_states(
+    rf, monkeypatch
+):
     state = {
         "table_exists": {
             "data_load_audit": False,
@@ -124,10 +160,13 @@ def test_admin_data_coverage_reports_present_partial_missing_and_auditless_state
     assert datasets["woodstock_mortgage_metadata"]["reason"] == "table_missing"
     assert datasets["bor_detail"]["status"] == "partial"
     assert datasets["registered_chicago_taxpayer"]["status"] == "missing"
+    assert datasets["registered_chicago_taxpayer"]["reason"] == "source_deprecated_no_replacement"
 
 
 @override_settings(ADMIN_API_TOKEN="coverage-secret")
-def test_admin_data_coverage_includes_latest_audit_metadata_when_available(rf, monkeypatch):
+def test_admin_data_coverage_includes_latest_audit_metadata_when_available(
+    rf, monkeypatch
+):
     state = {
         "table_exists": {
             "data_load_audit": True,
@@ -246,6 +285,49 @@ def test_ratelimit_uses_x_forwarded_for_first_ip(rf, monkeypatch):
     cache.clear()
 
 
+@override_settings(ADMIN_API_TOKEN="propstream-secret")
+def test_propstream_upload_requires_admin_token(rf):
+    upload = SimpleUploadedFile("propstream.csv", b"APN#,Owner\n17032270221140,Owner\n")
+    response = views.propstream_upload(
+        rf.post("/api/propstream/upload", {"file": upload})
+    )
+
+    assert response.status_code == 401
+    assert json.loads(response.content)["error"] == "Unauthorized request"
+
+
+@override_settings(ADMIN_API_TOKEN="propstream-secret")
+def test_propstream_upload_imports_with_admin_token_without_request_path_ddl(
+    rf, monkeypatch
+):
+    fake_connection = FakePropstreamConnection()
+    monkeypatch.setattr(views, "connections", {"wow": fake_connection})
+    monkeypatch.setattr(
+        views,
+        "ensure_propstream_table",
+        lambda: (_ for _ in ()).throw(AssertionError("request path DDL should not run")),
+    )
+
+    upload = SimpleUploadedFile(
+        "propstream.csv",
+        b"APN#,Owner\n17-03-227-022-1140,Owner A\n,Missing Pin\n",
+        content_type="text/csv",
+    )
+    response = views.propstream_upload(
+        rf.post(
+            "/api/propstream/upload",
+            {"file": upload},
+            HTTP_AUTHORIZATION="Token propstream-secret",
+        )
+    )
+
+    assert response.status_code == 200
+    payload = json.loads(response.content)
+    assert payload == {"imported_parcels": 1, "imported_rows": 1, "skipped_rows": 1}
+    assert len(fake_connection.cursor_obj.statements) == 1
+    assert fake_connection.cursor_obj.statements[0][1][0] == "17032270221140"
+
+
 def test_apply_cors_policy_only_echoes_allowed_origin(rf):
     from wow import apiutil
 
@@ -288,7 +370,10 @@ def test_health_check_returns_healthy_when_db_cursor_succeeds(rf, monkeypatch):
     response = views.health_check(rf.get("/api/health/"))
 
     assert response.status_code == 200
-    assert json.loads(response.content) == {"status": "healthy", "database": "connected"}
+    assert json.loads(response.content) == {
+        "status": "healthy",
+        "database": "connected",
+    }
 
 
 def test_address_search_smoke_uses_pin_search_contract(rf, monkeypatch):
@@ -313,6 +398,7 @@ def test_address_search_smoke_uses_pin_search_contract(rf, monkeypatch):
 
 
 def test_address_query_smoke_returns_cleaned_numeric_fields(rf, monkeypatch):
+    monkeypatch.setattr(views, "attach_propstream_records", lambda rows: rows)
     monkeypatch.setattr(
         views,
         "call_db_func",
@@ -350,7 +436,9 @@ def test_address_query_smoke_returns_cleaned_numeric_fields(rf, monkeypatch):
     assert payload["addrs"][0]["permits_total"] == 3
 
 
-def test_address_overview_map_smoke_returns_bounds_results_and_truncation(rf, monkeypatch):
+def test_address_overview_map_smoke_returns_bounds_results_and_truncation(
+    rf, monkeypatch
+):
     monkeypatch.setattr(
         views,
         "exec_db_query",
@@ -387,6 +475,7 @@ def test_address_overview_map_smoke_returns_bounds_results_and_truncation(rf, mo
 
 
 def test_address_nearby_smoke_returns_owner_and_mailing_fields(rf, monkeypatch):
+    monkeypatch.setattr(views, "enrich_nearby_rows_with_contacts", lambda rows: rows)
     monkeypatch.setattr(
         views,
         "exec_db_query",
@@ -439,9 +528,7 @@ def test_owner_current_smoke_returns_owner_summary_and_parcels(rf, monkeypatch):
         ],
     )
 
-    response = views.owner_current(
-        rf.get("/api/owner/current", {"owner_id": "row-1"})
-    )
+    response = views.owner_current(rf.get("/api/owner/current", {"owner_id": "row-1"}))
 
     assert response.status_code == 200
     payload = json.loads(response.content)
@@ -449,6 +536,49 @@ def test_owner_current_smoke_returns_owner_summary_and_parcels(rf, monkeypatch):
     assert payload["owner"]["owner_name"] == "SO 3134 N KIMBALL LLC"
     assert payload["owner"]["parcel_count"] == 1
     assert payload["result"][0]["pin"] == "13262030280000"
+
+
+def test_business_linkage_smoke_returns_summary_and_matches(rf, monkeypatch):
+    def fake_exec_db_query(sql_path, params):
+        assert params == {"pin": "17032270221140"}
+        if sql_path.name == "business_linkage_summary.sql":
+            return [
+                {
+                    "pin": "17032270221140",
+                    "business_name_match_count": "1",
+                    "business_address_match_count": "2",
+                    "business_ambiguous_match_count": "0",
+                    "business_best_match_score": "95",
+                    "matched_business_names": ["CITY OWNER LLC"],
+                    "matched_business_account_numbers": ["12345"],
+                }
+            ]
+        if sql_path.name == "business_linkage_matches.sql":
+            return [
+                {
+                    "pin": "17032270221140",
+                    "match_type": "business_name_exact",
+                    "account_number": "12345",
+                    "matched_name": "CITY OWNER LLC",
+                    "match_score": "95",
+                    "address_variant_used": None,
+                    "is_ambiguous": False,
+                }
+            ]
+        raise AssertionError(f"Unexpected SQL path: {sql_path}")
+
+    monkeypatch.setattr(views, "exec_db_query", fake_exec_db_query)
+
+    response = views.business_linkage(
+        rf.get("/api/business-linkage", {"pin": "17032270221140"})
+    )
+
+    assert response.status_code == 200
+    payload = json.loads(response.content)
+    assert payload["pin"] == "17032270221140"
+    assert payload["degraded"] is False
+    assert payload["summary"]["business_best_match_score"] == 95
+    assert payload["matches"][0]["match_type"] == "business_name_exact"
 
 
 def test_address_indicatorhistory_smoke_prefers_pin_path(rf, monkeypatch):

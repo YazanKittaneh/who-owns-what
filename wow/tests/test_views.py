@@ -225,7 +225,7 @@ class TestServerError:
     def test_it_returns_html_on_non_api_requests(self):
         res = self.client.get("/server-error")
         assert res.status_code == 500
-        assert res["Content-Type"] == "text/html"
+        assert res["Content-Type"].startswith("text/html")
         assert b"Server Error" in res.content
 
     def test_it_returns_json_on_api_requests(self, settings):

@@ -1,0 +1,133 @@
+.AdminCoveragePage {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.AdminCoveragePage__header,
+.AdminCoveragePage__section {
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.AdminCoveragePage__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.AdminCoveragePage__header h1,
+.AdminCoveragePage__section h2 {
+  margin: 0;
+}
+
+.AdminCoveragePage__eyebrow {
+  margin: 0 0 0.25rem;
+  color: #5f6b7a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.AdminCoveragePage__tokenForm {
+  display: flex;
+  gap: 0.5rem;
+  min-width: min(420px, 100%);
+}
+
+.AdminCoveragePage__section {
+  margin-top: 1rem;
+}
+
+.AdminCoveragePage__sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  margin-bottom: 1rem;
+}
+
+.AdminCoveragePage__sectionHeader span,
+.AdminCoveragePage__note {
+  color: #5f6b7a;
+}
+
+.AdminCoveragePage__tableWrap {
+  overflow-x: auto;
+}
+
+.AdminCoveragePage__table {
+  min-width: 840px;
+  margin-bottom: 0;
+}
+
+.AdminCoveragePage__status {
+  display: inline-block;
+  min-width: 4.5rem;
+  border-radius: 4px;
+  padding: 0.12rem 0.35rem;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.AdminCoveragePage__status--ok {
+  background: #e8f5ec;
+  color: #216b3a;
+}
+
+.AdminCoveragePage__status--partial {
+  background: #fff3d6;
+  color: #805700;
+}
+
+.AdminCoveragePage__status--missing {
+  background: #fde7e7;
+  color: #a12727;
+}
+
+.AdminCoveragePage__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.AdminCoveragePage__metrics div {
+  border: 1px solid #dfe3ea;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.AdminCoveragePage__metrics span,
+.AdminCoveragePage__metrics strong {
+  display: block;
+}
+
+.AdminCoveragePage__metrics span {
+  color: #5f6b7a;
+  font-size: 0.8rem;
+}
+
+.AdminCoveragePage__metrics strong {
+  margin-top: 0.2rem;
+  font-size: 1.2rem;
+}
+
+@media (max-width: 720px) {
+  .AdminCoveragePage__header,
+  .AdminCoveragePage__sectionHeader,
+  .AdminCoveragePage__tokenForm {
+    display: block;
+  }
+
+  .AdminCoveragePage__tokenForm .btn {
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+}

@@ -137,6 +137,7 @@ export const createCoreRoutePaths = (prefix?: string) => {
     ownerPage: `${pathPrefix}/owner/:ownerType(id|name)/:ownerKey`,
     findOwners: `${pathPrefix}/find-owners`,
     savedLists: `${pathPrefix}/saved-lists`,
+    adminCoverage: `${pathPrefix}/admin/coverage`,
     account: createAccountRoutePaths(`${pathPrefix}/account`),
     about: `${pathPrefix}/about`,
     howToUse: `${pathPrefix}/how-to-use`,

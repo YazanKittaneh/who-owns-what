@@ -11,8 +11,8 @@
 
 @media screen and (max-width: 480px) {
   .AddressSearch form {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
@@ -33,6 +33,12 @@
 .AddressSearch .AddressSearch__submitButton {
   margin-top: 1.5rem;
   white-space: nowrap;
+}
+
+@media screen and (max-width: 480px) {
+  .AddressSearch .AddressSearch__submitButton {
+    width: 100%;
+  }
 }
 
 .AddressSearch {

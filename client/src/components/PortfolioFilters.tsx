@@ -230,17 +230,14 @@ const PortfolioFiltersWithoutI18n = React.memo(
       () => (
         <>
           <h4>
-            <Trans>What’s the difference between a landlord, an owner, and head officer?</Trans>
+            <Trans>What do these owner names mean?</Trans>
           </h4>
           <p>
             <Trans>
-              While the legal owner of a building is often a company (usually called an “LLC”),
-              these names and business addresses registered with the Department of Housing
-              Preservation and Development (“HPD”) offer a clearer picture of who really controls
-              the building. People listed here as “Head Officer” or “Owner” usually have ties to
-              building ownership, while “Site Managers” are part of management. That being said,
-              these names are self reported by the landlord, so they can be misleading. Learn more
-              about HPD registrations and how this information powers this tool on the{" "}
+              Property ownership records may list a person, trust, or business entity. These names
+              are taken from current parcel-owner data and can contain spelling variants, mailing
+              names, or business names that still need entity resolution. Learn more about how this
+              information powers this tool on the{" "}
               <LocaleLink to={isLegacyPath(pathname) ? legacy.about : about}>About page</LocaleLink>
               .
             </Trans>
@@ -322,10 +319,10 @@ const PortfolioFiltersWithoutI18n = React.memo(
               </span>
             </button>
             <FilterAccordion
-              title={i18n._(t`Landlord`)}
+              title={i18n._(t`Owner`)}
               subtitle={i18n._(t`Person/Entity`)}
               infoIconAriaLabel={i18n._(
-                t`Learn more about what it means for someone to be listed as a landlord`
+                t`Learn more about what it means for someone to be listed as an owner`
               )}
               infoModalContents={ownernamesInfoModalContents}
               isActive={ownernamesActive}
@@ -341,7 +338,7 @@ const PortfolioFiltersWithoutI18n = React.memo(
                 onApply={onOwnernamesApply}
                 onError={() => logPortfolioAnalytics("filterError", { column: "ownernames" })}
                 infoAlert={OwnernamesInfoAlert}
-                aria-label={i18n._(t`Landlord filter`)}
+                aria-label={i18n._(t`Owner filter`)}
                 isOpen={ownernamesIsOpen}
                 defaultSelections={valuesAsMultiselectOptions(ownernamesSelections)}
                 filterOption={ownernamesFilterOption}
@@ -388,15 +385,13 @@ const PortfolioFiltersWithoutI18n = React.memo(
             </FilterAccordion>
           </FiltersWrapper>
 
-          {(
-            commercialOnlyActive ||
+          {(commercialOnlyActive ||
             taxSaleHistoryActive ||
             recorderHistoryActive ||
             foreclosureDocsActive ||
             ownernamesActive ||
             unitsresActive ||
-            zipActive
-          ) && (
+            zipActive) && (
             <div className="filter-status">
               <div className="filter-status-info">
                 <span className="results-count" role="status">
@@ -427,11 +422,9 @@ const PortfolioFiltersWithoutI18n = React.memo(
           </h4>
           <p>
             <Trans>
-              We pull data from public records to calculate these results. Our algorithm relies on
-              public{" "}
-              <a href="https://www.nyc.gov/site/hpd/about/open-data.page">HPD registration data</a>{" "}
-              for residential buildings, which contains self-reported landlord contact information
-              on about 170,000 properties across the city.
+              We pull data from public records to calculate these results. The Chicago workflow
+              currently uses parcel-owner, permit, violation, 311, tax sale, recorder, and
+              foreclosure-related records where available.
             </Trans>
           </p>
           <LocaleLink to={isLegacyPath(pathname) ? legacy.methodology : methodology}>
@@ -536,7 +529,7 @@ const OwnernamesInfoAlert = (
     storageId="owner-info-alert-close"
     role="status"
   >
-    <Trans>The same owner may have spelled their name several ways in official documents.</Trans>
+    <Trans>The same owner may be listed several ways in official documents.</Trans>
   </Alert>
 );
 
@@ -659,7 +652,10 @@ function normalizeForTokenSearch(value: string): string {
     .trim();
 }
 
-function ownernamesFilterOption(option: { label: string; value: string }, rawInput: string): boolean {
+function ownernamesFilterOption(
+  option: { label: string; value: string },
+  rawInput: string
+): boolean {
   const query = normalizeForTokenSearch(rawInput);
   if (!query) return true;
 
