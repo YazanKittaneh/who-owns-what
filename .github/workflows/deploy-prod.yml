@@ -169,8 +169,10 @@ jobs:
             test -f /usr/share/nginx/html/index.html
             test -d /usr/share/nginx/html/static/js
             test -d /usr/share/nginx/html/static/css
-            grep -Eq "/static/js/main\.[a-f0-9]+\.chunk\.js" /usr/share/nginx/html/index.html
-            grep -Eq "/static/css/main\.[a-f0-9]+\.chunk\.css" /usr/share/nginx/html/index.html
+            find /usr/share/nginx/html/static/js -maxdepth 1 -type f -name "main*.js" | grep -q .
+            find /usr/share/nginx/html/static/css -maxdepth 1 -type f -name "main*.css" | grep -q .
+            grep -Eq "/static/js/main\.[^\"]+\.js" /usr/share/nginx/html/index.html
+            grep -Eq "/static/css/main\.[^\"]+\.css" /usr/share/nginx/html/index.html
           '
 
   deploy:
