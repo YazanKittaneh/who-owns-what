@@ -214,7 +214,7 @@ function SelectedValuesContainer<
         removeProps={{
           onClick: () => removeValue(opt),
           onTouchEnd: () => removeValue(opt),
-          onMouseDown: (e) => {
+          onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => {
             e.preventDefault();
             e.stopPropagation();
           },

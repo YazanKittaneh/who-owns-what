@@ -25,7 +25,7 @@
     "@types/markerclustererplus": "^2.1.29",
     "@types/minimatch": "3.0.5",
     "@types/node": "^11.9.4",
-    "@types/react": "^16.9.49",
+    "@types/react": "16.14.35",
     "@types/react-cytoscapejs": "^1.2.2",
     "@types/react-dom": "^16.8.2",
     "@types/react-helmet": "^6.0.0",
@@ -111,8 +111,9 @@
     "@svgr/webpack": "$@svgr/webpack"
   },
   "resolutions": {
-    "@types/react": "16.14.69",
+    "@types/react": "16.14.35",
     "@types/react-dom": "16.9.25",
+    "@types/react-router": "5.1.8",
     "ejs": "^3.1.7",
     "shell-quote": "^1.7.2",
     "loader-utils": "^2.0.4",
