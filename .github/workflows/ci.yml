@@ -65,7 +65,9 @@ jobs:
           SECRET_KEY: ci-secret-key
 
       - name: Run backend tests
-        run: pytest tests --ignore=tests/test_sql.py
+        # wow/tests/test_milestone1.py stubs DB access, so it runs anywhere;
+        # the rest of wow/tests needs a fully built test DB (see conftest).
+        run: pytest tests wow/tests/test_milestone1.py --ignore=tests/test_sql.py
         env:
           SECRET_KEY: ci-secret-key
           ALERTS_API_TOKEN: ci-alerts-token
