@@ -1,3 +1,4 @@
+import hmac
 import re
 from typing import Dict, Any
 import functools
@@ -35,15 +36,31 @@ class AuthorizationError(Exception):
 
 
 def client_ip(group, request):
-    """Key function for django-ratelimit that prefers the real client IP.
+    """Key function for django-ratelimit that resolves the real client IP.
 
-    Honours the first entry of X-Forwarded-For when present (set by our
-    reverse proxies) so we rate-limit per end-user, not per proxy hop.
-    Falls back to REMOTE_ADDR.
+    X-Forwarded-For is client-controlled: trusting its left-most entry lets
+    any caller mint a fresh throttle bucket per request. We only consult it
+    when RATELIMIT_TRUSTED_PROXY_COUNT says how many trailing hops belong to
+    proxies we operate, and then take the right-most untrusted entry. The
+    Cloudflare-appended CF-Connecting-IP header is preferred when present,
+    since production ingress is a Cloudflare Tunnel and direct origin access
+    is not exposed.
     """
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR") or ""
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    cf_ip = request.META.get("HTTP_CF_CONNECTING_IP")
+    if cf_ip:
+        return cf_ip.strip()
+    trusted_hops = getattr(settings, "RATELIMIT_TRUSTED_PROXY_COUNT", 0)
+    if trusted_hops > 0:
+        forwarded = [
+            part.strip()
+            for part in (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")
+            if part.strip()
+        ]
+        if forwarded:
+            # Right-most entry is appended by the closest proxy; step left
+            # past our own hops, but never past the start of the list.
+            index = max(len(forwarded) - trusted_hops, 0)
+            return forwarded[index]
     return request.META.get("REMOTE_ADDR") or "unknown"
 
 
@@ -93,28 +110,31 @@ def api(fn):
     return wrapper
 
 
+GENERIC_AUTH_ERROR = "Invalid or missing authorization credentials."
+
+
 def authorize_with_token(request, keyword, token):
+    # A single generic message for every failure mode so callers can't
+    # learn how far their guess got.
+    if not token:
+        # Endpoint's token is not configured server-side: fail closed
+        # rather than comparing against an empty secret.
+        raise AuthorizationError(GENERIC_AUTH_ERROR)
 
     if "Authorization" not in request.headers:
-        raise AuthorizationError("No authorization header provided")
+        raise AuthorizationError(GENERIC_AUTH_ERROR)
 
     auth = request.headers.get("Authorization").split()
 
-    if not auth or auth[0].lower() != keyword.lower():
-        raise AuthorizationError("Invalid authorization header. No token provided.")
-
-    if len(auth) == 1:
-        raise AuthorizationError("Invalid token header. No credentials provided.")
-
-    elif len(auth) > 2:
-        raise AuthorizationError(
-            "Invalid token header. Token string should not contain spaces."
-        )
+    if len(auth) != 2 or auth[0].lower() != keyword.lower():
+        raise AuthorizationError(GENERIC_AUTH_ERROR)
 
     request_token = auth[1]
 
-    if not (token == request_token):
-        raise AuthorizationError("You do not have permission to access this resource")
+    if not hmac.compare_digest(
+        token.encode("utf-8"), request_token.encode("utf-8")
+    ):
+        raise AuthorizationError(GENERIC_AUTH_ERROR)
 
 
 def authorize_for_alerts(request):

@@ -879,6 +879,7 @@ def health_check(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="30/m", block=True)
 def admin_data_coverage(request):
     apiutil.authorize_for_admin(request)
 

@@ -244,7 +244,8 @@ def test_ratelimited_address_search_returns_json_429(rf, monkeypatch):
 
 
 @override_settings(RATELIMIT_ENABLE=True)
-def test_ratelimit_uses_x_forwarded_for_first_ip(rf, monkeypatch):
+def test_ratelimit_ignores_spoofed_x_forwarded_for(rf, monkeypatch):
+    """Client-supplied X-Forwarded-For must not mint fresh throttle buckets."""
     from django.core.cache import cache
 
     cache.clear()
@@ -254,7 +255,6 @@ def test_ratelimit_uses_x_forwarded_for_first_ip(rf, monkeypatch):
         lambda _sql_path, params: [],
     )
 
-    # First IP exhausts its budget.
     for _ in range(120):
         views.address_search(
             rf.get(
@@ -264,25 +264,49 @@ def test_ratelimit_uses_x_forwarded_for_first_ip(rf, monkeypatch):
             )
         )
 
-    blocked = views.address_search(
-        rf.get(
-            "/api/address/search",
-            {"q": "test"},
-            HTTP_X_FORWARDED_FOR="203.0.113.20, 10.0.0.1",
-        )
-    )
-    assert blocked.status_code == 429
-
-    # A different upstream IP, same proxy chain, should still be allowed.
-    allowed = views.address_search(
+    # Rotating the spoofable header must NOT reset the limit: the requests
+    # all come from the same underlying REMOTE_ADDR.
+    still_blocked = views.address_search(
         rf.get(
             "/api/address/search",
             {"q": "test"},
             HTTP_X_FORWARDED_FOR="203.0.113.21, 10.0.0.1",
         )
     )
-    assert allowed.status_code == 200
+    assert still_blocked.status_code == 429
     cache.clear()
+
+
+def test_client_ip_key_derivation(rf):
+    from wow.apiutil import client_ip
+
+    # Default (no trusted proxies): REMOTE_ADDR wins, XFF is ignored.
+    request = rf.get("/", HTTP_X_FORWARDED_FOR="6.6.6.6, 7.7.7.7")
+    assert client_ip("g", request) == "127.0.0.1"
+
+    # Cloudflare's connecting-IP header is preferred when present.
+    request = rf.get("/", HTTP_CF_CONNECTING_IP="198.51.100.7")
+    assert client_ip("g", request) == "198.51.100.7"
+
+    # With one trusted proxy hop, the entry appended by that proxy (the
+    # right-most) is used; left-side spoofed entries are ignored.
+    with override_settings(RATELIMIT_TRUSTED_PROXY_COUNT=1):
+        request = rf.get("/", HTTP_X_FORWARDED_FOR="6.6.6.6, 203.0.113.9")
+        assert client_ip("g", request) == "203.0.113.9"
+        request = rf.get("/", HTTP_X_FORWARDED_FOR="203.0.113.9")
+        assert client_ip("g", request) == "203.0.113.9"
+
+
+@override_settings(ADMIN_API_TOKEN=None)
+def test_admin_endpoints_fail_closed_when_token_unconfigured(rf):
+    """With no ADMIN_API_TOKEN there is no fallback to other tokens: 401."""
+    response = views.admin_data_coverage(
+        rf.get(
+            "/api/admin/data-coverage",
+            HTTP_AUTHORIZATION="Token alerts-tok",
+        )
+    )
+    assert response.status_code == 401
 
 
 @override_settings(ADMIN_API_TOKEN="propstream-secret")

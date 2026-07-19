@@ -4,13 +4,14 @@ psycopg2==2.9.9
 django==4.2.20
 rollbar==0.16.3
 dj-database-url==0.5.0
-gunicorn==19.9.0
+gunicorn==23.0.0
 numpy==2.0.1
 algoliasearch==2.6.1
 boto3==1.28.44
-requests==2.25.1
-types-requests==2.25.1
+requests==2.32.3
+types-requests==2.32.0.20240914
 django-cors-headers==4.6.0
 django-ratelimit==4.1.0
+redis==5.0.8
 PyYAML>=5.1
 networkx==3.3

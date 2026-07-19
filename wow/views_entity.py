@@ -317,6 +317,7 @@ def parcel_entities(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="30/m", block=True)
 def admin_contact_coverage(request):
     """Admin endpoint to view contact data coverage statistics."""
     apiutil.authorize_for_admin(request)
