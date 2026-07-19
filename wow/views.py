@@ -6,7 +6,7 @@ import re
 import zipfile
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from xml.etree import ElementTree
 from django.http import HttpResponse, JsonResponse
 from django.db import ProgrammingError, connections
@@ -19,7 +19,6 @@ from . import csvutil, apiutil
 from .apiutil import api, client_ip, get_validated_form_data
 from .forms import (
     PinForm,
-    PinListForm,
     AddressSearchForm,
     PinOrBblForm,
     MapViewportForm,
@@ -98,7 +97,10 @@ def parse_xlsx_rows(upload) -> list[Dict[str, Any]]:
     ns = {"a": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
     def cell_index(cell_ref: str) -> int:
-        letters = re.match(r"[A-Z]+", cell_ref).group(0)
+        match = re.match(r"[A-Z]+", cell_ref)
+        if match is None:
+            raise ValueError(f"Invalid cell reference: {cell_ref!r}")
+        letters = match.group(0)
         index = 0
         for letter in letters:
             index = index * 26 + ord(letter) - 64
@@ -130,7 +132,7 @@ def parse_xlsx_rows(upload) -> list[Dict[str, Any]]:
 
         parsed_rows = []
         for row in sheet_root.findall(".//a:sheetData/a:row", ns):
-            values = []
+            values: List[str] = []
             for cell in row.findall("a:c", ns):
                 index = cell_index(cell.attrib["r"])
                 while len(values) < index:
@@ -195,9 +197,11 @@ def fetch_propstream_records_for_pins(
 
 
 def attach_propstream_records(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
-    records_by_pin = fetch_propstream_records_for_pins([row.get("pin") for row in rows])
+    records_by_pin = fetch_propstream_records_for_pins(
+        [row["pin"] for row in rows if row.get("pin")]
+    )
     return [
-        {**row, "propstream_records": records_by_pin.get(row.get("pin"), [])}
+        {**row, "propstream_records": records_by_pin.get(row.get("pin") or "", [])}
         for row in rows
     ]
 
@@ -883,7 +887,7 @@ def health_check(request):
 def admin_data_coverage(request):
     apiutil.authorize_for_admin(request)
 
-    datasets = [
+    datasets: List[Dict[str, Any]] = [
         {
             "name": "chi_owners",
             "table": "chi_owners",

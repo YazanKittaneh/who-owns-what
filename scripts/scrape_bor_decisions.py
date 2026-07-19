@@ -11,7 +11,6 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlencode
 
 
@@ -52,7 +51,7 @@ def extract_text(html: str) -> str:
 
 def parse_results_table(html: str) -> list[SearchResult]:
     """Parse the decision results table from HTML."""
-    results = []
+    results: list[SearchResult] = []
 
     # Find the results table
     table_match = re.search(

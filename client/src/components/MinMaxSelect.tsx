@@ -61,7 +61,9 @@ function MinMaxSelect({
           break;
         case "presets":
           setCustomRange(NUMBER_RANGE_DEFAULT);
-          const selectionMinValues = defaultSelections.values.map((rng: FilterNumberRange) => rng.min);
+          const selectionMinValues = defaultSelections.values.map(
+            (rng: FilterNumberRange) => rng.min
+          );
           const presetSelections = PRESETS_DEFAULT.map((preset) => {
             return { ...preset, checked: selectionMinValues.includes(preset.min) };
           });

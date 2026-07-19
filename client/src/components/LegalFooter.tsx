@@ -21,15 +21,17 @@ const LegalFooter = () => {
           </p>
           <p>
             <Trans>
-              This Chicago version of Who Owns What is built and operated independently by
-              Yazan.
+              This Chicago version of Who Owns What is built and operated independently by Yazan.
             </Trans>
           </p>
           <p>
             <Trans>It is not a JustFix project.</Trans>
           </p>
           <p>
-            <Trans>This version was modified to fit Chicago and is not affiliated with or endorsed by JustFix.</Trans>
+            <Trans>
+              This version was modified to fit Chicago and is not affiliated with or endorsed by
+              JustFix.
+            </Trans>
           </p>
         </div>
         <div className="Links column col-4 col-md-12">
@@ -43,11 +45,7 @@ const LegalFooter = () => {
               <a target="_blank" rel="noopener noreferrer" href="https://yazan.io">
                 <Trans>Yazan.io</Trans>
               </a>
-              <a
-                href="https://github.com/yazankittaneh"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href="https://github.com/yazankittaneh" target="_blank" rel="noopener noreferrer">
                 <Trans>GitHub</Trans>
               </a>
               <NavLink to={isLegacyPath(pathname) ? legacy.termsOfUse : termsOfUse}>
@@ -60,11 +58,7 @@ const LegalFooter = () => {
               <NavLink to={isLegacyPath(pathname) ? legacy.methodology : methodology}>
                 <Trans>Methodology</Trans>
               </NavLink>
-              <a
-                href="https://github.com/yazankittaneh"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href="https://github.com/yazankittaneh" target="_blank" rel="noopener noreferrer">
                 <Trans>Source code</Trans>
               </a>
             </nav>

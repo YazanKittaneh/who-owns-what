@@ -57,7 +57,9 @@ def populate_portfolios_table(conn, table="wow_portfolios"):
                     ORDER BY coalesce(nullif(o.mail_address_name, ''), nullif(o.row_id, ''), p.pin)
                 ) AS orig_id,
                 array_agg(p.pin ORDER BY p.pin) AS pins,
-                ARRAY[coalesce(nullif(o.mail_address_name, ''), nullif(o.row_id, ''), p.pin)] AS owner_names,
+                ARRAY[
+                    coalesce(nullif(o.mail_address_name, ''), nullif(o.row_id, ''), p.pin)
+                ] AS owner_names,
                 '{{}}'::jsonb AS graph
             FROM latest_parcels AS p
             LEFT JOIN latest_owners AS o ON o.pin = p.pin

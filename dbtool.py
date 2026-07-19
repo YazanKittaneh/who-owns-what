@@ -7,7 +7,7 @@ import yaml
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Iterable, Literal
+from typing import Any, Dict, List, Tuple, Literal
 from urllib.parse import urlparse
 
 from csv_limits import set_max_csv_field_size_limit
@@ -52,14 +52,9 @@ DbConnection = Any
 
 
 class DbContext(tuple):
-    host: str
-    database: str
-    user: str
-    password: str
-    port: int
-
     def __new__(cls, host: str, database: str, user: str, password: str, port: int):
-        return super().__new__(cls, (host, database, user, password, port))
+        values = (host, database, user, password, port)
+        return super().__new__(cls, values)  # type: ignore[arg-type]
 
     @property
     def host(self) -> str:

@@ -303,7 +303,7 @@ def write_detail_csv(path: Path, seed: dict, rows: list[dict]) -> None:
 
 
 def write_owner_summary_csv(path: Path, seed: dict, rows: list[dict]) -> None:
-    grouped = {}
+    grouped: dict = {}
     for row in rows:
         owner_key = row.get("owner_id") or row.get("owner_name") or row.get("pin")
         group = grouped.setdefault(

@@ -10,7 +10,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     Geosupport = None
 
-    class GeosupportError(Exception):
+    class GeosupportError(Exception):  # type: ignore[no-redef]
         def __init__(self, result=None):
             super().__init__("Geosupport is not installed")
             self.result = result or {}

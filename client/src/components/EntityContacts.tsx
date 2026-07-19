@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react";
-import Client, { EntityContact, EntityContactsResult, ParcelEntity, ParcelEntitiesResult } from "./APIClient";
+import Client, {
+  EntityContact,
+  EntityContactsResult,
+  ParcelEntity,
+  ParcelEntitiesResult,
+} from "./APIClient";
 import Loader from "./Loader";
 import "./EntityContacts.scss";
 
@@ -42,9 +47,7 @@ const ContactDisplay: React.FC<ContactDisplayProps> = ({ contact }) => {
           <span className={`confidence-badge ${getConfidenceClass(contact.confidence)}`}>
             {contact.confidence}% confidence
           </span>
-          {contact.is_verified && (
-            <span className="verified-badge">✓ Verified</span>
-          )}
+          {contact.is_verified && <span className="verified-badge">✓ Verified</span>}
           <span className="source-badge">{contact.source}</span>
         </div>
       </div>
@@ -122,7 +125,9 @@ export const EntityContacts: React.FC<EntityContactsProps> = ({
         </div>
 
         {contacts.length === 0 ? (
-          <p className="no-contacts">No contact information available at {minConfidence}% confidence threshold.</p>
+          <p className="no-contacts">
+            No contact information available at {minConfidence}% confidence threshold.
+          </p>
         ) : (
           <div className="contacts-sections">
             {phones.length > 0 && (
@@ -207,9 +212,7 @@ const EntityContactCard: React.FC<EntityContactCardProps> = ({ entity }) => {
       </div>
 
       {entity.owner_name_at_time && (
-        <div className="owner-alias">
-          Listed as: {entity.owner_name_at_time}
-        </div>
+        <div className="owner-alias">Listed as: {entity.owner_name_at_time}</div>
       )}
 
       {highConfidenceContacts.length > 0 ? (
@@ -223,9 +226,7 @@ const EntityContactCard: React.FC<EntityContactCardProps> = ({ entity }) => {
             </div>
           ))}
           {highConfidenceContacts.length > 3 && (
-            <div className="more-contacts">
-              +{highConfidenceContacts.length - 3} more contacts
-            </div>
+            <div className="more-contacts">+{highConfidenceContacts.length - 3} more contacts</div>
           )}
         </div>
       ) : (

@@ -22,15 +22,23 @@ const PropertiesSummary: React.FC<withMachineInStateProps<"portfolioFound">> = (
           <h3>
             <Trans>Portfolio totals</Trans>
           </h3>
-          <p>{formatNumber.format(totals.parcels)} <Trans>parcels</Trans></p>
-          <p>{formatNumber.format(totals.units_res)} <Trans>residential units</Trans></p>
+          <p>
+            {formatNumber.format(totals.parcels)} <Trans>parcels</Trans>
+          </p>
+          <p>
+            {formatNumber.format(totals.units_res)} <Trans>residential units</Trans>
+          </p>
         </div>
         <div className="PropertiesSummary__card">
           <h3>
             <Trans>Violations</Trans>
           </h3>
-          <p>{formatNumber.format(totals.violations_open)} <Trans>open</Trans></p>
-          <p>{formatNumber.format(totals.violations_total)} <Trans>total</Trans></p>
+          <p>
+            {formatNumber.format(totals.violations_open)} <Trans>open</Trans>
+          </p>
+          <p>
+            {formatNumber.format(totals.violations_total)} <Trans>total</Trans>
+          </p>
         </div>
         <div className="PropertiesSummary__card">
           <h3>
@@ -49,25 +57,30 @@ const PropertiesSummary: React.FC<withMachineInStateProps<"portfolioFound">> = (
             <Trans>Tax sale history</Trans>
           </h3>
           <p>
-            {formatNumber.format(totals.parcels_with_tax_sale_history)} <Trans>parcels affected</Trans>
+            {formatNumber.format(totals.parcels_with_tax_sale_history)}{" "}
+            <Trans>parcels affected</Trans>
           </p>
           <p>
             {formatNumber.format(totals.tax_sale_event_count)} <Trans>events</Trans>
           </p>
-          <p>{formatCurrency.format(totals.total_tax_sale_amount_paid)} <Trans>paid at sale</Trans></p>
+          <p>
+            {formatCurrency.format(totals.total_tax_sale_amount_paid)} <Trans>paid at sale</Trans>
+          </p>
         </div>
         <div className="PropertiesSummary__card">
           <h3>
             <Trans>Recorder history</Trans>
           </h3>
           <p>
-            {formatNumber.format(totals.parcels_with_recorder_history)} <Trans>parcels with filings</Trans>
+            {formatNumber.format(totals.parcels_with_recorder_history)}{" "}
+            <Trans>parcels with filings</Trans>
           </p>
           <p>
             {formatNumber.format(totals.recorder_doc_count)} <Trans>documents</Trans>
           </p>
           <p>
-            {formatNumber.format(totals.foreclosure_doc_count)} <Trans>foreclosure-related docs</Trans>
+            {formatNumber.format(totals.foreclosure_doc_count)}{" "}
+            <Trans>foreclosure-related docs</Trans>
           </p>
         </div>
       </div>

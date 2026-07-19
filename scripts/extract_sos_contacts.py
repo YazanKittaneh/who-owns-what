@@ -11,9 +11,8 @@ import os
 import re
 import sys
 import zipfile
-import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from dataclasses import dataclass
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -299,13 +298,13 @@ class SOSContactExtractor:
             cursor.execute(
                 """
                 WITH sos_matches AS (
-                    SELECT 
+                    SELECT
                         ce.id as entity_id,
                         cbl.account_number,
                         cbl.legal_name,
                         similarity(ce.normalized_name, normalize_name(cbl.legal_name)) as sim
                     FROM canonical_entities ce
-                    JOIN chi_business_licenses cbl 
+                    JOIN chi_business_licenses cbl
                         ON ce.normalized_name % normalize_name(cbl.legal_name)
                     WHERE ce.il_sos_file_number IS NOT NULL
                       AND similarity(ce.normalized_name, normalize_name(cbl.legal_name)) > 0.8

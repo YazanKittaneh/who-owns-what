@@ -3,7 +3,7 @@ import argparse
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Dict, Iterable
 from urllib import error, request
 
 
@@ -227,7 +227,7 @@ def main() -> None:
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    manifest: dict[str, object] = {
+    manifest: Dict[str, Any] = {
         "generated_by": "scripts/fetch_source_expansion.py",
         "output_dir": str(output_dir),
         "sources": [],

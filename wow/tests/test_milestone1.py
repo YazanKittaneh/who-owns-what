@@ -40,7 +40,7 @@ class FakeCoverageCursor:
 
         if (
             normalized_sql
-            == "SELECT COUNT(*), COUNT(*) FILTER (WHERE years_seen >= 2) FROM ( SELECT pin, COUNT(DISTINCT year) AS years_seen FROM chi_owners WHERE year ~ '^[0-9]{4}$' GROUP BY pin ) owner_history"
+            == "SELECT COUNT(*), COUNT(*) FILTER (WHERE years_seen >= 2) FROM ( SELECT pin, COUNT(DISTINCT year) AS years_seen FROM chi_owners WHERE year ~ '^[0-9]{4}$' GROUP BY pin ) owner_history"  # noqa: E501
         ):
             self.result = self.state.get("chi_owners_depth")
             return
@@ -241,6 +241,7 @@ def test_ratelimited_address_search_returns_json_429(rf, monkeypatch):
             )
         )
 
+    assert last_response is not None
     assert last_response.status_code == 429
     assert json.loads(last_response.content)["error"].startswith("Too many requests")
     cache.clear()

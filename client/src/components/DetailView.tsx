@@ -19,11 +19,11 @@ import "styles/DetailView.css";
 
 type Props = withI18nProps &
   withMachineInStateProps<"portfolioFound"> & {
-  mobileShow: boolean;
-  onClose: () => void;
-  onAddrChange: (pin: string) => void;
-  timelineHref: string;
-};
+    mobileShow: boolean;
+    onClose: () => void;
+    onAddrChange: (pin: string) => void;
+    timelineHref: string;
+  };
 
 const NUM_COMPLAINT_TYPES_TO_SHOW = 3;
 const PROPSTREAM_DISPLAY_FIELDS = [
@@ -70,13 +70,14 @@ export const sortContactsByImportance = (contact: GroupedContact) =>
 const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelineHref }) => {
   const isMobile = Browser.isMobile();
   const { detailAddr } = state.context.portfolioData;
-  const [propstreamRecords, setPropstreamRecords] = React.useState(detailAddr.propstream_records || []);
+  const [propstreamRecords, setPropstreamRecords] = React.useState(
+    detailAddr.propstream_records || []
+  );
   const [propstreamStatus, setPropstreamStatus] = React.useState<string | null>(null);
   const [isPropstreamUploading, setPropstreamUploading] = React.useState(false);
   const locale = getI18nLocale(i18n);
   const addressLine =
-    detailAddr.address ||
-    [detailAddr.housenumber, detailAddr.streetname].filter(Boolean).join(" ");
+    detailAddr.address || [detailAddr.housenumber, detailAddr.streetname].filter(Boolean).join(" ");
   const locality = detailAddr.boro || detailAddr.city || "";
   const formattedRegEndDate =
     detailAddr.registrationenddate &&
@@ -179,9 +180,15 @@ const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelin
                         groupedContacts.map(([contactName, info], idx) => (
                           <Accordion title={contactName} key={`${contactName}-${idx}`}>
                             {info.map((entry, entryIdx) => (
-                              <div className="landlord-contact-info" key={`${entry.title}-${entryIdx}`}>
+                              <div
+                                className="landlord-contact-info"
+                                key={`${entry.title}-${entryIdx}`}
+                              >
                                 <span className="text-bold text-dark">
-                                  {Helpers.translateContactTitleAndIncludeEnglish(entry.title, i18n)}
+                                  {Helpers.translateContactTitleAndIncludeEnglish(
+                                    entry.title,
+                                    i18n
+                                  )}
                                 </span>
                                 {entry.address && (
                                   <>
@@ -222,7 +229,9 @@ const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelin
                             <Trans>Tax sale history:</Trans>
                           </b>{" "}
                           {detailAddr.tax_sale_event_count} <Trans>event(s)</Trans>
-                          {detailAddr.latest_tax_sale_year ? `, latest ${detailAddr.latest_tax_sale_year}` : ""}
+                          {detailAddr.latest_tax_sale_year
+                            ? `, latest ${detailAddr.latest_tax_sale_year}`
+                            : ""}
                           {detailAddr.latest_tax_sale_buyer_name
                             ? `, ${detailAddr.latest_tax_sale_buyer_name}`
                             : ""}
@@ -235,7 +244,9 @@ const DetailView: React.FC<Props> = ({ state, mobileShow, onClose, i18n, timelin
                           </b>{" "}
                           {detailAddr.recorder_doc_count} <Trans>document(s)</Trans>
                           {detailAddr.latest_mortgage_amount
-                            ? `, latest mortgage $${Math.round(detailAddr.latest_mortgage_amount).toLocaleString()}`
+                            ? `, latest mortgage $${Math.round(
+                                detailAddr.latest_mortgage_amount
+                              ).toLocaleString()}`
                             : ""}
                         </p>
                       ) : null}

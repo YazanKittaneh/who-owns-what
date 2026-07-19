@@ -9,14 +9,10 @@ const Login: React.FC = () => {
   return (
     <div>
       <p>
-        <Trans>
-          Account login and sign-up are currently disabled in the Chicago MVP.
-        </Trans>
+        <Trans>Account login and sign-up are currently disabled in the Chicago MVP.</Trans>
       </p>
       <p>
-        <Trans>
-          You can still use search and portfolio features without an account.
-        </Trans>
+        <Trans>You can still use search and portfolio features without an account.</Trans>
       </p>
       <p>
         <LocaleLink to={home}>

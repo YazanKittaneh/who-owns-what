@@ -41,7 +41,7 @@ async function handleEvent(event) {
           cacheControl: {
             bypassCache: true,
           },
-        },
+        }
       );
     } catch (notFoundError) {
       return new Response(notFoundError.message || "Not Found", {

@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 def group_nearby_owner_rows(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
     grouped: Dict[str, Dict[str, Any]] = {}
     for row in rows:
-        owner_key = row.get("owner_id") or row.get("owner_name") or row.get("pin")
+        owner_key = str(row.get("owner_id") or row.get("owner_name") or row.get("pin"))
         if owner_key not in grouped:
             grouped[owner_key] = {
                 "owner_key": owner_key,

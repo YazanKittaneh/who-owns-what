@@ -71,14 +71,12 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
   const [hasError, setHasError] = React.useState(false);
   const activeVisRef = React.useRef(activeVis);
 
-  const timelinePathBase = React.useMemo(
-    () => removeIndicatorSuffix(location.pathname),
-    [location.pathname]
-  );
-  const xAxisViewableColumns = React.useMemo(
-    () => getXAxisViewableColumns(activeTimeSpan),
-    [activeTimeSpan]
-  );
+  const timelinePathBase = React.useMemo(() => removeIndicatorSuffix(location.pathname), [
+    location.pathname,
+  ]);
+  const xAxisViewableColumns = React.useMemo(() => getXAxisViewableColumns(activeTimeSpan), [
+    activeTimeSpan,
+  ]);
 
   React.useEffect(() => {
     activeVisRef.current = activeVis;
@@ -152,11 +150,14 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
     window.gtag("event", `${timeSpan}-timeline-tab`);
   };
 
-  const indicatorTotal = timelineData?.[activeVis]?.values.total?.reduce((sum, value) => sum + value, 0) || 0;
+  const indicatorTotal =
+    timelineData?.[activeVis]?.values.total?.reduce((sum, value) => sum + value, 0) || 0;
 
-  const canShiftAxis = activeTimeSpan !== "year" && groupedData.labels.length > xAxisViewableColumns;
+  const canShiftAxis =
+    activeTimeSpan !== "year" && groupedData.labels.length > xAxisViewableColumns;
   const canShiftLeft = canShiftAxis && xAxisStart > 0;
-  const canShiftRight = canShiftAxis && xAxisStart + xAxisViewableColumns < groupedData.labels.length;
+  const canShiftRight =
+    canShiftAxis && xAxisStart + xAxisViewableColumns < groupedData.labels.length;
 
   const detailAddrStr =
     detailAddr.address ||
@@ -185,14 +186,19 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
                   </div>
                   <div className="Indicators__links">
                     <div className="Indicators__linksContainer">
-                      <label className="Indicators__linksTitle text-uppercase" htmlFor="dataset-select">
+                      <label
+                        className="Indicators__linksTitle text-uppercase"
+                        htmlFor="dataset-select"
+                      >
                         <Trans>Display:</Trans>
                       </label>
                       <select
                         id="dataset-select"
                         className="form-select"
                         value={activeVis}
-                        onChange={(e) => handleDatasetChange(e.currentTarget.value as IndicatorsDatasetId)}
+                        onChange={(e) =>
+                          handleDatasetChange(e.currentTarget.value as IndicatorsDatasetId)
+                        }
                       >
                         {availableDatasets.map((datasetId) => (
                           <option key={datasetId} value={datasetId}>
@@ -202,14 +208,19 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
                       </select>
                     </div>
                     <div className="Indicators__linksContainer">
-                      <label className="Indicators__linksTitle text-uppercase" htmlFor="timespan-select">
+                      <label
+                        className="Indicators__linksTitle text-uppercase"
+                        htmlFor="timespan-select"
+                      >
                         <Trans>View by:</Trans>
                       </label>
                       <select
                         id="timespan-select"
                         className="form-select"
                         value={activeTimeSpan}
-                        onChange={(e) => handleTimeSpanChange(e.currentTarget.value as IndicatorsTimeSpan)}
+                        onChange={(e) =>
+                          handleTimeSpanChange(e.currentTarget.value as IndicatorsTimeSpan)
+                        }
                       >
                         <option value="month">{i18n._(t`month`)}</option>
                         <option value="quarter">{i18n._(t`quarter`)}</option>
@@ -225,7 +236,9 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
                       aria-label={i18n._(t`Move chart data left.`)}
                       aria-hidden={!canShiftLeft}
                       aria-disabled={!canShiftLeft}
-                      className={!canShiftLeft ? "btn btn-off btn-axis-shift" : "btn btn-axis-shift"}
+                      className={
+                        !canShiftLeft ? "btn btn-off btn-axis-shift" : "btn btn-axis-shift"
+                      }
                       onClick={() => setXAxisStart((previous) => Math.max(previous - 6, 0))}
                     >
                       ‹
@@ -241,7 +254,9 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
                       aria-label={i18n._(t`Move chart data right.`)}
                       aria-hidden={!canShiftRight}
                       aria-disabled={!canShiftRight}
-                      className={!canShiftRight ? "btn btn-off btn-axis-shift" : "btn btn-axis-shift"}
+                      className={
+                        !canShiftRight ? "btn btn-off btn-axis-shift" : "btn btn-axis-shift"
+                      }
                       onClick={() =>
                         setXAxisStart((previous) =>
                           Math.min(previous + 6, groupedData.labels.length - xAxisViewableColumns)
@@ -260,7 +275,9 @@ const Indicators: React.FC<IndicatorsProps> = ({ state, isVisible = true }) => {
                       </div>
                       <div className="card-subtitle text-gray" />
                     </div>
-                    <div className="card-body">{INDICATORS_DATASETS[activeVis].explanation(i18n)}</div>
+                    <div className="card-body">
+                      {INDICATORS_DATASETS[activeVis].explanation(i18n)}
+                    </div>
                   </div>
                   <UsefulLinks addrForLinks={detailAddr} location="timeline-tab" />
                 </div>
