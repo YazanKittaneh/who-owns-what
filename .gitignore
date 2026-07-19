@@ -52,3 +52,7 @@ apps/web/.open-next/
 apps/web/test-results/
 test-results/
 *.sst
+
+# Never commit spreadsheets/exports with personal data
+data/*.xlsx
+data/**/*.xlsx
