@@ -84,7 +84,13 @@ def normalize_lookup_value(value: str | None) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\s]", "", value.lower()).strip())
 
 
-def build_contact(contact_type: str, contact_value: str, confidence: int, source: str, is_verified: bool) -> dict:
+def build_contact(
+    contact_type: str,
+    contact_value: str,
+    confidence: int,
+    source: str,
+    is_verified: bool,
+) -> dict:
     return {
         "type": contact_type,
         "value": contact_value,
@@ -108,12 +114,26 @@ def get_seed(conn, pin: str) -> dict:
 
 def get_nearby_rows(conn, pin: str, radius_m: int, limit: int) -> list[dict]:
     with conn.cursor() as cursor:
-        cursor.execute(NEARBY_SQL, [pin, radius_m, radius_m, radius_m, radius_m, radius_m, limit])
+        cursor.execute(
+            NEARBY_SQL, [pin, radius_m, radius_m, radius_m, radius_m, radius_m, limit]
+        )
         cols = [desc[0] for desc in cursor.description]
         rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
 
-    owner_name_keys = sorted({normalize_lookup_value(row.get("owner_name")) for row in rows if row.get("owner_name")})
-    mailing_keys = sorted({(row.get("mailing_address") or "").strip().lower() for row in rows if row.get("mailing_address")})
+    owner_name_keys = sorted(
+        {
+            normalize_lookup_value(row.get("owner_name"))
+            for row in rows
+            if row.get("owner_name")
+        }
+    )
+    mailing_keys = sorted(
+        {
+            (row.get("mailing_address") or "").strip().lower()
+            for row in rows
+            if row.get("mailing_address")
+        }
+    )
 
     contacts_by_owner: dict[str, list[dict]] = defaultdict(list)
     contacts_by_mailing: dict[str, list[dict]] = defaultdict(list)
@@ -131,9 +151,22 @@ def get_nearby_rows(conn, pin: str, radius_m: int, limit: int) -> list[dict]:
                 """,
                 [owner_name_keys],
             )
-            for normalized_alias, contact_type, contact_value, confidence_score, source_system, is_verified in cursor.fetchall():
+            for (
+                normalized_alias,
+                contact_type,
+                contact_value,
+                confidence_score,
+                source_system,
+                is_verified,
+            ) in cursor.fetchall():
                 contacts_by_owner[normalized_alias].append(
-                    build_contact(contact_type, contact_value, confidence_score, source_system, bool(is_verified))
+                    build_contact(
+                        contact_type,
+                        contact_value,
+                        confidence_score,
+                        source_system,
+                        bool(is_verified),
+                    )
                 )
 
         if mailing_keys:
@@ -147,25 +180,47 @@ def get_nearby_rows(conn, pin: str, radius_m: int, limit: int) -> list[dict]:
                 """,
                 [mailing_keys],
             )
-            for normalized_value, contact_type, contact_value, confidence_score, source_system, is_verified in cursor.fetchall():
+            for (
+                normalized_value,
+                contact_type,
+                contact_value,
+                confidence_score,
+                source_system,
+                is_verified,
+            ) in cursor.fetchall():
                 contacts_by_mailing[normalized_value].append(
-                    build_contact(contact_type, contact_value, confidence_score, source_system, bool(is_verified))
+                    build_contact(
+                        contact_type,
+                        contact_value,
+                        confidence_score,
+                        source_system,
+                        bool(is_verified),
+                    )
                 )
 
     enriched = []
     for row in rows:
         contacts = []
         seen = set()
-        mailing_parts = [row.get("mailing_address"), row.get("mailing_city"), row.get("mailing_state"), row.get("mailing_zip")]
+        mailing_parts = [
+            row.get("mailing_address"),
+            row.get("mailing_city"),
+            row.get("mailing_state"),
+            row.get("mailing_zip"),
+        ]
         mailing_full = ", ".join([part for part in mailing_parts if part])
         if mailing_full:
-            contact = build_contact("mailing_address", mailing_full, 80, "wow_parcels_owner_record", True)
+            contact = build_contact(
+                "mailing_address", mailing_full, 80, "wow_parcels_owner_record", True
+            )
             contacts.append(contact)
             seen.add((contact["type"], contact["value"], contact["source"]))
 
         owner_key = normalize_lookup_value(row.get("owner_name"))
         mailing_key = (row.get("mailing_address") or "").strip().lower()
-        for contact in contacts_by_owner.get(owner_key, []) + contacts_by_mailing.get(mailing_key, []):
+        for contact in contacts_by_owner.get(owner_key, []) + contacts_by_mailing.get(
+            mailing_key, []
+        ):
             dedupe = (contact["type"], contact["value"], contact["source"])
             if dedupe in seen:
                 continue
@@ -274,7 +329,10 @@ def write_owner_summary_csv(path: Path, seed: dict, rows: list[dict]) -> None:
         )
         group["parcel_count"] += 1
         group["parcels"].append(f"{row['pin']}:{row['address']}")
-        if group["nearest_distance_m"] is None or (row.get("distance_m") is not None and row["distance_m"] < group["nearest_distance_m"]):
+        if group["nearest_distance_m"] is None or (
+            row.get("distance_m") is not None
+            and row["distance_m"] < group["nearest_distance_m"]
+        ):
             group["nearest_distance_m"] = row["distance_m"]
         for contact in row["contacts"]:
             if contact["type"] == "phone":
@@ -305,7 +363,14 @@ def write_owner_summary_csv(path: Path, seed: dict, rows: list[dict]) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
-        for group in sorted(grouped.values(), key=lambda item: (not item["same_owner"], item["nearest_distance_m"] or 10**9, -item["parcel_count"])):
+        for group in sorted(
+            grouped.values(),
+            key=lambda item: (
+                not item["same_owner"],
+                item["nearest_distance_m"] or 10**9,
+                -item["parcel_count"],
+            ),
+        ):
             writer.writerow(
                 {
                     **{key: group[key] for key in fieldnames if key in group},
@@ -318,7 +383,9 @@ def write_owner_summary_csv(path: Path, seed: dict, rows: list[dict]) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Export nearby owner contacts for a target parcel")
+    parser = argparse.ArgumentParser(
+        description="Export nearby owner contacts for a target parcel"
+    )
     parser.add_argument("--pin", default="13262040080000")
     parser.add_argument("--radius-m", type=int, default=250)
     parser.add_argument("--limit", type=int, default=200)

@@ -24,19 +24,47 @@ class IndicatorSpec:
 
 
 INDICATORS = (
-    IndicatorSpec("total-sales-activity", "browse_total_sales_activity.html", "Total Sales Activity", False),
-    IndicatorSpec("share-sales-business", "browse_share_sales_business.html", "Share of Sales, Business Buyers", True),
-    IndicatorSpec("total-mortgage-activity", "browse_total_mortgage_activity.html", "Total Mortgage Activity", False),
-    IndicatorSpec("total-foreclosure-activity", "browse_total_foreclosure_activity.html", "Total Foreclosure Filings Activity", False),
-    IndicatorSpec("total-auctions", "browse_total_auctions.html", "Total Auction Activity", False),
+    IndicatorSpec(
+        "total-sales-activity",
+        "browse_total_sales_activity.html",
+        "Total Sales Activity",
+        False,
+    ),
+    IndicatorSpec(
+        "share-sales-business",
+        "browse_share_sales_business.html",
+        "Share of Sales, Business Buyers",
+        True,
+    ),
+    IndicatorSpec(
+        "total-mortgage-activity",
+        "browse_total_mortgage_activity.html",
+        "Total Mortgage Activity",
+        False,
+    ),
+    IndicatorSpec(
+        "total-foreclosure-activity",
+        "browse_total_foreclosure_activity.html",
+        "Total Foreclosure Filings Activity",
+        False,
+    ),
+    IndicatorSpec(
+        "total-auctions", "browse_total_auctions.html", "Total Auction Activity", False
+    ),
 )
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Parse IHS HTML indicator pages to CSV.")
+    parser = argparse.ArgumentParser(
+        description="Parse IHS HTML indicator pages to CSV."
+    )
     parser.add_argument("--input-dir", default=str(DEFAULT_INPUT_DIR))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
-    parser.add_argument("--indicator", choices=[i.slug for i in INDICATORS], help="Process single indicator.")
+    parser.add_argument(
+        "--indicator",
+        choices=[i.slug for i in INDICATORS],
+        help="Process single indicator.",
+    )
     return parser.parse_args()
 
 
@@ -126,16 +154,18 @@ def parse_indicator_file(input_path: Path, spec: IndicatorSpec) -> list[dict]:
             # Remove commas from numeric values (e.g., "1,006" -> "1006")
             value = value.replace(",", "")
 
-            records.append({
-                "indicator_slug": spec.slug,
-                "indicator_title": spec.title,
-                "property_type": "All Residential Properties",
-                "area_slug": "chicago-community-areas",
-                "geography_name": geography,
-                "year": year_col,
-                "value": value,
-                "is_percentage": "true" if spec.is_percentage else "false",
-            })
+            records.append(
+                {
+                    "indicator_slug": spec.slug,
+                    "indicator_title": spec.title,
+                    "property_type": "All Residential Properties",
+                    "area_slug": "chicago-community-areas",
+                    "geography_name": geography,
+                    "year": year_col,
+                    "value": value,
+                    "is_percentage": "true" if spec.is_percentage else "false",
+                }
+            )
 
     return records
 
@@ -146,7 +176,9 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    indicators_to_process = [i for i in INDICATORS if not args.indicator or i.slug == args.indicator]
+    indicators_to_process = [
+        i for i in INDICATORS if not args.indicator or i.slug == args.indicator
+    ]
 
     all_records = []
     for spec in indicators_to_process:
@@ -165,7 +197,16 @@ def main() -> None:
         return
 
     output_path = output_dir / "ihs_indicators.csv"
-    fieldnames = ["indicator_slug", "indicator_title", "property_type", "area_slug", "geography_name", "year", "value", "is_percentage"]
+    fieldnames = [
+        "indicator_slug",
+        "indicator_title",
+        "property_type",
+        "area_slug",
+        "geography_name",
+        "year",
+        "value",
+        "is_percentage",
+    ]
 
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)

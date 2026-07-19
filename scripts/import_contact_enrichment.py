@@ -68,7 +68,9 @@ def lookup_owner_name_for_pin(cursor, pin: str) -> str | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Import landlord contact enrichment from CSV")
+    parser = argparse.ArgumentParser(
+        description="Import landlord contact enrichment from CSV"
+    )
     parser.add_argument("csv_path", help="Path to enrichment CSV")
     parser.add_argument(
         "--default-source-system",
@@ -113,27 +115,37 @@ def main() -> int:
     }
 
     try:
-        with conn.cursor() as cursor, csv_path.open("r", newline="", encoding="utf-8-sig") as handle:
+        with conn.cursor() as cursor, csv_path.open(
+            "r", newline="", encoding="utf-8-sig"
+        ) as handle:
             if args.automated:
-                cursor.execute("SELECT set_config('wow.contact_audit_enabled', 'off', true)")
+                cursor.execute(
+                    "SELECT set_config('wow.contact_audit_enabled', 'off', true)"
+                )
 
             reader = csv.DictReader(handle)
             required = {"contact_type", "contact_value"}
             missing = required.difference(set(reader.fieldnames or []))
             if missing:
-                raise ValueError(f"Missing required columns: {', '.join(sorted(missing))}")
+                raise ValueError(
+                    f"Missing required columns: {', '.join(sorted(missing))}"
+                )
 
             for row in reader:
                 stats["rows_read"] += 1
 
                 pin = clean(row.get("pin"))
-                entity_name = clean(row.get("entity_name")) or clean(row.get("owner_name"))
+                entity_name = clean(row.get("entity_name")) or clean(
+                    row.get("owner_name")
+                )
                 if not entity_name and pin:
                     entity_name = lookup_owner_name_for_pin(cursor, pin)
 
                 contact_type = clean(row.get("contact_type"))
                 contact_value = clean(row.get("contact_value"))
-                source_system = clean(row.get("source_system")) or args.default_source_system
+                source_system = (
+                    clean(row.get("source_system")) or args.default_source_system
+                )
                 source_record_id = clean(row.get("source_record_id"))
                 verification_method = clean(row.get("verification_method")) or (
                     "manual" if source_system == "manual_verified" else None
@@ -174,7 +186,10 @@ def main() -> int:
                             source_record_id,
                             int(confidence_score) if confidence_score else None,
                             parse_bool(row.get("is_primary"), False),
-                            parse_bool(row.get("is_verified"), source_system == "manual_verified"),
+                            parse_bool(
+                                row.get("is_verified"),
+                                source_system == "manual_verified",
+                            ),
                             verification_method,
                             "contact_enrichment_csv",
                             contact_type,

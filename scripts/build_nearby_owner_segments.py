@@ -95,7 +95,9 @@ def is_absentee(row: dict[str, str]) -> bool:
     if not mailing_address:
         return False
     mailing_base = normalize_street_base(mailing_address)
-    parcel_base = normalize_street_base(get_primary_parcel_address(row.get("parcels", "")))
+    parcel_base = normalize_street_base(
+        get_primary_parcel_address(row.get("parcels", ""))
+    )
     return bool(mailing_base and parcel_base and mailing_base != parcel_base)
 
 
@@ -104,7 +106,13 @@ def is_entity_owner(owner_name: str) -> bool:
     return any(token in normalized for token in ENTITY_TOKENS)
 
 
-def build_reason(row: dict[str, str], absentee_flag: bool, entity_flag: bool, multi_parcel_flag: bool, out_of_state_flag: bool) -> str:
+def build_reason(
+    row: dict[str, str],
+    absentee_flag: bool,
+    entity_flag: bool,
+    multi_parcel_flag: bool,
+    out_of_state_flag: bool,
+) -> str:
     reasons: list[str] = []
     if absentee_flag:
         reasons.append("absentee")
@@ -122,7 +130,9 @@ def enrich_row(row: dict[str, str]) -> dict[str, str]:
     entity_flag = is_entity_owner(row.get("owner_name", ""))
     multi_parcel_flag = int(row.get("parcel_count") or 0) > 1
     out_of_state_flag = normalize_text(row.get("mailing_state")) not in {"", "IL"}
-    investor_reason = build_reason(row, absentee_flag, entity_flag, multi_parcel_flag, out_of_state_flag)
+    investor_reason = build_reason(
+        row, absentee_flag, entity_flag, multi_parcel_flag, out_of_state_flag
+    )
     primary_property_address = get_primary_parcel_address(row.get("parcels", ""))
     return {
         **row,
@@ -264,8 +274,14 @@ def main() -> int:
             }
         )
 
-    write_csv(out_dir / f"{base_name}-absentee-owners.csv", absentee_rows, enriched_fields)
-    write_csv(out_dir / f"{base_name}-likely-investors.csv", likely_investor_rows, enriched_fields)
+    write_csv(
+        out_dir / f"{base_name}-absentee-owners.csv", absentee_rows, enriched_fields
+    )
+    write_csv(
+        out_dir / f"{base_name}-likely-investors.csv",
+        likely_investor_rows,
+        enriched_fields,
+    )
     write_csv(
         out_dir / f"{base_name}-mailing-list-ready.csv",
         mailing_ready_rows,

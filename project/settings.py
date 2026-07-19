@@ -15,6 +15,7 @@ except ImportError:
 
 # Also try to load from .env file directly if dotenv is not available
 import os
+
 if not os.environ.get("SECRET_KEY"):
     env_path = Path(__file__).parent.parent / ".env"
     if env_path.exists():

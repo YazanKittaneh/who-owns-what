@@ -48,29 +48,43 @@ def host_rewritten_url(database_url: str, host: str) -> str:
 
 
 def get_database_url() -> str:
-    database_url = os.environ.get("DATABASE_URL", "") or load_dotenv_value("DATABASE_URL")
+    database_url = os.environ.get("DATABASE_URL", "") or load_dotenv_value(
+        "DATABASE_URL"
+    )
     if not database_url:
         raise SystemExit("Please define DATABASE_URL in the environment or in .env.")
 
     # The repo .env is Docker-oriented (`db`). From the host, use the known DB host fallback.
     parsed = urlparse(database_url)
     if parsed.hostname == "db":
-        return host_rewritten_url(database_url, os.environ.get("WOW_DB_HOST", "10.0.7.4"))
+        return host_rewritten_url(
+            database_url, os.environ.get("WOW_DB_HOST", "10.0.7.4")
+        )
     return database_url
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Find nearby parcels for a Chicago parcel")
-    parser.add_argument("address_parts", nargs="*", help="Address search text, for simple CLI usage")
+    parser = argparse.ArgumentParser(
+        description="Find nearby parcels for a Chicago parcel"
+    )
+    parser.add_argument(
+        "address_parts", nargs="*", help="Address search text, for simple CLI usage"
+    )
     target = parser.add_mutually_exclusive_group(required=False)
     target.add_argument("--pin", help="Seed parcel PIN")
     target.add_argument("--address", help="Address search text, matched with ILIKE")
-    parser.add_argument("--radius-m", type=int, default=500, help="Search radius in meters")
-    parser.add_argument("--limit", type=int, default=200, help="Maximum nearby parcels to print")
+    parser.add_argument(
+        "--radius-m", type=int, default=500, help="Search radius in meters"
+    )
+    parser.add_argument(
+        "--limit", type=int, default=200, help="Maximum nearby parcels to print"
+    )
     args = parser.parse_args()
     if args.address_parts:
         if args.pin or args.address:
-            parser.error("positional address cannot be combined with --pin or --address")
+            parser.error(
+                "positional address cannot be combined with --pin or --address"
+            )
         args.address = " ".join(args.address_parts)
     if not args.pin and not args.address:
         parser.error("provide an address or --pin")
@@ -116,7 +130,9 @@ def main() -> int:
 
     conn = DbContext.from_url(database_url).connection()
     with conn.cursor() as cursor:
-        seed_pin, seed_address, seed_lat, seed_lng = get_seed(cursor, args.pin, args.address)
+        seed_pin, seed_address, seed_lat, seed_lng = get_seed(
+            cursor, args.pin, args.address
+        )
         cursor.execute(
             """
             SELECT pin, address,

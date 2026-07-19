@@ -55,12 +55,19 @@ def main() -> int:
     ensure_load_audit_table(conn)
 
     if args.data_dir:
-        print("Note: --data-dir is ignored; source rows come from chi_business_licenses in Postgres.")
+        print(
+            "Note: --data-dir is ignored; source rows come from chi_business_licenses in Postgres."
+        )
 
     try:
         with conn.cursor() as cursor:
             cursor.execute("SELECT * FROM load_business_license_contacts(NULL)")
-            inserted_entities, inserted_aliases, inserted_contacts, inserted_mappings = cursor.fetchone()
+            (
+                inserted_entities,
+                inserted_aliases,
+                inserted_contacts,
+                inserted_mappings,
+            ) = cursor.fetchone()
         conn.commit()
 
         details = {

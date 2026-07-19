@@ -160,7 +160,10 @@ def test_admin_data_coverage_reports_present_partial_missing_and_auditless_state
     assert datasets["woodstock_mortgage_metadata"]["reason"] == "table_missing"
     assert datasets["bor_detail"]["status"] == "partial"
     assert datasets["registered_chicago_taxpayer"]["status"] == "missing"
-    assert datasets["registered_chicago_taxpayer"]["reason"] == "source_deprecated_no_replacement"
+    assert (
+        datasets["registered_chicago_taxpayer"]["reason"]
+        == "source_deprecated_no_replacement"
+    )
 
 
 @override_settings(ADMIN_API_TOKEN="coverage-secret")
@@ -329,7 +332,9 @@ def test_propstream_upload_imports_with_admin_token_without_request_path_ddl(
     monkeypatch.setattr(
         views,
         "ensure_propstream_table",
-        lambda: (_ for _ in ()).throw(AssertionError("request path DDL should not run")),
+        lambda: (_ for _ in ()).throw(
+            AssertionError("request path DDL should not run")
+        ),
     )
 
     upload = SimpleUploadedFile(

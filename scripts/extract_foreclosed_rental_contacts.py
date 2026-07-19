@@ -64,7 +64,12 @@ def main() -> int:
                 )
 
             cursor.execute("SELECT * FROM load_foreclosed_rental_contacts(NULL)")
-            inserted_entities, inserted_aliases, inserted_contacts, inserted_mappings = cursor.fetchone()
+            (
+                inserted_entities,
+                inserted_aliases,
+                inserted_contacts,
+                inserted_mappings,
+            ) = cursor.fetchone()
         conn.commit()
 
         details = {

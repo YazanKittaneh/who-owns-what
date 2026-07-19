@@ -175,7 +175,9 @@ DOWNLOAD_SPECS: tuple[DownloadSpec, ...] = (
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Fetch selected external source expansion files.")
+    parser = argparse.ArgumentParser(
+        description="Fetch selected external source expansion files."
+    )
     parser.add_argument(
         "--output-dir",
         default=str(DEFAULT_OUTPUT_DIR),
@@ -261,7 +263,9 @@ def main() -> None:
         manifest["sources"].append(entry)
 
     manifest_path = output_dir / "source_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     print(f"Wrote manifest: {manifest_path}")
 
 

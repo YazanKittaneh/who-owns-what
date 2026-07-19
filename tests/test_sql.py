@@ -121,9 +121,15 @@ class TestSQL:
         nycdb_ctx.write_csv(
             "chi_permits.csv",
             [
-                ChiPermits(pin_list="1234567890", street_number="100", street_name="FUNKY"),
-                ChiPermits(pin_list="1234567890", street_number="100", street_name="FUNKY"),
-                ChiPermits(pin_list="1234567891", street_number="200", street_name="FUNKY"),
+                ChiPermits(
+                    pin_list="1234567890", street_number="100", street_name="FUNKY"
+                ),
+                ChiPermits(
+                    pin_list="1234567890", street_number="100", street_name="FUNKY"
+                ),
+                ChiPermits(
+                    pin_list="1234567891", street_number="200", street_name="FUNKY"
+                ),
             ],
         )
         nycdb_ctx.write_csv(
@@ -221,6 +227,4 @@ class TestSQL:
             f = StringIO()
             export_portfolios_table_json(conn, f)
             data = json.loads(f.getvalue())
-            assert any(
-                row["pins"] == [FUNKY_PIN, MONKEY_PIN] for row in data
-            )
+            assert any(row["pins"] == [FUNKY_PIN, MONKEY_PIN] for row in data)

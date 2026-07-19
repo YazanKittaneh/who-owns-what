@@ -69,7 +69,9 @@ EXPANSION_DATASETS = [
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Load source expansion datasets into Postgres.")
+    parser = argparse.ArgumentParser(
+        description="Load source expansion datasets into Postgres."
+    )
     parser.add_argument(
         "--data-dir",
         default="data/supplemental-20260331",
@@ -114,7 +116,9 @@ def load_dataset(conn, data_dir: Path, spec: DatasetSpec, run_id: str) -> None:
         with csv_path.open("r", newline="", encoding="utf-8", errors="replace") as src:
             reader = csv.DictReader(src)
             row_count = 0
-            with tempfile.NamedTemporaryFile(mode="w+", newline="", encoding="utf-8") as filtered:
+            with tempfile.NamedTemporaryFile(
+                mode="w+", newline="", encoding="utf-8"
+            ) as filtered:
                 writer = csv.DictWriter(filtered, fieldnames=dest_headers)
                 writer.writeheader()
                 for row in reader:
@@ -238,7 +242,9 @@ def main() -> None:
     run_id = build_run_id("expansion")
     ensure_load_audit_table(conn)
 
-    datasets_to_load = [d for d in EXPANSION_DATASETS if not args.dataset or d.name == args.dataset]
+    datasets_to_load = [
+        d for d in EXPANSION_DATASETS if not args.dataset or d.name == args.dataset
+    ]
 
     # Run create SQL files
     create_files = []

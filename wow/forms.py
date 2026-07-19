@@ -25,19 +25,21 @@ BBL_REGEX = r"^\d{10}$"
 
 class PinForm(forms.Form):
     pin = forms.CharField(
-        validators=[
-            RegexValidator(PIN_REGEX, message="This should be a 14-digit PIN.")
-        ]
+        validators=[RegexValidator(PIN_REGEX, message="This should be a 14-digit PIN.")]
     )
 
 
 class PinOrBblForm(forms.Form):
     pin = forms.CharField(
-        validators=[RegexValidator(PIN_REGEX, message="This should be a 14-digit PIN.")],
+        validators=[
+            RegexValidator(PIN_REGEX, message="This should be a 14-digit PIN.")
+        ],
         required=False,
     )
     bbl = forms.CharField(
-        validators=[RegexValidator(BBL_REGEX, message="This should be a 10-digit BBL.")],
+        validators=[
+            RegexValidator(BBL_REGEX, message="This should be a 10-digit BBL.")
+        ],
         required=False,
     )
 
@@ -49,7 +51,9 @@ class PinOrBblForm(forms.Form):
 
 
 class PinListForm(forms.Form):
-    pins = CommaSeparatedField(label="14-digit PIN (comma-separated list)", required=True)
+    pins = CommaSeparatedField(
+        label="14-digit PIN (comma-separated list)", required=True
+    )
 
     def clean(self):
         data = self.cleaned_data
@@ -90,7 +94,9 @@ class MapViewportForm(forms.Form):
 
 
 class NearbyPropertiesForm(PinForm):
-    radius_m = forms.IntegerField(required=False, min_value=25, max_value=5000, initial=200)
+    radius_m = forms.IntegerField(
+        required=False, min_value=25, max_value=5000, initial=200
+    )
     limit = forms.IntegerField(required=False, min_value=1, max_value=100, initial=25)
 
 
@@ -109,11 +115,16 @@ class CurrentOwnerForm(forms.Form):
 
 class EntitySearchForm(forms.Form):
     """Form for searching entities by name."""
+
     q = forms.CharField(required=True, min_length=2, max_length=500)
     entity_type = forms.ChoiceField(
-        choices=[('all', 'All'), ('business', 'Business'), ('individual', 'Individual')],
+        choices=[
+            ("all", "All"),
+            ("business", "Business"),
+            ("individual", "Individual"),
+        ],
         required=False,
-        initial='all'
+        initial="all",
     )
     limit = forms.IntegerField(required=False, min_value=1, max_value=100, initial=20)
 
@@ -129,9 +140,13 @@ OWNER_SEARCH_BUILDING_TYPE_CHOICES = [
 
 
 class OwnerSearchByAreaForm(PinForm):
-    radius_m = forms.IntegerField(required=False, min_value=5, max_value=5000, initial=600)
+    radius_m = forms.IntegerField(
+        required=False, min_value=5, max_value=5000, initial=600
+    )
     building_types = CommaSeparatedField(required=False, empty_value=[])
-    min_parcels = forms.IntegerField(required=False, min_value=1, max_value=500, initial=1)
+    min_parcels = forms.IntegerField(
+        required=False, min_value=1, max_value=500, initial=1
+    )
     max_parcels = forms.IntegerField(required=False, min_value=1, max_value=500)
     limit = forms.IntegerField(required=False, min_value=1, max_value=100, initial=100)
 
@@ -140,7 +155,11 @@ class OwnerSearchByAreaForm(PinForm):
         building_types = data.get("building_types") or []
         valid_types = {choice[0] for choice in OWNER_SEARCH_BUILDING_TYPE_CHOICES}
 
-        invalid_types = [building_type for building_type in building_types if building_type not in valid_types]
+        invalid_types = [
+            building_type
+            for building_type in building_types
+            if building_type not in valid_types
+        ]
         if invalid_types:
             raise ValidationError(
                 f"Invalid building type filter: {', '.join(invalid_types)}."
@@ -149,7 +168,9 @@ class OwnerSearchByAreaForm(PinForm):
         min_parcels = data.get("min_parcels")
         max_parcels = data.get("max_parcels")
         if min_parcels and max_parcels and max_parcels < min_parcels:
-            raise ValidationError("max_parcels must be greater than or equal to min_parcels.")
+            raise ValidationError(
+                "max_parcels must be greater than or equal to min_parcels."
+            )
 
         data["building_types"] = building_types
         return data
@@ -157,15 +178,26 @@ class OwnerSearchByAreaForm(PinForm):
 
 class ContactConfidenceFilterForm(forms.Form):
     """Form for filtering contacts by confidence score."""
-    min_confidence = forms.IntegerField(required=False, min_value=0, max_value=100, initial=70)
+
+    min_confidence = forms.IntegerField(
+        required=False, min_value=0, max_value=100, initial=70
+    )
     contact_type = forms.ChoiceField(
-        choices=[('all', 'All'), ('phone', 'Phone'), ('email', 'Email'), ('mailing_address', 'Address')],
+        choices=[
+            ("all", "All"),
+            ("phone", "Phone"),
+            ("email", "Email"),
+            ("mailing_address", "Address"),
+        ],
         required=False,
-        initial='all'
+        initial="all",
     )
 
 
 class EntityContactsForm(forms.Form):
     """Form for the /entity/contacts endpoint."""
+
     entity_id = forms.IntegerField(required=True, min_value=1)
-    min_confidence = forms.IntegerField(required=False, min_value=0, max_value=100, initial=70)
+    min_confidence = forms.IntegerField(
+        required=False, min_value=0, max_value=100, initial=70
+    )

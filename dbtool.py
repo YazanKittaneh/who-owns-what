@@ -134,7 +134,16 @@ class DbContext(tuple):
     def get_pg_env_and_args(self) -> Tuple[Dict[str, str], List[str]]:
         env = os.environ.copy()
         env["PGPASSWORD"] = self.password
-        args = ["-h", self.host, "-p", str(self.port), "-U", self.user, "-d", self.database]
+        args = [
+            "-h",
+            self.host,
+            "-p",
+            str(self.port),
+            "-U",
+            self.user,
+            "-d",
+            self.database,
+        ]
         return (env, args)
 
 
@@ -558,7 +567,9 @@ class ChiDbBuilder:
     is_testing: bool
     run_id: str
 
-    def __init__(self, db: DbContext, is_testing: bool, data_dir: Path | None = None) -> None:
+    def __init__(
+        self, db: DbContext, is_testing: bool, data_dir: Path | None = None
+    ) -> None:
         self.db = db
         self.is_testing = is_testing
 
@@ -606,7 +617,9 @@ class ChiDbBuilder:
     def load_csv(self, spec: DatasetSpec) -> None:
         csv_path = self.data_dir / spec.csv_filename
         if not csv_path.exists():
-            print(f"Skipping {spec.name}: {csv_path.name} not found in {self.data_dir}.")
+            print(
+                f"Skipping {spec.name}: {csv_path.name} not found in {self.data_dir}."
+            )
             record_load_audit(
                 self.conn,
                 dataset_name=spec.name,
@@ -626,12 +639,16 @@ class ChiDbBuilder:
             with self.conn:
                 with self.conn.cursor() as cursor:
                     cursor.execute(f"TRUNCATE {spec.table}")
-                    with csv_path.open("r", newline="", encoding="utf-8", errors="replace") as f:
+                    with csv_path.open(
+                        "r", newline="", encoding="utf-8", errors="replace"
+                    ) as f:
                         header = next(csv.reader(f), None)
                         if not header:
                             raise ValueError(f"{csv_path} is missing a CSV header row.")
 
-                        columns_to_load = [name for name in header if name in expected_column_set]
+                        columns_to_load = [
+                            name for name in header if name in expected_column_set
+                        ]
                         if not columns_to_load:
                             raise ValueError(
                                 f"{csv_path} has no columns matching table {spec.table}."
@@ -646,11 +663,18 @@ class ChiDbBuilder:
                         with tempfile.NamedTemporaryFile(
                             mode="w+", newline="", encoding="utf-8"
                         ) as filtered:
-                            writer = csv.DictWriter(filtered, fieldnames=columns_to_load)
+                            writer = csv.DictWriter(
+                                filtered, fieldnames=columns_to_load
+                            )
                             writer.writeheader()
                             for row in reader:
                                 row_count += 1
-                                writer.writerow({name: row.get(name, "") for name in columns_to_load})
+                                writer.writerow(
+                                    {
+                                        name: row.get(name, "")
+                                        for name in columns_to_load
+                                    }
+                                )
                             filtered.seek(0)
                             cursor.copy_expert(
                                 f"COPY {spec.table} ({columns}) FROM STDIN WITH CSV HEADER",
@@ -784,9 +808,7 @@ if __name__ == "__main__":
     parser_builddb.add_argument(
         "--update",
         action="store_true",
-        help=(
-            "Delete tables for the datasets so they can be re-installed."
-        ),
+        help=("Delete tables for the datasets so they can be re-installed."),
     )
     parser_builddb.set_defaults(cmd="builddb")
 

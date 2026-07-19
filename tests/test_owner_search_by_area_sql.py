@@ -196,7 +196,10 @@ class TestOwnerSearchByAreaSql:
             },
         )
 
-        assert [row["owner_name"] for row in rows] == ["SEED OWNER LLC", "MIDRISE OWNER LLC"]
+        assert [row["owner_name"] for row in rows] == [
+            "SEED OWNER LLC",
+            "MIDRISE OWNER LLC",
+        ]
         assert rows[0]["same_owner"] is True
         assert rows[0]["parcel_count"] == 1
         assert rows[0]["parcels"][0]["pin"] == SAME_OWNER_PIN
@@ -206,7 +209,9 @@ class TestOwnerSearchByAreaSql:
             MULTI_OWNER_PIN_TWO,
         }
 
-    def test_owner_search_filters_by_building_type_and_portfolio_size(self, db, nycdb_ctx):
+    def test_owner_search_filters_by_building_type_and_portfolio_size(
+        self, db, nycdb_ctx
+    ):
         self.load_owner_search_data(nycdb_ctx)
 
         rows = self.exec_query(

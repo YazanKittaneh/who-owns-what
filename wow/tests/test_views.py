@@ -196,7 +196,9 @@ class TestAddressExport(ApiTest):
         assert len(list(csvreader)) > 0
 
     def test_it_returns_404_when_no_bbls_exist(self, db, client):
-        res = client.get("/api/address/export?bbl=1234567890", HTTP_ORIGIN=ALLOWED_ORIGIN)
+        res = client.get(
+            "/api/address/export?bbl=1234567890", HTTP_ORIGIN=ALLOWED_ORIGIN
+        )
         assert res.status_code == 404
         assert "Access-Control-Allow-Origin" in res
 

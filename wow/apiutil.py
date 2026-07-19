@@ -131,9 +131,7 @@ def authorize_with_token(request, keyword, token):
 
     request_token = auth[1]
 
-    if not hmac.compare_digest(
-        token.encode("utf-8"), request_token.encode("utf-8")
-    ):
+    if not hmac.compare_digest(token.encode("utf-8"), request_token.encode("utf-8")):
         raise AuthorizationError(GENERIC_AUTH_ERROR)
 
 

@@ -14,7 +14,9 @@ from pathlib import Path
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_INPUT_DIR = ROOT_DIR / "data" / "supplemental-20260331" / "housing" / "woodstock"
+DEFAULT_INPUT_DIR = (
+    ROOT_DIR / "data" / "supplemental-20260331" / "housing" / "woodstock"
+)
 DEFAULT_OUTPUT_DIR = ROOT_DIR / "data" / "supplemental-20260331" / "normalized"
 
 
@@ -29,15 +31,21 @@ class WorkbookMetadata:
     headers: list[str]
 
 
-def extract_shared_strings_iter(zf: zipfile.ZipFile, max_strings: int = 200) -> list[str]:
+def extract_shared_strings_iter(
+    zf: zipfile.ZipFile, max_strings: int = 200
+) -> list[str]:
     """Extract first N shared strings incrementally."""
     try:
         with zf.open("xl/sharedStrings.xml") as f:
             strings = []
             for event, elem in ET.iterparse(f, events=("end",)):
                 if elem.tag.endswith("}si"):
-                    t_elem = elem.find(".//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}t")
-                    strings.append(t_elem.text if t_elem is not None and t_elem.text else "")
+                    t_elem = elem.find(
+                        ".//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}t"
+                    )
+                    strings.append(
+                        t_elem.text if t_elem is not None and t_elem.text else ""
+                    )
                     elem.clear()
                     if len(strings) >= max_strings:
                         break
@@ -54,7 +62,9 @@ def get_sheet_names(zf: zipfile.ZipFile) -> list[str]:
 
     root = tree.getroot()
     sheets = []
-    for sheet in root.findall(".//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}sheets/{http://schemas.openxmlformats.org/spreadsheetml/2006/main}sheet"):
+    for sheet in root.findall(
+        ".//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}sheets/{http://schemas.openxmlformats.org/spreadsheetml/2006/main}sheet"
+    ):
         name = sheet.get("name")
         if name:
             sheets.append(name)
@@ -149,7 +159,9 @@ def extract_headers(zf: zipfile.ZipFile, shared_strings: list[str]) -> list[str]
         text = content.decode("utf-8", errors="ignore")
 
         # Find row 1 content
-        row1_match = re.search(r'\u003crow r="1"[^\u003e]*\u003e(.*?)\u003c/row\u003e', text, re.DOTALL)
+        row1_match = re.search(
+            r'\u003crow r="1"[^\u003e]*\u003e(.*?)\u003c/row\u003e', text, re.DOTALL
+        )
         if not row1_match:
             return []
 
@@ -157,7 +169,10 @@ def extract_headers(zf: zipfile.ZipFile, shared_strings: list[str]) -> list[str]
         headers = {}
 
         # Find all cells in row 1 with string type
-        for cell_match in re.finditer(r'\u003cc r="([A-Z]+\d+)"[^\u003e]*t="s"[^\u003e]*\u003e\s*\u003cv\u003e(\d+)\u003c/v\u003e', row1_content):
+        for cell_match in re.finditer(
+            r'\u003cc r="([A-Z]+\d+)"[^\u003e]*t="s"[^\u003e]*\u003e\s*\u003cv\u003e(\d+)\u003c/v\u003e',
+            row1_content,
+        ):
             cell_ref = cell_match.group(1)
             str_idx = int(cell_match.group(2))
             if str_idx < len(shared_strings):
@@ -175,11 +190,11 @@ def analyze_workbook(filepath: Path) -> WorkbookMetadata | None:
     filename = filepath.name
 
     # Extract year from filename (e.g., illinois_mortgage_2024.xlsx)
-    year_match = re.search(r'(\d{4})', filename)
+    year_match = re.search(r"(\d{4})", filename)
     year = year_match.group(1) if year_match else "unknown"
 
     try:
-        with zipfile.ZipFile(filepath, 'r') as zf:
+        with zipfile.ZipFile(filepath, "r") as zf:
             sheets = get_sheet_names(zf)
             if not sheets:
                 print(f"Warning: No sheets found in {filename}")
@@ -206,7 +221,9 @@ def analyze_workbook(filepath: Path) -> WorkbookMetadata | None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Extract metadata from Woodstock XLSX files.")
+    parser = argparse.ArgumentParser(
+        description="Extract metadata from Woodstock XLSX files."
+    )
     parser.add_argument("--input-dir", default=str(DEFAULT_INPUT_DIR))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     return parser.parse_args()
@@ -231,7 +248,9 @@ def main() -> None:
         meta = analyze_workbook(filepath)
         if meta:
             metadata_list.append(meta)
-            print(f"  -> {meta.row_count:,} rows, {meta.column_count} cols, {len(meta.headers)} headers")
+            print(
+                f"  -> {meta.row_count:,} rows, {meta.column_count} cols, {len(meta.headers)} headers"
+            )
 
     # Write metadata JSON
     json_path = output_dir / "woodstock_metadata.json"
