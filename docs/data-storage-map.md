@@ -1,6 +1,6 @@
 # Data Storage Map
 
-Last updated: 2026-05-18
+Last updated: 2026-07-19
 
 ## Purpose
 
@@ -13,6 +13,11 @@ and what to clean up after refresh runs.
 
 - Repo data root: `/root/who-owns-what/data`
 - Primary loaded CSVs live in this directory (for local processing and DB loads).
+- As of 2026-07-19, `data/exports/**` CSVs and `data/*.xlsx` are **disk-only,
+  never tracked in git** (issue #6): the nearby-owner-outreach exports and the
+  PropStream workbook contain personal contact data and were removed from
+  tracking. They still exist at these paths on the server; anything that must
+  survive machine loss belongs on the backup pool, not in the repo.
 
 ### Backup pool path
 
