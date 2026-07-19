@@ -695,12 +695,6 @@ export function isPartOfGroupSale(saleId: string, addrs: AddressRecord[]) {
   return addrsWithMatchingSale.length > 1;
 }
 
-function formatAbatementStartYear(year: number | null | undefined, i18n: I18nLike) {
-  const thisYear = new Date().getFullYear();
-  if (!year) return null;
-  return year > thisYear ? i18n._(t`Starts ${year}`) : i18n._(t`Since ${year}`);
-}
-
 function findMostCommonType(complaints: HpdComplaintCount[] | null | undefined) {
   return complaints && complaints.length > 0 && complaints[0].type;
 }

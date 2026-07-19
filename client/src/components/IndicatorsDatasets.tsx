@@ -235,7 +235,9 @@ export const INDICATORS_DATASETS: Record<IndicatorsDatasetId, IndicatorsDataset>
     quantity: (_i18n, value) => `${value} requests`,
     startYear: 2007,
     yAxisLabel: (i18n) => i18n._(t`311 requests`),
-    explanation: (i18n) => <>{i18n._(t`311 service request volume over time for this property.`)}</>,
+    explanation: (i18n) => (
+      <>{i18n._(t`311 service request volume over time for this property.`)}</>
+    ),
     series: [
       {
         key: "total",
@@ -291,7 +293,11 @@ export const INDICATORS_DATASETS: Record<IndicatorsDatasetId, IndicatorsDataset>
     explanation: (i18n) => (
       <Trans render="span">
         Total property sales in this community area from the{" "}
-        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://www.housingstudies.org/data-portal/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Institute for Housing Studies
         </a>
         . Shows market activity trends over time.
@@ -316,7 +322,11 @@ export const INDICATORS_DATASETS: Record<IndicatorsDatasetId, IndicatorsDataset>
     explanation: (i18n) => (
       <Trans render="span">
         Foreclosure filing activity in this community area from the{" "}
-        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://www.housingstudies.org/data-portal/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Institute for Housing Studies
         </a>
         . Indicates housing distress levels.
@@ -341,7 +351,11 @@ export const INDICATORS_DATASETS: Record<IndicatorsDatasetId, IndicatorsDataset>
     explanation: (i18n) => (
       <Trans render="span">
         Mortgage lending activity in this community area from the{" "}
-        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://www.housingstudies.org/data-portal/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Institute for Housing Studies
         </a>
         . Shows credit access trends.
@@ -366,7 +380,11 @@ export const INDICATORS_DATASETS: Record<IndicatorsDatasetId, IndicatorsDataset>
     explanation: (i18n) => (
       <Trans render="span">
         Completed foreclosure auctions in this community area from the{" "}
-        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://www.housingstudies.org/data-portal/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Institute for Housing Studies
         </a>
         . Shows REO property flow into the market.
@@ -391,7 +409,11 @@ export const INDICATORS_DATASETS: Record<IndicatorsDatasetId, IndicatorsDataset>
     explanation: (i18n) => (
       <Trans render="span">
         Share of property sales to business buyers (investors) in this community area from the{" "}
-        <a href="https://www.housingstudies.org/data-portal/" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://www.housingstudies.org/data-portal/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Institute for Housing Studies
         </a>
         . High levels may indicate distressed markets.

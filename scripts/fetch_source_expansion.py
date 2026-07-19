@@ -3,7 +3,7 @@ import argparse
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Dict, Iterable
 from urllib import error, request
 
 
@@ -175,7 +175,9 @@ DOWNLOAD_SPECS: tuple[DownloadSpec, ...] = (
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Fetch selected external source expansion files.")
+    parser = argparse.ArgumentParser(
+        description="Fetch selected external source expansion files."
+    )
     parser.add_argument(
         "--output-dir",
         default=str(DEFAULT_OUTPUT_DIR),
@@ -225,7 +227,7 @@ def main() -> None:
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    manifest: dict[str, object] = {
+    manifest: Dict[str, Any] = {
         "generated_by": "scripts/fetch_source_expansion.py",
         "output_dir": str(output_dir),
         "sources": [],
@@ -261,7 +263,9 @@ def main() -> None:
         manifest["sources"].append(entry)
 
     manifest_path = output_dir / "source_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     print(f"Wrote manifest: {manifest_path}")
 
 

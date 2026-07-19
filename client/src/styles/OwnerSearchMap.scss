@@ -1,0 +1,63 @@
+.OwnerSearchMap {
+  position: relative;
+  border: 1px solid #727e96;
+  background: #fff;
+
+  .leaflet-container {
+    height: 60vh;
+    width: 100%;
+    background: #f8f8f8;
+  }
+
+  &.OwnerSearchMap--empty {
+    padding: 1rem;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  .OwnerSearchMap__legend {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.96);
+    border-left: 1px solid #727e96;
+    border-top: 1px solid #727e96;
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .OwnerSearchMap__legendEntry {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &::before {
+      content: "";
+      display: inline-block;
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    &.OwnerSearchMap__legendEntry--center::before {
+      background: #00b4ff;
+    }
+
+    &.OwnerSearchMap__legendEntry--sameOwner::before {
+      background: #ff813a;
+    }
+
+    &.OwnerSearchMap__legendEntry--owner::before {
+      background: #454d5d;
+    }
+  }
+}

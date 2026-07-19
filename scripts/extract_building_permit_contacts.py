@@ -64,16 +64,21 @@ def main() -> int:
                 )
 
             cursor.execute("SELECT * FROM load_building_permit_contacts(NULL)")
-            inserted_entities, inserted_aliases, inserted_contacts, inserted_mappings = cursor.fetchone()
+            (
+                inserted_entities,
+                inserted_aliases,
+                inserted_contacts,
+                inserted_mappings,
+            ) = cursor.fetchone()
         conn.commit()
 
         details = {
-            'mode': 'sql_first',
-            'inserted_entities': inserted_entities,
-            'inserted_aliases': inserted_aliases,
-            'inserted_contacts': inserted_contacts,
-            'inserted_mappings': inserted_mappings,
-            'link_parcels_flag': args.link_parcels,
+            "mode": "sql_first",
+            "inserted_entities": inserted_entities,
+            "inserted_aliases": inserted_aliases,
+            "inserted_contacts": inserted_contacts,
+            "inserted_mappings": inserted_mappings,
+            "link_parcels_flag": args.link_parcels,
         }
 
         record_load_audit(

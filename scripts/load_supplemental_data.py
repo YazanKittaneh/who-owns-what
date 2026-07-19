@@ -176,7 +176,9 @@ SUMMARY_SQL_FILES = [
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Load supplemental WOW datasets into Postgres.")
+    parser = argparse.ArgumentParser(
+        description="Load supplemental WOW datasets into Postgres."
+    )
     parser.add_argument(
         "--data-dir",
         default="data/supplemental-20260329",
@@ -197,7 +199,9 @@ def run_sql_file(conn, sql_path: Path) -> None:
             cursor.execute(sql)
 
 
-def load_dataset(conn, data_dir: Path, spec: SupplementalDatasetSpec, run_id: str) -> None:
+def load_dataset(
+    conn, data_dir: Path, spec: SupplementalDatasetSpec, run_id: str
+) -> None:
     csv_path = data_dir / spec.csv_relpath
     if not csv_path.exists():
         record_load_audit(
@@ -220,7 +224,9 @@ def load_dataset(conn, data_dir: Path, spec: SupplementalDatasetSpec, run_id: st
         with csv_path.open("r", newline="", encoding="utf-8", errors="replace") as src:
             reader = csv.DictReader(src)
             row_count = 0
-            with tempfile.NamedTemporaryFile(mode="w+", newline="", encoding="utf-8") as filtered:
+            with tempfile.NamedTemporaryFile(
+                mode="w+", newline="", encoding="utf-8"
+            ) as filtered:
                 writer = csv.DictWriter(filtered, fieldnames=dest_headers)
                 writer.writeheader()
                 for row in reader:

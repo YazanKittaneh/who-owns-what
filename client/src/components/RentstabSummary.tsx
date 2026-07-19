@@ -4,7 +4,9 @@ import { withMachineInStateProps } from "state-machine";
 
 const RentstabSummary: React.FC<withMachineInStateProps<"portfolioFound">> = ({ state }) => {
   const addrs = state.context.portfolioData.assocAddrs;
-  const withRentData = addrs.filter((a) => a.rsunitslatest !== null && a.rsunitslatest !== undefined);
+  const withRentData = addrs.filter(
+    (a) => a.rsunitslatest !== null && a.rsunitslatest !== undefined
+  );
   const withLoss = addrs.filter((a) => (a.rsdiff || 0) < 0);
   const totalLoss = withLoss.reduce((sum, a) => sum + Math.abs(a.rsdiff || 0), 0);
 
@@ -18,7 +20,9 @@ const RentstabSummary: React.FC<withMachineInStateProps<"portfolioFound">> = ({ 
             portfolio. Estimated net unit loss across those buildings is <b>{totalLoss}</b>.
           </Trans>
         ) : (
-          <Trans>Rent-stabilized unit history is unavailable for this portfolio in this dataset.</Trans>
+          <Trans>
+            Rent-stabilized unit history is unavailable for this portfolio in this dataset.
+          </Trans>
         )}
       </p>
     </>

@@ -12,7 +12,8 @@ export const calculateAggDataFromAddressList = (addrs: AddressRecord[]): Summary
   const scavenger_tax_sale_count = _.sumBy(addrs, (a) => a.scavenger_tax_sale_count || 0);
   const tax_sale_event_count = _.sumBy(addrs, (a) => a.tax_sale_event_count || 0);
   const total_tax_sale_amount_paid = _.sumBy(addrs, (a) => a.total_tax_sale_amount_paid || 0);
-  const parcels_with_tax_sale_history = addrs.filter((a) => (a.tax_sale_event_count || 0) > 0).length;
+  const parcels_with_tax_sale_history = addrs.filter((a) => (a.tax_sale_event_count || 0) > 0)
+    .length;
   const recorder_doc_count = _.sumBy(addrs, (a) => a.recorder_doc_count || 0);
   const mortgage_doc_count = _.sumBy(addrs, (a) => a.mortgage_doc_count || 0);
   const quitclaim_doc_count = _.sumBy(addrs, (a) => a.quitclaim_doc_count || 0);

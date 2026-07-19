@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 def group_nearby_owner_rows(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
     grouped: Dict[str, Dict[str, Any]] = {}
     for row in rows:
-        owner_key = row.get("owner_id") or row.get("owner_name") or row.get("pin")
+        owner_key = str(row.get("owner_id") or row.get("owner_name") or row.get("pin"))
         if owner_key not in grouped:
             grouped[owner_key] = {
                 "owner_key": owner_key,
@@ -50,18 +50,23 @@ def group_nearby_owner_rows(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
 
         group = grouped[owner_key]
         group["parcel_count"] += 1
-        group["parcels"].append({
-            "pin": row.get("pin"),
-            "address": row.get("address"),
-            "distance_m": row.get("distance_m"),
-        })
+        group["parcels"].append(
+            {
+                "pin": row.get("pin"),
+                "address": row.get("address"),
+                "distance_m": row.get("distance_m"),
+            }
+        )
         if group["nearest_distance_m"] is None or (
-            row.get("distance_m") is not None and row.get("distance_m") < group["nearest_distance_m"]
+            row.get("distance_m") is not None
+            and row.get("distance_m") < group["nearest_distance_m"]
         ):
             group["nearest_distance_m"] = row.get("distance_m")
         group["same_owner"] = group["same_owner"] or bool(row.get("same_owner"))
 
-        seen = {(item["type"], item["value"], item["source"]) for item in group["contacts"]}
+        seen = {
+            (item["type"], item["value"], item["source"]) for item in group["contacts"]
+        }
         for contact in row.get("contacts", []):
             dedupe_key = (contact["type"], contact["value"], contact["source"])
             if dedupe_key in seen:
@@ -73,7 +78,9 @@ def group_nearby_owner_rows(rows: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
         grouped.values(),
         key=lambda row: (
             not row["same_owner"],
-            row["nearest_distance_m"] if row["nearest_distance_m"] is not None else 10**9,
+            row["nearest_distance_m"]
+            if row["nearest_distance_m"] is not None
+            else 10**9,
             -(row["parcel_count"] or 0),
         ),
     )
@@ -92,7 +99,9 @@ def entity_search(request):
         with connections["wow"].cursor() as cursor:
             cursor.execute("SELECT to_regclass('canonical_entities')")
             if not cursor.fetchone()[0]:
-                return JsonResponse({"result": [], "note": "Contact tables not yet created"})
+                return JsonResponse(
+                    {"result": [], "note": "Contact tables not yet created"}
+                )
 
             params: list[Any] = [query, query]
             type_filter = ""
@@ -152,7 +161,9 @@ def entity_contacts(request):
         with connections["wow"].cursor() as cursor:
             cursor.execute("SELECT to_regclass('entity_contacts')")
             if not cursor.fetchone()[0]:
-                return JsonResponse({"result": [], "note": "Contact tables not yet created"})
+                return JsonResponse(
+                    {"result": [], "note": "Contact tables not yet created"}
+                )
 
             cursor.execute(
                 """
@@ -207,16 +218,18 @@ def entity_contacts(request):
                 for row in cursor.fetchall()
             ]
 
-            return JsonResponse({
-                "entity": {
-                    "id": entity_row[0],
-                    "type": entity_row[1],
-                    "name": entity_row[2],
-                    "parcel_count": entity_row[3] or 0,
-                },
-                "contacts": contacts,
-                "min_confidence": min_confidence,
-            })
+            return JsonResponse(
+                {
+                    "entity": {
+                        "id": entity_row[0],
+                        "type": entity_row[1],
+                        "name": entity_row[2],
+                        "parcel_count": entity_row[3] or 0,
+                    },
+                    "contacts": contacts,
+                    "min_confidence": min_confidence,
+                }
+            )
     except ProgrammingError as error:
         if not is_missing_db_object_error(error):
             raise
@@ -236,7 +249,9 @@ def parcel_entities(request):
         with connections["wow"].cursor() as cursor:
             cursor.execute("SELECT to_regclass('entity_parcel_mappings')")
             if not cursor.fetchone()[0]:
-                return JsonResponse({"result": [], "note": "Contact tables not yet created"})
+                return JsonResponse(
+                    {"result": [], "note": "Contact tables not yet created"}
+                )
 
             cursor.execute(
                 """
@@ -275,14 +290,23 @@ def parcel_entities(request):
                     """,
                     [entity_ids],
                 )
-                for entity_id, contact_type, contact_value, confidence, source, is_verified in cursor.fetchall():
-                    contacts_by_entity.setdefault(entity_id, []).append({
-                        "type": contact_type,
-                        "value": contact_value,
-                        "confidence": confidence,
-                        "source": source,
-                        "is_verified": is_verified,
-                    })
+                for (
+                    entity_id,
+                    contact_type,
+                    contact_value,
+                    confidence,
+                    source,
+                    is_verified,
+                ) in cursor.fetchall():
+                    contacts_by_entity.setdefault(entity_id, []).append(
+                        {
+                            "type": contact_type,
+                            "value": contact_value,
+                            "confidence": confidence,
+                            "source": source,
+                            "is_verified": is_verified,
+                        }
+                    )
 
             entities = [
                 {
@@ -299,15 +323,17 @@ def parcel_entities(request):
         nearby_rows = get_nearby_rows(pin, args["radius_m"], args["limit"])
         nearby_owners = group_nearby_owner_rows(nearby_rows)
 
-        return JsonResponse({
-            "pin": pin,
-            "entities": entities,
-            "nearby": {
-                "radius_m": args["radius_m"],
-                "owners": nearby_owners,
-                "parcels": nearby_rows,
-            },
-        })
+        return JsonResponse(
+            {
+                "pin": pin,
+                "entities": entities,
+                "nearby": {
+                    "radius_m": args["radius_m"],
+                    "owners": nearby_owners,
+                    "parcels": nearby_rows,
+                },
+            }
+        )
     except ProgrammingError as error:
         if not is_missing_db_object_error(error):
             raise
@@ -317,6 +343,7 @@ def parcel_entities(request):
 
 
 @api
+@ratelimit(key=client_ip, rate="30/m", block=True)
 def admin_contact_coverage(request):
     """Admin endpoint to view contact data coverage statistics."""
     apiutil.authorize_for_admin(request)
@@ -325,10 +352,12 @@ def admin_contact_coverage(request):
         with connections["wow"].cursor() as cursor:
             cursor.execute("SELECT to_regclass('canonical_entities')")
             if not cursor.fetchone()[0]:
-                return JsonResponse({
-                    "status": "not_initialized",
-                    "message": "Contact tables have not been created yet.",
-                })
+                return JsonResponse(
+                    {
+                        "status": "not_initialized",
+                        "message": "Contact tables have not been created yet.",
+                    }
+                )
 
             cursor.execute("SELECT * FROM get_contact_coverage_stats()")
             stats_row = cursor.fetchone()
@@ -385,18 +414,24 @@ def admin_contact_coverage(request):
                 for row in cursor.fetchall()
             ]
 
-            return JsonResponse({
-                "generated_at": datetime.now(tz=timezone.utc).isoformat(),
-                "coverage": stats,
-                "sources": sources,
-                "recent_activity": recent_activity,
-            })
+            return JsonResponse(
+                {
+                    "generated_at": datetime.now(tz=timezone.utc).isoformat(),
+                    "coverage": stats,
+                    "sources": sources,
+                    "recent_activity": recent_activity,
+                }
+            )
     except ProgrammingError as error:
         if not is_missing_db_object_error(error):
             raise
         rollback_wow_connection()
-        logger.warning("Contact coverage stats skipped because contact tables are missing.")
-        return JsonResponse({
-            "status": "not_initialized",
-            "message": "Contact tables have not been created yet.",
-        })
+        logger.warning(
+            "Contact coverage stats skipped because contact tables are missing."
+        )
+        return JsonResponse(
+            {
+                "status": "not_initialized",
+                "message": "Contact tables have not been created yet.",
+            }
+        )

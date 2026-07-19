@@ -22,10 +22,14 @@ class TestAddressSearchSql:
 
     def search_fallback(self, db, query):
         with db.cursor() as cur:
-            cur.execute((SQL_DIR / "address_search_fallback.sql").read_text(), {"q": query})
+            cur.execute(
+                (SQL_DIR / "address_search_fallback.sql").read_text(), {"q": query}
+            )
             return cur.fetchall()
 
-    def load_search_data(self, nycdb_ctx, include_state_address=True, build_wow_parcels=True):
+    def load_search_data(
+        self, nycdb_ctx, include_state_address=True, build_wow_parcels=True
+    ):
         parcels = [
             ChiParcels(
                 pin=WABASH_2460_PIN,

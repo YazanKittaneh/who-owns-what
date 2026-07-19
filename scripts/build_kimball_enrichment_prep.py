@@ -127,7 +127,9 @@ def main() -> int:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for row in business_rows:
-            parcel_entries = [entry for entry in (row.get("parcels", "").split(" | ")) if entry]
+            parcel_entries = [
+                entry for entry in (row.get("parcels", "").split(" | ")) if entry
+            ]
             for parcel_entry in parcel_entries:
                 pin = parcel_entry.split(":", 1)[0]
                 for contact_type in ("phone", "email"):

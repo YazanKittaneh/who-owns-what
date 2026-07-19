@@ -90,7 +90,7 @@
     "watch-css": "yarn build-css && sass src/:src/ --no-source-map --load-path src/ --load-path node_modules/ --watch",
     "start-js": "lingui compile && NODE_OPTIONS=--openssl-legacy-provider TSC_COMPILE_ON_ERROR=true react-scripts start",
     "start": "npm-run-all -p watch-css start-js",
-    "build": "node write-version.js && yarn build-css && lingui compile && NODE_OPTIONS=--openssl-legacy-provider TSC_COMPILE_ON_ERROR=true react-scripts build",
+    "build": "node write-version.js && yarn build-css && lingui compile && NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
     "test": "react-scripts test --env=jsdom --transformIgnorePatterns \"node_modules/(?!@justfixnyc)/\"",
     "eject": "react-scripts eject"
   },

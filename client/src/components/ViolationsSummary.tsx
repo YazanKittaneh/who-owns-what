@@ -19,8 +19,8 @@ const ViolationsSummary: React.FC<withMachineInStateProps<"portfolioFound">> = (
         </Trans>{" "}
         {totals.units_res > 0 && (
           <Trans>
-            That is <b>{byUnit.toFixed(1)}</b> open violations per residential unit, compared with
-            a citywide benchmark of about {VIOLATIONS_CITYWIDE_AVG}.
+            That is <b>{byUnit.toFixed(1)}</b> open violations per residential unit, compared with a
+            citywide benchmark of about {VIOLATIONS_CITYWIDE_AVG}.
           </Trans>
         )}
       </p>

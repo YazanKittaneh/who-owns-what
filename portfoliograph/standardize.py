@@ -4,15 +4,18 @@ import itertools
 import multiprocessing
 from pathlib import Path
 from typing import Iterable, List, NamedTuple
+
 try:
     from geosupport import Geosupport, GeosupportError
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     Geosupport = None
 
-    class GeosupportError(Exception):
+    class GeosupportError(Exception):  # type: ignore[no-redef]
         def __init__(self, result=None):
             super().__init__("Geosupport is not installed")
             self.result = result or {}
+
+
 from psycopg2.extras import DictCursor
 
 # Use of NYC DCP's Geosupport desktop for geocoding addresses (to standardize

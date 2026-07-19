@@ -53,8 +53,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      - name: Check formatting (black)
+        run: black --check .
+
+      - name: Lint (flake8)
+        run: flake8
+
+      - name: Type-check (mypy)
+        run: mypy .
+        env:
+          SECRET_KEY: ci-secret-key
+
       - name: Run backend tests
-        run: pytest tests --ignore=tests/test_sql.py
+        # wow/tests/test_milestone1.py stubs DB access, so it runs anywhere;
+        # the rest of wow/tests needs a fully built test DB (see conftest).
+        run: pytest tests wow/tests/test_milestone1.py --ignore=tests/test_sql.py
         env:
           SECRET_KEY: ci-secret-key
           ALERTS_API_TOKEN: ci-alerts-token
@@ -83,13 +96,24 @@ jobs:
         working-directory: client
         run: yarn install --frozen-lockfile
 
+      - name: Check formatting (prettier)
+        working-directory: client
+        run: yarn prettier:check
+
+      - name: Type-check (tsc)
+        working-directory: client
+        run: yarn typecheck
+
+      # NOTE: yarn test is not run here yet — the CRA 4 jest toolchain is
+      # broken by dependency drift (bundled Babel 7.12 vs plugins requiring
+      # 7.22). Restore a test step as part of the toolchain migration
+      # tracked in issue #20.
       - name: Build frontend
         working-directory: client
         run: yarn build
         env:
           BUILD_GIT_SHA: ${{ github.sha }}
           NODE_OPTIONS: --openssl-legacy-provider
-          TSC_COMPILE_ON_ERROR: 'true'
           REACT_APP_API_BASE_URL: https://wow-api.yazan.io
           REACT_APP_STREETVIEW_API_KEY: ${{ secrets.REACT_APP_STREETVIEW_API_KEY }}
           REACT_APP_AMPLITUDE_API_KEY: ${{ secrets.REACT_APP_AMPLITUDE_API_KEY }}

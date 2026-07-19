@@ -22,7 +22,12 @@ function formatAddress(address?: string | null, pin?: string) {
 
 function formatMailing(detailAddr: AddressRecord | null) {
   if (!detailAddr) return "";
-  return [detailAddr.mailing_address, detailAddr.mailing_city, detailAddr.mailing_state, detailAddr.mailing_zip]
+  return [
+    detailAddr.mailing_address,
+    detailAddr.mailing_city,
+    detailAddr.mailing_state,
+    detailAddr.mailing_zip,
+  ]
     .filter(Boolean)
     .join(detailAddr.mailing_address ? ", " : " ");
 }

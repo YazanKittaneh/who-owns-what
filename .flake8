@@ -8,6 +8,14 @@ exclude =
 
 max-line-length = 100
 
+# Operator scripts bootstrap sys.path before imports (E402) and embed long
+# source URLs / SQL strings (E501); the same applies to the legacy nycdb
+# test harness and the find_nearby CLI wrapper.
+per-file-ignores =
+    scripts/*.py: E402,E501
+    tests/nycdb_context.py: E402,E501
+    find_nearby.py: E402,E501
+
 ignore =
     # Sometimes we want to use f-strings on multiple lines
     # of strings to keep formatting consistent, even though

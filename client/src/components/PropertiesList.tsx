@@ -175,10 +175,10 @@ const PropertiesListWithoutI18n: React.FC<
 
   const { filterContext } = React.useContext(FilterContext);
   const { viewType, filterSelections } = filterContext;
-  const filteredAddrs = React.useMemo(
-    () => filterAddresses(addrs, filterSelections),
-    [addrs, filterSelections]
-  );
+  const filteredAddrs = React.useMemo(() => filterAddresses(addrs, filterSelections), [
+    addrs,
+    filterSelections,
+  ]);
 
   // avoid loading any components until portfolio tab is viewed
   const [everVisible, setEverVisible] = React.useState(false);

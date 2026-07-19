@@ -11,7 +11,6 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlencode
 
 
@@ -52,28 +51,36 @@ def extract_text(html: str) -> str:
 
 def parse_results_table(html: str) -> list[SearchResult]:
     """Parse the decision results table from HTML."""
-    results = []
+    results: list[SearchResult] = []
 
     # Find the results table
-    table_match = re.search(r'id="decision_results"[^\u003e]*\u003e(.*?)\u003c/table\u003e', html, re.DOTALL)
+    table_match = re.search(
+        r'id="decision_results"[^\u003e]*\u003e(.*?)\u003c/table\u003e', html, re.DOTALL
+    )
     if not table_match:
         return results
 
     table_html = table_match.group(1)
 
     # Find all rows in tbody
-    tbody_match = re.search(r'\u003ctbody[^\u003e]*\u003e(.*?)\u003c/tbody\u003e', table_html, re.DOTALL)
+    tbody_match = re.search(
+        r"\u003ctbody[^\u003e]*\u003e(.*?)\u003c/tbody\u003e", table_html, re.DOTALL
+    )
     if not tbody_match:
         return results
 
     tbody_html = tbody_match.group(1)
 
     # Parse each row
-    for row_match in re.finditer(r'\u003ctr[^\u003e]*\u003e(.*?)\u003c/tr\u003e', tbody_html, re.DOTALL):
+    for row_match in re.finditer(
+        r"\u003ctr[^\u003e]*\u003e(.*?)\u003c/tr\u003e", tbody_html, re.DOTALL
+    ):
         row_html = row_match.group(1)
 
         # Extract cells
-        cells = re.findall(r'\u003ctd[^\u003e]*\u003e(.*?)\u003c/td\u003e', row_html, re.DOTALL)
+        cells = re.findall(
+            r"\u003ctd[^\u003e]*\u003e(.*?)\u003c/td\u003e", row_html, re.DOTALL
+        )
         if len(cells) < 4:
             continue
 
@@ -103,15 +110,17 @@ def parse_results_table(html: str) -> list[SearchResult]:
         if id_match:
             result_id = id_match.group(1)
 
-        results.append(SearchResult(
-            address=address,
-            pin=pin,
-            year=year,
-            prop_no=prop_no,
-            trunk_no=trunk_no,
-            seq_no=seq_no,
-            result_id=result_id,
-        ))
+        results.append(
+            SearchResult(
+                address=address,
+                pin=pin,
+                year=year,
+                prop_no=prop_no,
+                trunk_no=trunk_no,
+                seq_no=seq_no,
+                result_id=result_id,
+            )
+        )
 
     return results
 
@@ -125,14 +134,16 @@ def search_by_address(
     aptcode: str = "",
 ) -> list[SearchResult]:
     """Search by address and return results."""
-    data = urlencode({
-        "type": "mainform_address",
-        "houseno": houseno,
-        "strtdir": strtdir,
-        "strtname": strtname,
-        "aptcode": aptcode,
-        "cityname": cityname,
-    })
+    data = urlencode(
+        {
+            "type": "mainform_address",
+            "houseno": houseno,
+            "strtdir": strtdir,
+            "strtname": strtname,
+            "aptcode": aptcode,
+            "cityname": cityname,
+        }
+    )
 
     req = urllib.request.Request(
         SEARCH_URL,
@@ -178,15 +189,17 @@ def search_by_pin(
         print(f"Invalid PIN format: {pin}")
         return []
 
-    data = urlencode({
-        "type": "mainform_pin",
-        "PIN": pin_clean,
-        "PIN1": pin_clean[0:2],
-        "PIN2": pin_clean[2:4],
-        "PIN3": pin_clean[4:7],
-        "PIN4": pin_clean[7:10],
-        "PIN5": pin_clean[10:14],
-    })
+    data = urlencode(
+        {
+            "type": "mainform_pin",
+            "PIN": pin_clean,
+            "PIN1": pin_clean[0:2],
+            "PIN2": pin_clean[2:4],
+            "PIN3": pin_clean[4:7],
+            "PIN4": pin_clean[7:10],
+            "PIN5": pin_clean[10:14],
+        }
+    )
 
     req = urllib.request.Request(
         SEARCH_URL,
@@ -222,11 +235,19 @@ def search_by_pin(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Scrape Cook County Board of Review decisions.")
+    parser = argparse.ArgumentParser(
+        description="Scrape Cook County Board of Review decisions."
+    )
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     parser.add_argument("--sample-pins", nargs="+", help="Sample PINs to search")
-    parser.add_argument("--sample-addresses", nargs="+", help="Sample addresses (format: 'houseno|direction|street')")
-    parser.add_argument("--delay", type=float, default=1.0, help="Delay between requests in seconds")
+    parser.add_argument(
+        "--sample-addresses",
+        nargs="+",
+        help="Sample addresses (format: 'houseno|direction|street')",
+    )
+    parser.add_argument(
+        "--delay", type=float, default=1.0, help="Delay between requests in seconds"
+    )
     return parser.parse_args()
 
 
@@ -278,9 +299,21 @@ def main() -> None:
         output_path = output_dir / "bor_search_results.csv"
         with output_path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["address", "pin", "year", "prop_no", "trunk_no", "seq_no", "result_id"])
+            writer.writerow(
+                ["address", "pin", "year", "prop_no", "trunk_no", "seq_no", "result_id"]
+            )
             for r in all_results:
-                writer.writerow([r.address, r.pin, r.year, r.prop_no, r.trunk_no, r.seq_no, r.result_id])
+                writer.writerow(
+                    [
+                        r.address,
+                        r.pin,
+                        r.year,
+                        r.prop_no,
+                        r.trunk_no,
+                        r.seq_no,
+                        r.result_id,
+                    ]
+                )
         print(f"Wrote {len(all_results)} results to {output_path}")
     else:
         print("No results found")

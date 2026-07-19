@@ -8,7 +8,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, Optional
 
 import requests
 
@@ -172,7 +172,9 @@ def request_with_retries(
 
     for attempt in range(1, max_retries + 1):
         try:
-            resp = session.get(url, params=params, headers=effective_headers, timeout=timeout)
+            resp = session.get(
+                url, params=params, headers=effective_headers, timeout=timeout
+            )
             if (
                 resp.status_code == 403
                 and effective_headers.get("X-App-Token")
@@ -211,7 +213,10 @@ def resolve_latest_owners_year(
     max_retries: int,
 ) -> str:
     config = DATASET_CONFIGS["chi_owners"]
-    params = {"$select": "max(year) AS max_year", "$where": "prop_address_city_name = 'CHICAGO'"}
+    params = {
+        "$select": "max(year) AS max_year",
+        "$where": "prop_address_city_name = 'CHICAGO'",
+    }
     response = request_with_retries(
         session=session,
         url=config.json_url,
@@ -361,7 +366,11 @@ def fetch_dataset(
         if max_pages > 0 and page >= max_pages:
             break
 
-        params = {"$limit": str(limit), "$offset": str(offset), "$order": config.order_by}
+        params = {
+            "$limit": str(limit),
+            "$offset": str(offset),
+            "$order": config.order_by,
+        }
         if config.where:
             params["$where"] = config.where
 

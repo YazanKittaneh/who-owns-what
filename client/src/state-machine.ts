@@ -99,7 +99,10 @@ export type withMachineInStateProps<TSV extends WowState["value"]> = {
   send: (event: WowEvent) => WowMachineEverything;
 };
 
-async function getSearchResult(addr: SearchAddress, useNewPortfolioMethod: boolean): Promise<WowState> {
+async function getSearchResult(
+  addr: SearchAddress,
+  useNewPortfolioMethod: boolean
+): Promise<WowState> {
   const apiResults = await APIClient.searchForAddress(addr);
   if (!apiResults.geosearch) {
     return {
@@ -107,7 +110,6 @@ async function getSearchResult(addr: SearchAddress, useNewPortfolioMethod: boole
       context: { searchAddrParams: addr, searchAddrPin: undefined },
     };
   } else if (apiResults.addrs.length === 0) {
-
     const buildingInfoResults = await APIClient.getBuildingInfo(apiResults.geosearch.pin);
     const buildingInfo = buildingInfoResults.result[0];
 
@@ -154,17 +156,20 @@ const createSearchInvoke = (): any => ({
   onDone: [
     {
       target: "pinNotFound",
-      cond: (_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.value === "pinNotFound",
+      cond: (_ctx: WowContext, event: DoneInvokeEvent<WowState>) =>
+        event.data.value === "pinNotFound",
       actions: assign((_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.context),
     },
     {
       target: "unregisteredFound",
-      cond: (_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.value === "unregisteredFound",
+      cond: (_ctx: WowContext, event: DoneInvokeEvent<WowState>) =>
+        event.data.value === "unregisteredFound",
       actions: assign((_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.context),
     },
     {
       target: "portfolioFound",
-      cond: (_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.value === "portfolioFound",
+      cond: (_ctx: WowContext, event: DoneInvokeEvent<WowState>) =>
+        event.data.value === "portfolioFound",
       actions: assign((_ctx: WowContext, event: DoneInvokeEvent<WowState>) => event.data.context),
     },
   ],
@@ -176,20 +181,21 @@ const createSearchInvoke = (): any => ({
 
 const selectDetailAddr = assign<WowContext, { type: "SELECT_DETAIL_ADDR"; pin: string }>(
   (context, event) => {
-  if (!context.portfolioData) {
-    throw new Error("Portfolio data is missing.");
+    if (!context.portfolioData) {
+      throw new Error("Portfolio data is missing.");
+    }
+    const addr = _find(context.portfolioData.assocAddrs, { pin: event.pin });
+    if (!addr) {
+      throw new Error("PIN not found in assocAddrs.");
+    }
+    return {
+      portfolioData: {
+        ...context.portfolioData,
+        detailAddr: addr,
+      },
+    };
   }
-  const addr = _find(context.portfolioData.assocAddrs, { pin: event.pin });
-  if (!addr) {
-    throw new Error("PIN not found in assocAddrs.");
-  }
-  return {
-    portfolioData: {
-      ...context.portfolioData,
-      detailAddr: addr,
-    },
-  };
-});
+);
 
 const addSearchContext = assign<
   WowContext,

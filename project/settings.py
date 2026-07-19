@@ -14,7 +14,6 @@ except ImportError:
     pass
 
 # Also try to load from .env file directly if dotenv is not available
-import os
 if not os.environ.get("SECRET_KEY"):
     env_path = Path(__file__).parent.parent / ".env"
     if env_path.exists():
@@ -55,7 +54,15 @@ ALERTS_API_TOKEN = get_required_env("ALERTS_API_TOKEN")
 
 SIGNATURE_API_TOKEN = get_required_env("SIGNATURE_API_TOKEN")
 
-ADMIN_API_TOKEN = os.environ.get("ADMIN_API_TOKEN") or ALERTS_API_TOKEN
+# Admin endpoints are a distinct privilege tier from alerts consumers; there
+# is deliberately no fallback to ALERTS_API_TOKEN. When unset, admin
+# endpoints fail closed (401) instead of sharing the alerts secret.
+ADMIN_API_TOKEN = os.environ.get("ADMIN_API_TOKEN") or None
+if ADMIN_API_TOKEN and ADMIN_API_TOKEN in (ALERTS_API_TOKEN, SIGNATURE_API_TOKEN):
+    raise ImproperlyConfigured(
+        "ADMIN_API_TOKEN must be a distinct secret; it currently matches "
+        "another API token. Generate a separate value for it."
+    )
 
 ALLOWED_HOSTS: List[str] = get_csv_env("ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
 
@@ -132,20 +139,28 @@ CORS_ALLOWED_ORIGINS = [
     "https://goodcauseny.org",
     # Cloudflare frontend domains
     "https://who-owns-what.pages.dev",
-    "https://*.who-owns-what.pages.dev",
     "https://who-owns-what.yazan-4a5.workers.dev",
 ]
 CORS_ALLOWED_ORIGINS += get_csv_env("CORS_EXTRA_ALLOWED_ORIGINS")
+# NOTE: django-cors-headers matches these with re.match (anchored only at the
+# start), so every pattern must end with $ — an unanchored pattern like
+# "https://x--foo.netlify.app" would also match
+# "https://x--foo.netlify.app.evil.example" and echo credentialed CORS
+# headers to an attacker-controlled origin.
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"https://deploy-preview-(?:\d{1,4})--wow-django-demo\.netlify\.app",
-    r"https://deploy-preview-(?:\d{1,4})--signature-dashboard\.netlify\.app",
-    r"https://deploy-preview-(?:\d{1,4})--wow-django\.netlify\.app",
-    r"https://deploy-preview-(?:\d{1,4})--gce-screener\.netlify\.app",
-    r"https://deploy-preview-(?:\d{1,4})--demo-gce-screener\.netlify\.app",
-    r"https://([A-Za-z0-9\-\_]+)--wow-django\.netlify\.app",
-    r"https://([A-Za-z0-9\-\_]+)--wow-django-demo\.netlify\.app",
-    r"https://([A-Za-z0-9\-\_]+)--gce-screener\.netlify\.app",
-    r"https://([A-Za-z0-9\-\_]+)--demo-gce-screener\.netlify\.app",
+    r"^https://deploy-preview-(?:\d{1,4})--wow-django-demo\.netlify\.app$",
+    r"^https://deploy-preview-(?:\d{1,4})--signature-dashboard\.netlify\.app$",
+    r"^https://deploy-preview-(?:\d{1,4})--wow-django\.netlify\.app$",
+    r"^https://deploy-preview-(?:\d{1,4})--gce-screener\.netlify\.app$",
+    r"^https://deploy-preview-(?:\d{1,4})--demo-gce-screener\.netlify\.app$",
+    r"^https://([A-Za-z0-9\-\_]+)--wow-django\.netlify\.app$",
+    r"^https://([A-Za-z0-9\-\_]+)--wow-django-demo\.netlify\.app$",
+    r"^https://([A-Za-z0-9\-\_]+)--gce-screener\.netlify\.app$",
+    r"^https://([A-Za-z0-9\-\_]+)--demo-gce-screener\.netlify\.app$",
+    # Cloudflare Pages preview deployments (replaces the ineffective literal
+    # "https://*.who-owns-what.pages.dev" that previously sat in
+    # CORS_ALLOWED_ORIGINS, where wildcards are not interpreted).
+    r"^https://[A-Za-z0-9\-]+\.who-owns-what\.pages\.dev$",
 ]
 
 # Django 4.0+ requires CSRF_TRUSTED_ORIGINS to include the scheme (http:// or https://)
@@ -194,6 +209,16 @@ CACHES = {
 
 RATELIMIT_USE_CACHE = "default"
 RATELIMIT_ENABLE = os.environ.get("RATELIMIT_ENABLE", "true").lower() != "false"
+
+# How many trailing X-Forwarded-For entries were appended by proxies we
+# operate (nginx, cloudflared). 0 (the default) means X-Forwarded-For is
+# ignored entirely for rate-limit keying, since its left-most entries are
+# client-controlled and would let callers mint fresh throttle buckets at
+# will. Cloudflare's CF-Connecting-IP header is always preferred when
+# present. See wow.apiutil.client_ip.
+RATELIMIT_TRUSTED_PROXY_COUNT = int(
+    os.environ.get("RATELIMIT_TRUSTED_PROXY_COUNT", "0")
+)
 
 # This is based off the default Django logging configuration:
 # https://github.com/django/django/blob/master/django/utils/log.py

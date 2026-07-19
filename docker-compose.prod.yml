@@ -16,6 +16,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # Shared cache so rate-limit counters are consistent across the API's
+  # gunicorn workers (LocMemCache is per-process and silently multiplies
+  # every limit by the worker count).
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    networks:
+      - wow-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Django Backend API
   api:
     image: ${API_IMAGE:-who-owns-what-api:local}
@@ -34,10 +49,14 @@ services:
       - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:-}
       - ROLLBAR_ACCESS_TOKEN=${ROLLBAR_ACCESS_TOKEN}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - DJANGO_CACHE_BACKEND=django.core.cache.backends.redis.RedisCache
+      - DJANGO_CACHE_LOCATION=redis://redis:6379/1
     env_file:
       - .env
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - wow-network

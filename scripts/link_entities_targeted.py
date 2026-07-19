@@ -42,7 +42,9 @@ def find_nearby_pins(conn, target_pin: str, radius_m: int) -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run targeted SQL pilot for nearby parcels.")
+    parser = argparse.ArgumentParser(
+        description="Run targeted SQL pilot for nearby parcels."
+    )
     parser.add_argument("--target-pin", default="13262040080000")
     parser.add_argument("--radius", type=int, default=500)
     args = parser.parse_args()
@@ -58,8 +60,15 @@ def main() -> int:
         raise SystemExit(f"No nearby parcels found for {args.target_pin}")
 
     with conn.cursor() as cursor:
-        cursor.execute("SELECT * FROM load_business_license_contacts(%s)", (nearby_pins,))
-        inserted_entities, inserted_aliases, inserted_contacts, inserted_mappings = cursor.fetchone()
+        cursor.execute(
+            "SELECT * FROM load_business_license_contacts(%s)", (nearby_pins,)
+        )
+        (
+            inserted_entities,
+            inserted_aliases,
+            inserted_contacts,
+            inserted_mappings,
+        ) = cursor.fetchone()
 
         cursor.execute(
             """

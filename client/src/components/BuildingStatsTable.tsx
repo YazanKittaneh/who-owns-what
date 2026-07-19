@@ -71,7 +71,9 @@ const BuildingStatsTable: React.FC<BuildingStatsTableProps> = ({ addr, timelineH
     {
       label: i18n._("Recorder documents"),
       value: formatValue(addr.recorder_doc_count),
-      info: i18n._("Recorded mortgage, quit claim, and related recorder documents tied to this parcel PIN."),
+      info: i18n._(
+        "Recorded mortgage, quit claim, and related recorder documents tied to this parcel PIN."
+      ),
     },
   ];
 
