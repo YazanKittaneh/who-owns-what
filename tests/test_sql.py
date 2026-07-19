@@ -14,6 +14,9 @@ from .factories.chi_geographies import ChiGeographies
 
 FUNKY_PIN = "12345678901234"
 MONKEY_PIN = "12345678901235"
+# Shares FUNKY HOLDINGS' mailing address but with a punctuation-variant name;
+# the normalization engine must still merge it into the same portfolio.
+DONKEY_PIN = "12345678901236"
 UNRELATED_PIN = "22345678901234"
 
 
@@ -38,6 +41,18 @@ class TestSQL:
                 ChiParcels(
                     pin=MONKEY_PIN,
                     pin10="1234567891",
+                    year="2024",
+                    PY_class="2",
+                    zip_code="60601",
+                    lon="-87.63",
+                    lat="41.88",
+                    ward_num="42",
+                    chicago_community_area_name="Loop",
+                    census_tract_geoid="17031010100",
+                ),
+                ChiParcels(
+                    pin=DONKEY_PIN,
+                    pin10="1234567892",
                     year="2024",
                     PY_class="2",
                     zip_code="60601",
@@ -93,6 +108,23 @@ class TestSQL:
                     mail_address_state="IL",
                     mail_address_zipcode_1="60601",
                     row_id="OWN1",
+                ),
+                ChiOwners(
+                    pin=DONKEY_PIN,
+                    pin10="1234567892",
+                    year="2024",
+                    prop_address_full="250 FUNKY ST",
+                    prop_address_city_name="CHICAGO",
+                    prop_address_state="IL",
+                    prop_address_zipcode_1="60601",
+                    # Punctuation variant of "FUNKY HOLDINGS LLC" + same mailing
+                    # address: must merge into the FUNKY portfolio.
+                    mail_address_name="FUNKY HOLDINGS, L.L.C.",
+                    mail_address_full="1 MAIN ST",
+                    mail_address_city_name="CHICAGO",
+                    mail_address_state="IL",
+                    mail_address_zipcode_1="60601",
+                    row_id="OWN3",
                 ),
                 ChiOwners(
                     pin=UNRELATED_PIN,
@@ -208,10 +240,11 @@ class TestSQL:
 
     def test_get_assoc_addrs_from_pin_returns_portfolio(self):
         results = self.get_assoc_addrs_from_pin(
-            FUNKY_PIN, expected_pins=[FUNKY_PIN, MONKEY_PIN]
+            FUNKY_PIN, expected_pins=[FUNKY_PIN, MONKEY_PIN, DONKEY_PIN]
         )
         assert results[FUNKY_PIN]["address"] == "100 FUNKY ST"
         assert results[MONKEY_PIN]["address"] == "200 FUNKY ST"
+        assert results[DONKEY_PIN]["address"] == "250 FUNKY ST"
 
     def test_get_assoc_addrs_from_pin_invalid_returns_empty(self):
         assert self.get_assoc_addrs_from_pin("00000000000000") == {}
@@ -220,11 +253,15 @@ class TestSQL:
         r = self.query_one(
             "SELECT * FROM wow_portfolios WHERE owner_names @> ARRAY['FUNKY HOLDINGS LLC']"
         )
-        assert set(r["pins"]) == {FUNKY_PIN, MONKEY_PIN}
+        # The punctuation-variant "FUNKY HOLDINGS, L.L.C." parcel normalizes to
+        # the same owner and shares the mailing address, so all three merge.
+        assert set(r["pins"]) == {FUNKY_PIN, MONKEY_PIN, DONKEY_PIN}
 
     def test_export_portfolios_table_json_works(self):
         with self.db.connect() as conn:
             f = StringIO()
             export_portfolios_table_json(conn, f)
             data = json.loads(f.getvalue())
-            assert any(row["pins"] == [FUNKY_PIN, MONKEY_PIN] for row in data)
+            assert any(
+                set(row["pins"]) == {FUNKY_PIN, MONKEY_PIN, DONKEY_PIN} for row in data
+            )
