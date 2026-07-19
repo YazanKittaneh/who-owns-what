@@ -6,9 +6,11 @@ engineer — each reviewing the codebase independently, then deduplicated
 against `TODO.md` (which is already a strong backlog; nothing here repeats it
 without adding new mechanism-level detail).
 
-- **Issue drafts:** [`issues.md`](./issues.md) — 32 ready-to-file GitHub issues.
-- **Filing script:** [`file_issues.sh`](./file_issues.sh) — files all of them
-  via `gh` once Issues is enabled on the repo (Settings → General → Features).
+- **Issue drafts:** [`issues.md`](./issues.md) — 32 GitHub issues, **filed as
+  [#6–#37](https://github.com/YazanKittaneh/who-owns-what/issues)** on
+  2026-07-19.
+- **Filing script:** [`file_issues.sh`](./file_issues.sh) — kept for reference
+  / re-filing; the issues above were created from these exact drafts.
 
 ## Executive summary
 
